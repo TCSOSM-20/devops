@@ -38,19 +38,22 @@ def ci_pipeline(mdg,url_prefix,project,branch,refspec,revision,build_system) {
         project_checkout(url_prefix,project,refspec,revision)
     }
 
+    stage('License Scan') {
+        sh "devops/tools/license_scan.sh"
+    }
+
     container_name = "${project}-${branch}".toLowerCase()
 
     stage('Docker-Build') {
+        sh '''
+           echo RUN groupadd -o -g $(id -g) -r jenkins >> Dockerfile
+           echo RUN useradd -o -u $(id -u) --create-home -r -g  jenkins jenkins >> Dockerfile
+           '''
+
         sh "docker build -t ${container_name} ."
     }
 
     withDockerContainer("${container_name}") {
-        stage('Docker-Setup') {
-            sh '''
-               groupadd -o -g $(id -g) -r jenkins
-               useradd -o -u $(id -u) --create-home -r -g  jenkins jenkins
-               '''
-        }
         stage('Test') {
             sh 'devops-stages/stage-test.sh'
         }
