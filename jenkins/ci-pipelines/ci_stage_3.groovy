@@ -59,7 +59,7 @@ node("${params.NODE}") {
                 // given target UPSTREAM_SUFFIX
 
                 dir("${RELEASE}") {
-                    def list = ["SO", "UI", "RO", "openvim", "osmclient", "IM"]
+                    def list = ["SO", "UI", "RO", "openvim", "osmclient"]
                     for (component in list) {
                         step ([$class: 'CopyArtifact',
                                projectName: "${component}${params.UPSTREAM_SUFFIX}/${GERRIT_BRANCH}"])
