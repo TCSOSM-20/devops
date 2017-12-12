@@ -35,14 +35,10 @@ set -o nounset    # Expanding an unset variable is an error.  Variables must be
 
 ###############################################################################
 # Set up repo and version
-PLATFORM_REPOSITORY=OSM3
-PLATFORM_VERSION=5.2.0.2.72254
+PLATFORM_VERSION=5.2.0.3.73627
 
-while getopts ":P:V:h" o; do
+while getopts "V:h" o; do
     case "${o}" in
-        P)
-            PLATFORM_REPOSITORY=${OPTARG}
-            ;;
         V)
             PLATFORM_VERSION=${OPTARG}
             ;;
@@ -64,12 +60,10 @@ function usage() {
     echo
     echo "SYNOPSIS:"
     echo "  $0 -h|--help"
-    echo "  $0 -P <PLATFORM_REPOSITORY> -V <PLATFORM_VERSION>"
     echo
     echo "DESCRIPTION:"
     echo "  Prepare current system to run SO and UI."
     echo
-    echo "  PLATFORM_REPOSITORY (optional): name of the RIFT.ware repository."
     echo "  PLATFORM_VERSION (optional): version of the platform packages to be installed."
     echo
 }
@@ -79,15 +73,15 @@ function usage() {
 # Main block
 
 # enable the right repos
-echo "### INSTALLING RIFT platform ${PLATFORM_VERSION} from repository ${PLATFORM_REPOSITORY}"
+echo "### INSTALLING RIFT platform ${PLATFORM_VERSION}"
 
 curl http://repos.riftio.com/public/xenial-riftware-public-key | apt-key add -
-curl -o /etc/apt/sources.list.d/rift.list http://buildtracker.riftio.com/repo_file/ub16/${PLATFORM_REPOSITORY}/
+echo "deb https://artifactory.riftio.com/debian-OSM xenial main" >/etc/apt/sources.list.d/rift.list
 
 # Make the Rift repo a higher priority to work around version conflicts.
 cat <<EOF > /etc/apt/preferences.d/rift
 Package: *
-Pin: origin repos.riftio.com
+Pin: origin artifactory.riftio.com
 Pin-Priority: 600
 EOF
 
