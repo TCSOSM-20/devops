@@ -241,13 +241,22 @@ function configure_SOUI(){
 
     so_is_up $SO_CONTAINER_IP
 
-    #delete existing config agent (could be there on reconfigure)
-    curl -k --request DELETE \
+    #delete existing config agent if already configured
+    current=$(curl -k --request GET \
       --url https://$SO_CONTAINER_IP:8008/api/config/config-agent/account/osmjuju \
       --header 'accept: application/vnd.yang.data+json' \
       --header 'authorization: Basic YWRtaW46YWRtaW4=' \
       --header 'cache-control: no-cache' \
-      --header 'content-type: application/vnd.yang.data+json' &> /dev/null
+      --header 'content-type: application/vnd.yang.data+json' &> /dev/null)
+
+    if [ "$current" != "{}" ]; then
+        curl -k --request DELETE \
+        --url https://$SO_CONTAINER_IP:8008/api/config/config-agent/account/osmjuju \
+        --header 'accept: application/vnd.yang.data+json' \
+        --header 'authorization: Basic YWRtaW46YWRtaW4=' \
+        --header 'cache-control: no-cache' \
+        --header 'content-type: application/vnd.yang.data+json' &> /dev/null
+    fi
 
     result=$(curl -k --request POST \
       --url https://$SO_CONTAINER_IP:8008/api/config/config-agent \
