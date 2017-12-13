@@ -247,7 +247,7 @@ function configure_SOUI(){
       --header 'accept: application/vnd.yang.data+json' \
       --header 'authorization: Basic YWRtaW46YWRtaW4=' \
       --header 'cache-control: no-cache' \
-      --header 'content-type: application/vnd.yang.data+json' &> /dev/null)
+      --header 'content-type: application/vnd.yang.data+json' )
 
     if [ -n "$current" -a "$current" != "{}" ]; then
         curl -k --request DELETE \
