@@ -153,7 +153,7 @@ function so_is_up() {
     timelength=300
     while [ $time -le $timelength ]
     do
-        if [[ `curl -k -X GET   https://$SO_IP:8008/api/operational/vcs/info \
+        if [[ `curl -m 10 -k -X GET   https://$SO_IP:8008/api/operational/vcs/info \
                 -H 'accept: application/vnd.yang.data+json' \
                 -H 'authorization: Basic YWRtaW46YWRtaW4=' \
                 -H 'cache-control: no-cache' 2> /dev/null | jq  '.[].components.component_info[] | select(.component_name=="RW.Restconf")' 2>/dev/null | grep "RUNNING" | wc -l` -eq 1 ]]
@@ -249,7 +249,7 @@ function configure_SOUI(){
       --header 'cache-control: no-cache' \
       --header 'content-type: application/vnd.yang.data+json' &> /dev/null)
 
-    if [ "$current" != "{}" ]; then
+    if [ -n "$current" -a "$current" != "{}" ]; then
         curl -k --request DELETE \
         --url https://$SO_CONTAINER_IP:8008/api/config/config-agent/account/osmjuju \
         --header 'accept: application/vnd.yang.data+json' \
