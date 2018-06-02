@@ -724,7 +724,9 @@ function install_lightweight() {
     LWTEMPDIR="$(mktemp -d -q --tmpdir "installosmlight.XXXXXX")"
     trap 'rm -rf "${LWTEMPDIR}"' EXIT
     DEFAULT_IF=`route -n |awk '$1~/^0.0.0.0/ {print $8}'`
+    [ -z "$DEFAULT_IF" ] && FATAL "Not possible to determine the interface with the default route 0.0.0.0"
     DEFAULT_IP=`ip -o -4 a |grep ${DEFAULT_IF}|awk '{split($4,a,"/"); print a[1]}'`
+    [ -z "$DEFAULT_IP" ] && FATAL "Not possible to determine the IP address of the interface with the default route"
     DEFAULT_MTU=$(ip addr show ${DEFAULT_IF} | perl -ne 'if (/mtu\s(\d+)/) {print $1;}')
     if [ -z "$INSTALL_NOLXD" ]; then
         need_packages_lw="lxd"
