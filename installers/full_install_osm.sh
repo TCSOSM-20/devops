@@ -720,6 +720,7 @@ function deploy_perfmon() {
 function install_lightweight() {
     [ "$USER" == "root" ] && FATAL "You are running the installer as root. The installer is prepared to be executed as a normal user with sudo privileges."
     [ -z "$ASSUME_YES" ] && ! ask_user "The installation will configure LXD, install juju, install docker CE and init a docker swarm, as pre-requirements. Do you want to proceed (Y/n)? " y && echo "Cancelled!" && exit 1
+    track proceed
     echo "Installing lightweight build of OSM"
     LWTEMPDIR="$(mktemp -d -q --tmpdir "installosmlight.XXXXXX")"
     trap 'rm -rf "${LWTEMPDIR}"' EXIT
@@ -740,6 +741,7 @@ function install_lightweight() {
           || sudo apt-get install -y $need_packages_lw \
           || FATAL "failed to install $need_packages_lw"
     fi
+    track prereqok
     install_juju
     OSMLCM_VCA_HOST=`sg lxd -c "juju show-controller"|grep api-endpoints|awk -F\' '{print $2}'|awk -F\: '{print $1}'`
     OSMLCM_VCA_SECRET=`grep password ${HOME}/.local/share/juju/accounts.yaml |awk '{print $2}'`
