@@ -910,7 +910,7 @@ function install_lightweight() {
 
     # if no host is passed in, we need to install lxd/juju, unless explicilty asked not to
     if [ -z "$OSMLCM_VCA_HOST" ] && [ -z "$INSTALL_NOLXD" ]; then
-        need_packages_lw="lxd"
+        need_packages_lw="lxd snapd"
         echo -e "Checking required packages: $need_packages_lw"
         dpkg -l $need_packages_lw &>/dev/null \
           || ! echo -e "One or several required packages are not installed. Updating apt cache requires root privileges." \
