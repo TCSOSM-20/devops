@@ -119,8 +119,23 @@ if __name__=="__main__":
             vnfd_list = vnfd_descriptor["vnfd"]
             mgmt_iface = False
             for vnfd in vnfd_list:
+                vdu_list = vnfd["vdu"]
+                for vdu in vdu_list:
+                    interface_list = []
+                    external_interface_list = vdu.pop("external-interface", ())
+                    for external_interface in external_interface_list:
+                        if external_interface.get("virtual-interface", {}).get("type") == "OM-MGMT":
+                            raise KeyError(
+                                "Wrong 'Virtual-interface type': Deprecated 'OM-MGMT' value. Please, use 'VIRTIO' instead")
+                    interface_list = vdu.pop("interface", ())
+                    for interface in interface_list:
+                        if interface.get("virtual-interface", {}).get("type") == "OM-MGMT":
+                            raise KeyError(
+                                "Wrong 'Virtual-interface type': Deprecated 'OM-MGMT' value. Please, use 'VIRTIO' instead")
                 if vnfd.get("mgmt-interface"):
                     mgmt_iface = True
+                    if vnfd["mgmt-interface"].get("vdu-id"):
+                        raise KeyError("'mgmt-iface': Deprecated 'vdu-id' field. Please, use 'cp' field instead")
             if not mgmt_iface:
                 raise KeyError("'mgmt-iface' is a mandatory field and it is not defined")
             myvnfd = vnfd_catalog.vnfd()
