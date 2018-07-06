@@ -661,6 +661,11 @@ function deploy_lightweight() {
 }
 
 function deploy_elk() {
+    echo "Pulling docker images for ELK"
+    sg docker -c "docker pull docker.elastic.co/elasticsearch/elasticsearch-oss:6.2.3" || FATAL "cannot get elasticsearch docker image"
+    sg docker -c "docker pull docker.elastic.co/logstash/logstash-oss:6.2.3" || FATAL "cannot get logstash docker image"
+    sg docker -c "docker pull docker.elastic.co/kibana/kibana-oss:6.2.3" || FATAL "cannot get kibana docker image"
+    echo "Finished pulling elk docker images"
     sudo mkdir -p /etc/osm/docker/osm_elk
     sudo cp -b ${OSM_DEVOPS}/installers/docker/osm_elk/* /etc/osm/docker/osm_elk
     remove_stack osm_elk
@@ -668,11 +673,11 @@ function deploy_elk() {
     sg docker -c "docker stack deploy -c /etc/osm/docker/osm_elk/docker-compose.yml osm_elk"
     echo "Waiting for ELK stack to be up and running"
     time=0
-    step=2
-    timelength=20
+    step=5
+    timelength=40
     elk_is_up=1
     while [ $time -le $timelength ]; do
-        if [[ $(curl -XGET http://127.0.0.1:5601/status -I | grep "HTTP/1.1 200 OK" | wc -l ) -eq 1 ]]; then
+        if [[ $(curl -f -XGET http://127.0.0.1:5601/status -I 2>/dev/null | grep "HTTP/1.1 200 OK" | wc -l ) -eq 1 ]]; then
             elk_is_up=0
             break
         fi
@@ -684,11 +689,11 @@ function deploy_elk() {
         #Create index pattern
         curl -f -XPOST -H "Content-Type: application/json" -H "kbn-xsrf: anything" \
           "http://127.0.0.1:5601/api/saved_objects/index-pattern/logstash-*" \
-          -d"{\"attributes\":{\"title\":\"logstash-*\",\"timeFieldName\":\"@timestamp\"}}"
+          -d"{\"attributes\":{\"title\":\"logstash-*\",\"timeFieldName\":\"@timestamp\"}}" 2>/dev/null
         #Make it the default index
-        curl -XPOST -H "Content-Type: application/json" -H "kbn-xsrf: anything" \
+        curl -f -XPOST -H "Content-Type: application/json" -H "kbn-xsrf: anything" \
           "http://127.0.0.1:5601/api/kibana/settings/defaultIndex" \
-          -d"{\"value\":\"logstash-*\"}"
+          -d"{\"value\":\"logstash-*\"}" 2>/dev/null
     else
         echo "Cannot connect to Kibana to create index pattern."
         echo "Once Kibana is running, you can use the following instructions to create index pattern:"
@@ -704,6 +709,10 @@ function deploy_elk() {
 }
 
 function deploy_perfmon() {
+    echo "Pulling docker images for PM (Grafana and Prometheus)"
+    sg docker -c "docker pull prom/prometheus" || FATAL "cannot get prometheus docker image"
+    sg docker -c "docker pull grafana/grafana" || FATAL "cannot get grafana docker image"
+    echo "Finished pulling PM docker images"
     echo "Generating osm/kafka-exporter docker image"
     sg docker -c "docker build ${OSM_DEVOPS}/installers/docker/osm_metrics/kafka-exporter -f ${OSM_DEVOPS}/installers/docker/osm_metrics/kafka-exporter/Dockerfile -t osm/kafka-exporter --no-cache" || FATAL "cannot build kafka-exporter docker image"
     echo "Finished generation of osm/kafka-exporter docker image"
