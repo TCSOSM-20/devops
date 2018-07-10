@@ -21,7 +21,17 @@
     },
     {
         "type": "shell",
-        "script": "scripts/juju-setup.sh"
+        "inline": ["echo 'vagrant' | sudo shutdown -r now"],
+        "expect_disconnect": "true"
+    },
+    {
+        "type": "shell",
+        "script": "scripts/juju-setup.sh",
+        "pause_before": "10s"
+    },
+    {
+        "type": "shell",
+        "script": "scripts/cleanup.sh"
     }
   ],
   "builders": [
@@ -54,7 +64,7 @@
         "<enter><wait>"
       ],
       "boot_wait": "10s",
-      "disk_size": 15360,
+      "disk_size": 20480,
       "guest_os_type": "Ubuntu_64",
       "headless": true,
       "http_directory": "http",
@@ -71,7 +81,8 @@
       "shutdown_command": "echo 'vagrant'|sudo -S shutdown -P now",
       "guest_additions_path": "VBoxGuestAdditions_{{.Version}}.iso",
       "virtualbox_version_file": ".vbox_version",
-      "vm_name": "packer-ubuntu-16.04-amd64-juju",
+      "output_directory": "jujubase-{{timestamp}}",
+      "vm_name": "xenial-jujubase",
       "vboxmanage": [
         [
           "modifyvm",
@@ -86,6 +97,13 @@
           "2"
         ]
       ]
+    }
+  ],
+  "post-processors": [
+    {
+      "output": "jujubase-{{timestamp}}/{{.Provider}}-jujubase.box",
+      "type": "vagrant",
+      "keep_input_artifact": true
     }
   ]
 }
