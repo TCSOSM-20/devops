@@ -30,7 +30,7 @@ function usage(){
     echo -e "     --elk_stack:    additionally deploy an ELK docker stack for event logging"
     echo -e "     --pm_stack:     additionally deploy a Prometheus+Grafana stack for performance monitoring (PM)"
     echo -e "     -m <MODULE>:    install OSM but only rebuild the specified docker images (RO, LCM, NBI, LW-UI, MON, KAFKA, MONGO, NONE)"
-    echo -e "     -o <ADDON>:     do not install OSM, but ONLY one of the addons (vimemu, elk_stack, pm_stack) (assumes OSM is already installed)"
+    echo -e "     -o <ADDON>:     ONLY (un)installs one of the addons (vimemu, elk_stack, pm_stack)"
     echo -e "     -D <devops path> use local devops installation path"
     echo -e "     --nolxd:        do not install and configure LXD, allowing unattended installations (assumes LXD is already installed and confifured)"
     echo -e "     --nodocker:     do not install docker, do not initialize a swarm (assumes docker is already installed and a swarm has been initialized)"
@@ -98,24 +98,43 @@ function remove_stack() {
 
 #Uninstall lightweight OSM: remove dockers
 function uninstall_lightweight() {
-    echo -e "\nUninstalling lightweight OSM"
-    remove_stack osm
-    echo "Now osm docker images and volumes will be deleted"
-    newgrp docker << EONG
-    docker image rm osm/ro
-    docker image rm osm/lcm
-    docker image rm osm/light-ui
-    docker image rm osm/nbi
-    docker image rm osm/mon
-    docker image rm osm/pm
-    docker volume rm osm_mon_db
-    docker volume rm osm_mongo_db
-    docker volume rm osm_osm_packages
-    docker volume rm osm_ro_db
+    if [ -n "$INSTALL_ONLY" ]; then
+        if [ -n "$INSTALL_ELK" ]; then
+            echo -e "\nUninstalling OSM ELK stack"
+            remove_stack osm_elk
+            sudo rm -rf /etc/osm/docker/osm_elk
+        fi
+        if [ -n "$INSTALL_PERFMON" ]; then
+            echo -e "\nUninstalling OSM Performance Monitoring stack"
+            remove_stack osm_metrics
+            sg docker -c "docker image rm osm/kafka-exporter"
+            sudo rm -rf /etc/osm/docker/osm_metrics
+        fi
+    else
+        echo -e "\nUninstalling OSM"
+        remove_stack osm
+        remove_stack osm_elk
+        remove_stack osm_metrics
+        echo "Now osm docker images and volumes will be deleted"
+        newgrp docker << EONG
+        docker image rm osm/ro
+        docker image rm osm/lcm
+        docker image rm osm/light-ui
+        docker image rm osm/nbi
+        docker image rm osm/mon
+        docker image rm osm/pm
+        docker image rm osm/kafka-exporter
+        docker volume rm osm_mon_db
+        docker volume rm osm_mongo_db
+        docker volume rm osm_osm_packages
+        docker volume rm osm_ro_db
 EONG
-    echo "Removing /etc/osm and /var/log/osm files"
-    rm -rf /etc/osm
-    rm -rf /var/log/osm
+        echo "Removing /etc/osm and /var/log/osm files"
+        sudo rm -rf /etc/osm
+        sudo rm -rf /var/log/osm
+    fi
+    echo "Some docker images will be kept in case they are used by other docker stacks"
+    echo "To remove them, just run 'docker image prune' in a terminal"
     return 0
 }
 
