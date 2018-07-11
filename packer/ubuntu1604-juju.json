@@ -34,6 +34,9 @@
         "script": "scripts/cleanup.sh"
     }
   ],
+  "variables": {
+    "build_dir": "jujubase-{{timestamp}}"
+  },
   "builders": [
     {
       "type": "virtualbox-iso",
@@ -64,7 +67,7 @@
         "<enter><wait>"
       ],
       "boot_wait": "10s",
-      "disk_size": 20480,
+      "disk_size": 40000,
       "guest_os_type": "Ubuntu_64",
       "headless": true,
       "http_directory": "http",
@@ -81,7 +84,7 @@
       "shutdown_command": "echo 'vagrant'|sudo -S shutdown -P now",
       "guest_additions_path": "VBoxGuestAdditions_{{.Version}}.iso",
       "virtualbox_version_file": ".vbox_version",
-      "output_directory": "jujubase-{{timestamp}}",
+      "output_directory": "{{user `build_dir`}}",
       "vm_name": "xenial-jujubase",
       "vboxmanage": [
         [
@@ -101,7 +104,7 @@
   ],
   "post-processors": [
     {
-      "output": "jujubase-{{timestamp}}/{{.Provider}}-jujubase.box",
+      "output": "{{user `build_dir`}}/{{.Provider}}-jujubase.box",
       "type": "vagrant",
       "keep_input_artifact": true
     }

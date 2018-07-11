@@ -20,6 +20,7 @@
     "osm_install_options": "--vimemu",
     "input_ovf": "output-virtualbox-iso/packer-ubuntu-16.04-amd64-juju.ovf",
     "vm_name": "xenial-osm"
+    "build_dir": "osm-{{timestamp}}"
   },
   "builders": [
     {
@@ -33,7 +34,7 @@
       "shutdown_command": "echo 'vagrant'|sudo -S shutdown -P now",
       "virtualbox_version_file": ".vbox_version",
       "vm_name": "{{user `vm_name`}}",
-      "output_directory": "osm-{{timestamp}}",
+      "output_directory": "{{user `build_dir`}}",
       "vboxmanage": [
         [
           "modifyvm",
@@ -53,7 +54,7 @@
   "post-processors": [
     [
       {
-	"output": "osm-{{timestamp}}/{{.Provider}}-osm.box",
+	"output": "{{user `build_dir`}}/{{.Provider}}-osm.box",
 	"type": "vagrant",
 	"keep_input_artifact": true
       },
