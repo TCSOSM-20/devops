@@ -19,7 +19,7 @@
   "variables": {
     "osm_install_options": "--vimemu",
     "input_ovf": "output-virtualbox-iso/packer-ubuntu-16.04-amd64-juju.ovf",
-    "vm_name": "xenial-osm"
+    "vm_name": "xenial-osm",
     "build_dir": "osm-{{timestamp}}"
   },
   "builders": [
