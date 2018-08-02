@@ -586,6 +586,11 @@ function install_juju() {
 
 function generate_docker_images() {
     echo "Pulling and generating docker images"
+    _build_from=$COMMIT_ID
+    [ -z "$_build_from" ] && _build_from="master"
+
+    echo "OSM Docker images generated from $_build_from"
+
     if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q KAFKA ; then
         sg docker -c "docker pull wurstmeister/zookeeper" || FATAL "cannot get zookeeper docker image"
         sg docker -c "docker pull wurstmeister/kafka" || FATAL "cannot get kafka docker image"
@@ -998,20 +1003,6 @@ fi
 # if develop, we force master
 [ -z "$COMMIT_ID" ] && [ -n "$DEVELOP" ] && COMMIT_ID="master"
 
-# forcing source from master removed. Now only install from source when explicit
-# [ -n "$COMMIT_ID" ] && [ "$COMMIT_ID" == "master" ] && INSTALL_FROM_SOURCE="y"
-
-if [ -z "$OSM_DEVOPS" ]; then
-    if [ -n "$TEST_INSTALLER" ]; then
-        echo -e "\nUsing local devops repo for OSM installation"
-        TEMPDIR="$(dirname $(realpath $(dirname $0)))"
-    else
-        echo -e "\nCreating temporary dir for OSM installation"
-        TEMPDIR="$(mktemp -d -q --tmpdir "installosm.XXXXXX")"
-        trap 'rm -rf "$TEMPDIR"' EXIT
-    fi
-fi
-
 need_packages="git jq wget curl tar"
 echo -e "Checking required packages: $need_packages"
 dpkg -l $need_packages &>/dev/null \
@@ -1024,25 +1015,28 @@ dpkg -l $need_packages &>/dev/null \
   || FATAL "failed to install $need_packages"
 
 if [ -z "$OSM_DEVOPS" ]; then
-    if [ -z "$TEST_INSTALLER" ]; then
-        echo -e "\nCloning devops repo temporarily"
-        git clone https://osm.etsi.org/gerrit/osm/devops.git $TEMPDIR
-        RC_CLONE=$?
-    fi
+    if [ -n "$TEST_INSTALLER" ]; then
+        echo -e "\nUsing local devops repo for OSM installation"
+        OSM_DEVOPS="$(dirname $(realpath $(dirname $0)))"
+    else
+        echo -e "\nCreating temporary dir for OSM installation"
+        OSM_DEVOPS="$(mktemp -d -q --tmpdir "installosm.XXXXXX")"
+        trap 'rm -rf "$OSM_DEVOPS"' EXIT
 
-    echo -e "\nGuessing the current stable release"
-    LATEST_STABLE_DEVOPS=`git -C $TEMPDIR tag -l v[0-9].* | sort -V | tail -n1`
-    [ -z "$COMMIT_ID" ] && [ -z "$LATEST_STABLE_DEVOPS" ] && echo "Could not find the current latest stable release" && exit 0
-    echo "Latest tag in devops repo: $LATEST_STABLE_DEVOPS"
-    [ -z "$COMMIT_ID" ] && [ -n "$LATEST_STABLE_DEVOPS" ] && COMMIT_ID="tags/$LATEST_STABLE_DEVOPS"
+        git clone https://osm.etsi.org/gerrit/osm/devops.git $OSM_DEVOPS
 
-    if [ -n "$RELEASE_DAILY" ]; then
-        echo "Using master/HEAD devops"
-        git -C $TEMPDIR checkout master
-    elif [ -z "$TEST_INSTALLER" ]; then
-        git -C $TEMPDIR checkout tags/$LATEST_STABLE_DEVOPS
+        if [ -z "$COMMIT_ID" ]; then
+            echo -e "\nGuessing the current stable release"
+            LATEST_STABLE_DEVOPS=`git -C $OSM_DEVOPS tag -l v[0-9].* | sort -V | tail -n1`
+            [ -z "$LATEST_STABLE_DEVOPS" ] && echo "Could not find the current latest stable release" && exit 0
+
+            echo "Latest tag in devops repo: $LATEST_STABLE_DEVOPS"
+            COMMIT_ID="tags/$LATEST_STABLE_DEVOPS"
+        else
+            echo -e "\nDEVOPS Using commit $COMMIT_ID"
+        fi
+        git -C $OSM_DEVOPS checkout $COMMIT_ID
     fi
-    OSM_DEVOPS=$TEMPDIR
 fi
 
 OSM_JENKINS="$OSM_DEVOPS/jenkins"
