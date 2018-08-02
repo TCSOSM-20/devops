@@ -16,7 +16,7 @@ while true; do
     sleep 2
 done
 echo "OSM is up"
-sleep 10 
+sleep 10
 export VIMEMU_HOSTNAME=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' vim-emu)
 osm vim-create --name vim-emulator --user username --password password --auth_url http://$VIMEMU_HOSTNAME:6001/v2.0 --tenant tenantName --account_type openstack
 osm vnfd-create /home/vagrant/vim-emu/examples/vnfs/ping.tar.gz
@@ -46,4 +46,4 @@ StandardOutput=journal+console
 WantedBy=multi-user.target
 EOF
 
-#systemctl enable osm-vimemu-setup.service
+systemctl enable osm-vimemu-setup.service
