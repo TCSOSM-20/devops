@@ -129,7 +129,7 @@ report_dir:
 
 _run_test: report_dir
 	-$(Q)py.test \
-        --osmhost $(OSM_HOSTNAME) \
+        --osmhost $(OSM_HOSTNAME) --sol005 \
         $(OPTION_RO_HOSTNAME) \
         $(OPTION_OS_AUTH_URL) \
         $(OPTION_OS_USERNAME) \
