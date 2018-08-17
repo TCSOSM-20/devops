@@ -26,7 +26,7 @@ OSM_HOSTNAME ?=
 OSM_RO_HOSTNAME ?=
 OS_AUTH_URL ?=
 OS_USERNAME ?=
-OS_PASSWORD_NAME ?=
+OS_PASSWORD ?=
 OS_PROJECT_NAME ?=
 VIM_CONFIG ?=
 VCD_AUTH_URL ?=
@@ -34,6 +34,7 @@ VCD_USERNAME ?=
 VCD_PASSWORD ?=
 VCD_TENANT_NAME ?=
 VCD_ORGANIZATION ?=
+VIM_EMU ?=
 
 TOPDIR=$(shell readlink -f .|sed -e 's/systest.*//')
 
@@ -169,11 +170,16 @@ images/cache/Fedora-x86_64-20-20131211.1-sda-pong.qcow2:
 OSM_IMAGE_PREFIX ?=
 sys_path ?= $(TOPDIR)systest
 
+ifdef VIM_EMU 
+# VIM emulator does not need images pushed to glance.
+else
 ifdef OS_AUTH_URL
 images/%.qcow2 images/%.img:
 	$(Q)openstack image show $(OSM_IMAGE_PREFIX)$(shell basename $@) || \
           sh -c "make images/cache/$(shell basename $@) && openstack image create --file images/cache/$(shell basename $@) $(OSM_IMAGE_PREFIX)$(shell basename $@)"
 endif
+endif
+
 ifdef VCD_AUTH_URL
 images/%.img:
 	ovf_converter images/cache/$(OSM_IMAGE_PREFIX)$(shell basename $@) -n cirros

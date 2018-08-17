@@ -659,8 +659,8 @@ function generate_docker_env_files() {
     if [ ! -f /etc/osm/docker/ro.env ]; then
         echo "RO_DB_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}" |sudo tee /etc/osm/docker/ro.env
     fi
-    echo "OS_NOTIFIER_URI=http://${DEFAULT_IP}:8662" |sudo tee ${OSM_DEVOPS}/installers/docker/mon.env
-    cmp_overwrite ${OSM_DEVOPS}/installers/docker/mon.env /etc/osm/docker/mon.env
+    echo "OS_NOTIFIER_URI=http://${DEFAULT_IP}:8662" |tee /tmp/mon.env
+    cmp_overwrite /tmp/mon.env /etc/osm/docker/mon.env
     echo "Finished generation of docker env files"
 }
 
