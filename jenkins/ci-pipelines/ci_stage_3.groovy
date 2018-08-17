@@ -235,15 +235,17 @@ node("${params.NODE}") {
     finally {
         sh "docker stop ${http_server_name}"
 
-        if (error) {
-            if ( !params.SAVE_CONTAINER_ON_FAIL ) {
-                sh "lxc delete ${container_name} --force"
+        if ( params.DO_INSTALL ) {
+            if (error) {
+                if ( !params.SAVE_CONTAINER_ON_FAIL ) {
+                    sh "lxc delete ${container_name} --force"
+                }
+                throw error 
             }
-            throw error 
-        }
-        else {
-            if ( !params.SAVE_CONTAINER_ON_PASS ) {
-                sh "lxc delete ${container_name} --force"
+            else {
+                if ( !params.SAVE_CONTAINER_ON_PASS ) {
+                    sh "lxc delete ${container_name} --force"
+                }
             }
         }
     }
