@@ -34,6 +34,8 @@ properties([
         booleanParam(defaultValue: false, description: '', name: 'SAVE_CONTAINER_ON_FAIL'),
         booleanParam(defaultValue: false, description: '', name: 'SAVE_CONTAINER_ON_PASS'),
         booleanParam(defaultValue: false, description: '', name: 'DO_STAGE_4'),
+        booleanParam(defaultValue: false, description: '', name: 'DO_INSTALL'),
+        booleanParam(defaultValue: false, description: '', name: 'DO_SMOKE'),
         booleanParam(defaultValue: false, description: '', name: 'SAVE_ARTIFACTS_OVERRIDE'),
     ])
 ])
@@ -69,7 +71,7 @@ node("${params.NODE}") {
             // grab all stable upstream builds based on the
 
             dir("${RELEASE}") {
-                def list = ["SO", "UI", "RO", "openvim", "osmclient", "IM", "devops", "MON", "N2VC", "NBI", "common" ]
+                def list = ["RO", "openvim", "osmclient", "IM", "devops", "MON", "N2VC", "NBI", "common", "LCM"]
                 for (component in list) {
                     step ([$class: 'CopyArtifact',
                            projectName: "${component}${upstream_main_job}/${GERRIT_BRANCH}"])
@@ -145,51 +147,55 @@ node("${params.NODE}") {
     error = null
 
     try {
-        stage("Install") {
+        if ( params.DO_INSTALL ) {
+            stage("Install") {
 
-            //will by default always delete containers on complete
-            //sh "jenkins/system/delete_old_containers.sh ${container_name_prefix}"
+                //will by default always delete containers on complete
+                //sh "jenkins/system/delete_old_containers.sh ${container_name_prefix}"
 
-            commit_id = ''
-            repo_distro = ''
-            repo_key_name = ''
-            release = ''
+                commit_id = ''
+                repo_distro = ''
+                repo_key_name = ''
+                release = ''
 
-            if ( params.COMMIT_ID )
-            {
-                commit_id = "-b ${params.COMMIT_ID}"
+                if ( params.COMMIT_ID )
+                {
+                    commit_id = "-b ${params.COMMIT_ID}"
+                }
+
+                if ( params.REPO_DISTRO )
+                {
+                    repo_distro = "-r ${params.REPO_DISTRO}"
+                }
+
+                if ( params.REPO_KEY_NAME )
+                {
+                    repo_key_name = "-k ${params.REPO_KEY_NAME}"
+                }
+
+                if ( params.RELEASE )
+                {
+                    release = "-R ${params.RELEASE}"
+                }
+         
+                sh """
+                    export OSM_USE_LOCAL_DEVOPS=true
+                    jenkins/host/start_build system --build-container ${container_name} \
+                                                    ${commit_id} \
+                                                    ${repo_distro} \
+                                                    ${repo_base_url} \
+                                                    ${repo_key_name} \
+                                                    ${release} \
+                                                    ${params.BUILD_FROM_SOURCE}
+                   """
             }
-
-            if ( params.REPO_DISTRO )
-            {
-                repo_distro = "-r ${params.REPO_DISTRO}"
-            }
-
-            if ( params.REPO_KEY_NAME )
-            {
-                repo_key_name = "-k ${params.REPO_KEY_NAME}"
-            }
-
-            if ( params.RELEASE )
-            {
-                release = "-R ${params.RELEASE}"
-            }
-     
-            sh """
-                export OSM_USE_LOCAL_DEVOPS=true
-                jenkins/host/start_build system --build-container ${container_name} \
-                                                ${commit_id} \
-                                                ${repo_distro} \
-                                                ${repo_base_url} \
-                                                ${repo_key_name} \
-                                                ${release} \
-                                                ${params.BUILD_FROM_SOURCE}
-               """
         }
 
-        stage("Smoke") {
-            ci_helper.systest_run(container_name, 'smoke')
-            junit '*.xml'
+        if ( params.DO_SMOKE ) {
+            stage("Smoke") {
+                ci_helper.systest_run(container_name, 'smoke')
+                junit '*.xml'
+            }
         }
 
         stage_4_archive = false
