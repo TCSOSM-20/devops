@@ -148,10 +148,8 @@ node("${params.NODE}") {
 
     try {
         if ( params.DO_INSTALL ) {
-            stage("Install") {
 
-                //will by default always delete containers on complete
-                //sh "jenkins/system/delete_old_containers.sh ${container_name_prefix}"
+            stage("Install") {
 
                 commit_id = ''
                 repo_distro = ''
@@ -179,14 +177,23 @@ node("${params.NODE}") {
                 }
          
                 sh """
-                    export OSM_USE_LOCAL_DEVOPS=true
-                    jenkins/host/start_build system --build-container ${container_name} \
-                                                    ${commit_id} \
-                                                    ${repo_distro} \
-                                                    ${repo_base_url} \
-                                                    ${repo_key_name} \
-                                                    ${release} \
-                                                    ${params.BUILD_FROM_SOURCE}
+                    OSM_INSTALL_OPTIONS+=(${commit_id})
+                    OSM_INSTALL_OPTIONS+=(${repo_distro})
+                    OSM_INSTALL_OPTIONS+=(${repo_key_name})
+                    OSM_INSTALL_OPTIONS+=(${release})
+                    OSM_INSTALL_OPTIONS+=(--vimemu)
+                    JUJUBASE_DIR="/var/jenkins/vagrant/jujubase"
+
+                    if [ ! -d "$JUJUBASE_DIR" ]; then
+                        PACKER_LOG=1 packer build -var build_dir="$JUJUBASE_DIR" packer/ubuntu1604-juju.json
+                    fi
+
+                    BASE_DIR="/var/jenkins/vagrant/$JOB_NAME/"
+                    OSMBASE_DIR="$BASE_DIR/osm"
+
+                    if [ ! -d "$OSMBASE_DIR" ]; then
+                        PACKER_LOG=1 packer build -var osm_install_options="$OSM_INSTALL_OPTIONS[*]" -var build_dir="$BASE_DIR/osm" -var input_ovf="$JUJUBASE_DIR/xenial-jujubase.ovf" packer/ubuntu1604-ovf-osm-dev.json
+                    fi
                    """
             }
         }
