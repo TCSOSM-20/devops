@@ -180,7 +180,7 @@ node("${params.NODE}") {
          
                 sh """
                     export OSM_USE_LOCAL_DEVOPS=true
-                    jenkins/host/start_build system --build-container ${container_name} \
+                    installers/full_install_osm.sh -y -s ${container_name} --nodocker --nojuju --nohostports \
                                                     ${commit_id} \
                                                     ${repo_distro} \
                                                     ${repo_base_url} \
