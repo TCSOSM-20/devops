@@ -40,6 +40,14 @@ properties([
     ])
 ])
 
+def uninstall_osm(stackName) {
+    sh """
+         export OSM_USE_LOCAL_DEVOPS=true
+         export PATH=$PATH:/snap/bin
+         installers/full_install_osm.sh -y -s ${stackName} --test --nolxd --nodocker --nojuju --nohostports --nohostclient --uninstall
+       """
+}
+
 node("${params.NODE}") {
 
     sh 'env'
@@ -179,8 +187,8 @@ node("${params.NODE}") {
                 }
          
                 sh """
-                    export OSM_USE_LOCAL_DEVOPS=true
-                    jenkins/host/start_build system --build-container ${container_name} \
+                    export PATH=$PATH:/snap/bin
+                    installers/full_install_osm.sh -y -s ${container_name} --test --nolxd --nodocker --nojuju --nohostports --nohostclient \
                                                     ${commit_id} \
                                                     ${repo_distro} \
                                                     ${repo_base_url} \
@@ -234,17 +242,18 @@ node("${params.NODE}") {
     }
     finally {
         sh "docker stop ${http_server_name}"
+        sh "docker rm ${http_server_name}"
 
         if ( params.DO_INSTALL ) {
             if (error) {
                 if ( !params.SAVE_CONTAINER_ON_FAIL ) {
-                    sh "lxc delete ${container_name} --force"
+                    uninstall_osm container_name
                 }
                 throw error 
             }
             else {
                 if ( !params.SAVE_CONTAINER_ON_PASS ) {
-                    sh "lxc delete ${container_name} --force"
+                    uninstall_osm container_name
                 }
             }
         }
