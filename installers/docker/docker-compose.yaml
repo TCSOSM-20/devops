@@ -20,7 +20,7 @@ services:
   kafka:
     image: wurstmeister/kafka
     ports:
-      - "9092:9092"
+      - "9092"
     networks:
       - netOSM
     environment:
@@ -49,7 +49,7 @@ services:
       OSMNBI_DATABASE_HOST: mongo
       OSMNBI_MESSAGE_HOST: kafka
     ports:
-      - "9999:9999"
+      - "${OSM_NBI_PORTS:-9999:9999}"
     #depends_on:
     #  - kafka
     #  - mongo
@@ -90,7 +90,7 @@ services:
     #depends_on:
     #  - ro-db
     ports:
-      - "9090:9090"
+      - "${OSM_RO_PORTS:-9090:9090}"
   mon:
     image: osm/mon
     networks:
@@ -105,7 +105,7 @@ services:
     #depends_on:
     #  - kafka
     ports:
-      - "8662:8662"
+      - "8662"
   pm:
     image: osm/pm
     networks:
@@ -124,5 +124,4 @@ services:
     #depends_on:
     #  - nbi
     ports:
-      - "80:80"
-
+      - "${OSM_UI_PORTS:-80:80}"
