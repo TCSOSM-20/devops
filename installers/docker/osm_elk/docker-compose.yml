@@ -37,4 +37,4 @@ services:
 networks:
   elk:
     external:
-      name: netOSM
+      name: ${OSM_NETWORK:-netOSM}

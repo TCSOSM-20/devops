@@ -40,6 +40,7 @@ function usage(){
     echo -e "     --nojuju:       do not juju, assumes already installed"
     echo -e "     --nodockerbuild:do not build docker images (use existing locally cached images)"
     echo -e "     --nohostports:  do not expose docker ports to host (useful for creating multiple instances of osm on the same host)"
+    echo -e "     --nohostclient: do not install the osmclient"
     echo -e "     --uninstall:    uninstall OSM: remove the containers and delete NAT rules"
     echo -e "     --source:       install OSM from source code using the latest stable tag"
     echo -e "     --develop:      (deprecated, use '-b master') install OSM from source code using the master branch"
@@ -101,6 +102,19 @@ function parse_juju_password {
    }'
 }
 
+function remove_volumes() {
+    stack=$1
+    volumes="mongo_db mon_db osm_packages ro_db"
+    for volume in $volumes; do
+        sg docker -c "docker volume rm ${stack}_${volume}"
+    done
+}
+
+function remove_network() {
+    stack=$1
+    sg docker -c "docker network rm net${stack}"
+}
+
 function remove_stack() {
     stack=$1
     if sg docker -c "docker stack ps ${stack}" ; then
@@ -153,11 +167,9 @@ function uninstall_lightweight() {
         docker image rm osm/mon
         docker image rm osm/pm
         docker image rm osm/kafka-exporter
-        docker volume rm osm_mon_db
-        docker volume rm osm_mongo_db
-        docker volume rm osm_osm_packages
-        docker volume rm osm_ro_db
 EONG
+        remove_volumes $OSM_STACK_NAME
+        remove_network $OSM_STACK_NAME
         echo "Removing $OSM_DOCKER_WORK_DIR"
         rm -rf $OSM_DOCKER_WORK_DIR
     fi
@@ -516,7 +528,6 @@ function install_osmclient(){
     CLIENT_RELEASE=${RELEASE#"-R "}
     CLIENT_REPOSITORY_KEY="OSM%20ETSI%20Release%20Key.gpg"
     CLIENT_REPOSITORY=${REPOSITORY#"-r "}
-    [ -z "$REPOSITORY_BASE" ] && REPOSITORY_BASE="-u https://osm-download.etsi.org/repository/osm/debian"
     CLIENT_REPOSITORY_BASE=${REPOSITORY_BASE#"-u "}
     key_location=$CLIENT_REPOSITORY_BASE/$CLIENT_RELEASE/$CLIENT_REPOSITORY_KEY
     curl $key_location | sudo apt-key add -
@@ -626,6 +637,11 @@ function generate_docker_images() {
 
     echo "OSM Docker images generated from $_build_from"
 
+    BUILD_ARGS+=(--build-arg REPOSITORY="$REPOSITORY")
+    BUILD_ARGS+=(--build-arg RELEASE="$RELEASE")
+    BUILD_ARGS+=(--build-arg REPOSITORY_KEY="$REPOSITORY_KEY")
+    BUILD_ARGS+=(--build-arg REPOSITORY_BASE="$REPOSITORY_BASE")
+    
     if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q KAFKA ; then
         sg docker -c "docker pull wurstmeister/zookeeper" || FATAL "cannot get zookeeper docker image"
         sg docker -c "docker pull wurstmeister/kafka" || FATAL "cannot get kafka docker image"
@@ -659,6 +675,9 @@ function generate_docker_images() {
         git -C ${LWTEMPDIR} clone https://osm.etsi.org/gerrit/osm/LW-UI
         git -C ${LWTEMPDIR}/LW-UI checkout ${COMMIT_ID}
         sg docker -c "docker build ${LWTEMPDIR}/LW-UI -t osm/light-ui -f ${LWTEMPDIR}/LW-UI/Dockerfile --no-cache" || FATAL "cannot build LW-UI docker image"
+    fi
+    if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q LW-osmclient; then
+        sg docker -c "docker build -t osm/osmclient ${BUILD_ARGS[@]} -f $OSM_DEVOPS/docker/osmclient ."
     fi
     echo "Finished generation of docker images"
 }
@@ -694,7 +713,16 @@ function generate_docker_env_files() {
         echo "RO_DB_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}" |tee $OSM_DOCKER_WORK_DIR/ro.env
     fi
     echo "OS_NOTIFIER_URI=http://${DEFAULT_IP}:8662" |tee $OSM_DOCKER_WORK_DIR/mon.env
+
     echo "Finished generation of docker env files"
+}
+
+function generate_osmclient_script () {
+    cat >"$OSM_DOCKER_WORK_DIR/osm" <<-EOF
+		docker run -ti --network net${OSM_STACK_NAME} osm/osmclient
+	EOF
+    chmod +x "$OSM_DOCKER_WORK_DIR/osm"
+    echo "osmclient sidecar container can be found at: $OSM_DOCKER_WORK_DIR/osm"
 }
 
 function init_docker_swarm() {
@@ -704,15 +732,18 @@ function init_docker_swarm() {
       sg docker -c "docker network create --subnet ${DOCKER_GW_NET} --opt com.docker.network.bridge.name=docker_gwbridge --opt com.docker.network.bridge.enable_icc=false --opt com.docker.network.bridge.enable_ip_masquerade=true --opt com.docker.network.driver.mtu=${DEFAULT_MTU} docker_gwbridge"
     fi
     sg docker -c "docker swarm init --advertise-addr ${DEFAULT_IP}"
-    sg docker -c "docker network create --driver=overlay --attachable --opt com.docker.network.driver.mtu=${DEFAULT_MTU} netOSM"
     return 0
 }
 
-function deploy_lightweight() {
-    echo "Deploying lightweight build"
-    [ -n "$INSTALL_NODOCKER" ] || init_docker_swarm
-    remove_stack $OSM_STACK_NAME
+function create_docker_network() {
+    echo "creating network"
+    sg docker -c "docker network create --driver=overlay --attachable --opt com.docker.network.driver.mtu=${DEFAULT_MTU} net${OSM_STACK_NAME}"
+    echo "creating network DONE"
+}
 
+function deploy_lightweight() {
+
+    echo "Deploying lightweight build"
     OSM_NBI_PORT=9999
     OSM_RO_PORT=9090
     OSM_UI_PORT=80
@@ -727,10 +758,11 @@ function deploy_lightweight() {
         OSM_PORTS+=(OSM_UI_PORTS=$OSM_UI_PORT:$OSM_UI_PORT)
     fi
     echo "export ${OSM_PORTS[@]}" > $OSM_DOCKER_WORK_DIR/osm_ports.sh
+    echo "export OSM_NETWORK=net${OSM_STACK_NAME}" >> $OSM_DOCKER_WORK_DIR/osm_ports.sh
 
-    pushd $OSM_DOCKER_WORK_DIR > /dev/null
+    pushd $OSM_DOCKER_WORK_DIR
     sg docker -c "source ./osm_ports.sh; docker stack deploy -c $OSM_DOCKER_WORK_DIR/docker-compose.yaml $OSM_STACK_NAME"
-    popd > /dev/null
+    popd
 
     echo "Finished deployment of lightweight build"
 }
@@ -745,7 +777,7 @@ function deploy_elk() {
     cp -b ${OSM_DEVOPS}/installers/docker/osm_elk/* $OSM_DOCKER_WORK_DIR/osm_elk
     remove_stack osm_elk
     echo "Deploying ELK stack"
-    sg docker -c "docker stack deploy -c $OSM_DOCKER_WORK_DIR/osm_elk/docker-compose.yml osm_elk"
+    sg docker -c "OSM_NETWORK=net${OSM_STACK_NAME} docker stack deploy -c $OSM_DOCKER_WORK_DIR/osm_elk/docker-compose.yml osm_elk"
     echo "Waiting for ELK stack to be up and running"
     time=0
     step=5
@@ -796,7 +828,7 @@ function deploy_perfmon() {
     cp -b ${OSM_DEVOPS}/installers/docker/osm_metrics/*.json $OSM_DOCKER_WORK_DIR/osm_metrics
     remove_stack osm_metrics
     echo "Deploying PM stack (Kafka exporter + Prometheus + Grafana)"
-    sg docker -c "docker stack deploy -c $OSM_DOCKER_WORK_DIR/osm_metrics/docker-compose.yml osm_metrics"
+    sg docker -c "OSM_NETWORK=net${OSM_STACK_NAME} docker stack deploy -c $OSM_DOCKER_WORK_DIR/osm_metrics/docker-compose.yml osm_metrics"
     echo "Finished deployment of PM stack"
     return 0
 }
@@ -851,12 +883,18 @@ function install_lightweight() {
     track docker_build
     generate_docker_env_files
     generate_config_log_folders
+
+    [ -n "$INSTALL_NODOCKER" ] || init_docker_swarm
+    # remove old stack
+    remove_stack $OSM_STACK_NAME
+    create_docker_network
     deploy_lightweight
+    generate_osmclient_script
     track docker_deploy
     [ -n "$INSTALL_VIMEMU" ] && install_vimemu && track vimemu
     [ -n "$INSTALL_ELK" ] && deploy_elk && track elk
     [ -n "$INSTALL_PERFMON" ] && deploy_perfmon && track perfmon
-    install_osmclient
+    [ -z "$INSTALL_NOHOSTCLIENT" ] && install_osmclient
     track osmclient
     wget -q -O- https://osm-download.etsi.org/ftp/osm-4.0-four/README2.txt &> /dev/null
     track end
@@ -878,7 +916,7 @@ function install_vimemu() {
     echo "Starting vim-emu Docker container 'vim-emu' ..."
     if [ -n "$INSTALL_LIGHTWEIGHT" ]; then
         # in lightweight mode, the emulator needs to be attached to netOSM
-        sg docker -c "docker run --name vim-emu -t -d --restart always --privileged --pid='host' --network=netOSM -v /var/run/docker.sock:/var/run/docker.sock vim-emu-img python examples/osm_default_daemon_topology_2_pop.py"
+        sg docker -c "docker run --name vim-emu -t -d --restart always --privileged --pid='host' --network=net${OSM_STACK_NAME} -v /var/run/docker.sock:/var/run/docker.sock vim-emu-img python examples/osm_default_daemon_topology_2_pop.py"
     else
         # classic build mode
         sg docker -c "docker run --name vim-emu -t -d --restart always --privileged --pid='host' -v /var/run/docker.sock:/var/run/docker.sock vim-emu-img python examples/osm_default_daemon_topology_2_pop.py"
@@ -948,8 +986,8 @@ SHOWOPTS=""
 COMMIT_ID=""
 ASSUME_YES=""
 INSTALL_FROM_SOURCE=""
-RELEASE="-R ReleaseFOUR"
-REPOSITORY="-r stable"
+RELEASE="ReleaseFOUR"
+REPOSITORY="stable"
 INSTALL_VIMEMU=""
 INSTALL_FROM_LXDIMAGES=""
 LXD_REPOSITORY_BASE="https://osm-download.etsi.org/repository/osm/lxd"
@@ -971,6 +1009,8 @@ OSMLCM_VCA_SECRET=
 OSM_STACK_NAME=osm
 NO_HOST_PORTS=""
 DOCKER_NOBUILD=""
+REPOSITORY_KEY="OSM%20ETSI%20Release%20Key.gpg"
+REPOSITORY_BASE="http://osm-download.etsi.org/repository/osm/debian"
 
 while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:H:S:s:" o; do
     case "${o}" in
@@ -981,16 +1021,20 @@ while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:H:S:s:" o; do
             COMMIT_ID=${OPTARG}
             ;;
         r)
-            REPOSITORY="-r ${OPTARG}"
+            REPOSITORY="${OPTARG}"
+            REPO_ARGS+=(-r "$REPOSITORY")
             ;;
         R)
-            RELEASE="-R ${OPTARG}"
+            RELEASE="${OPTARG}"
+            REPO_ARGS+=(-R "$RELEASE")
             ;;
         k)
-            REPOSITORY_KEY="-k ${OPTARG}"
+            REPOSITORY_KEY="${OPTARG}"
+            REPO_ARGS+=(-k "$REPOSITORY_KEY")
             ;;
         u)
-            REPOSITORY_BASE="-u ${OPTARG}"
+            REPOSITORY_BASE="${OPTARG}"
+            REPO_ARGS+=(-u "$REPOSITORY_BASE")
             ;;
         l)
             LXD_REPOSITORY_BASE="${OPTARG}"
@@ -1050,6 +1094,7 @@ while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:H:S:s:" o; do
             [ "${OPTARG}" == "nohostports" ] && NO_HOST_PORTS="y" && continue
             [ "${OPTARG}" == "nojuju" ] && INSTALL_NOJUJU="y" && continue
             [ "${OPTARG}" == "nodockerbuild" ] && DOCKER_NOBUILD="y" && continue
+            [ "${OPTARG}" == "nohostclient" ] && INSTALL_NOHOSTCLIENT="y" && continue
             echo -e "Invalid option: '--$OPTARG'\n" >&2
             usage && exit 1
             ;;
@@ -1167,14 +1212,14 @@ elif [ -n "$INSTALL_FROM_LXDIMAGES" ]; then #install from LXD images stored in O
     install_from_lxdimages
 else #install from binaries
     echo -e "\nCreating the containers and installing from binaries ..."
-    $OSM_DEVOPS/jenkins/host/install RO $REPOSITORY $RELEASE $REPOSITORY_KEY $REPOSITORY_BASE || FATAL "RO install failed"
+    $OSM_DEVOPS/jenkins/host/install RO ${REPO_ARGS[@]} || FATAL "RO install failed"
     ro_is_up && track RO
     $OSM_DEVOPS/jenkins/host/start_build VCA || FATAL "VCA install failed"
     vca_is_up && track VCA
     $OSM_DEVOPS/jenkins/host/install MON || FATAL "MON build failed"
     mon_is_up && track MON
-    $OSM_DEVOPS/jenkins/host/install SO $REPOSITORY $RELEASE $REPOSITORY_KEY $REPOSITORY_BASE || FATAL "SO install failed"
-    $OSM_DEVOPS/jenkins/host/install UI $REPOSITORY $RELEASE $REPOSITORY_KEY $REPOSITORY_BASE || FATAL "UI install failed"
+    $OSM_DEVOPS/jenkins/host/install SO ${REPO_ARGS[@]} || FATAL "SO install failed"
+    $OSM_DEVOPS/jenkins/host/install UI ${REPO_ARGS[@]} || FATAL "UI install failed"
     #so_is_up && track SOUI
     track SOUI
 fi

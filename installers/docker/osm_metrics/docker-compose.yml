@@ -1,7 +1,8 @@
 version: '3'
 networks:
   netOSM:
-    external: true
+    external:
+       name: ${OSM_NETWORK:-netOSM}
 services:
   kafka-exporter:
     image: osm/kafka-exporter
@@ -32,4 +33,3 @@ services:
       - netOSM
     depends_on:
       - prometheus
-

@@ -181,7 +181,7 @@ node("${params.NODE}") {
                 sh """
                     export OSM_USE_LOCAL_DEVOPS=true
                     export PATH=$PATH:/snap/bin
-                    installers/full_install_osm.sh -y -s ${container_name} --nolxd --nodocker --nojuju --nohostports \
+                    installers/full_install_osm.sh -y -s ${container_name} --nolxd --nodocker --nojuju --nohostports --nohostclient \
                                                     ${commit_id} \
                                                     ${repo_distro} \
                                                     ${repo_base_url} \
@@ -235,17 +235,20 @@ node("${params.NODE}") {
     }
     finally {
         sh "docker stop ${http_server_name}"
+        sh "docker rm ${http_server_name}"
 
         if ( params.DO_INSTALL ) {
             if (error) {
                 if ( !params.SAVE_CONTAINER_ON_FAIL ) {
-                    sh "lxc delete ${container_name} --force"
+                    sh "docker stack rm ${container_name}"
+                    sh "export PATH=$PATH:/snap/bin; juju destroy-controller ${container_name}"
                 }
                 throw error 
             }
             else {
                 if ( !params.SAVE_CONTAINER_ON_PASS ) {
-                    sh "lxc delete ${container_name} --force"
+                    sh "docker stack rm ${container_name}"
+                    sh "export PATH=$PATH:/snap/bin; juju destroy-controller ${container_name}"
                 }
             }
         }

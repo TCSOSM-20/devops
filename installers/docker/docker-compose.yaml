@@ -6,7 +6,8 @@ volumes:
   osm_packages:
 networks:
   netOSM:
-    external: true
+    external:
+      name: ${OSM_NETWORK:-netOSM}
     #driver: overlay
     #driver_opts:
     #  com.docker.network.driver.mtu: "1446"
