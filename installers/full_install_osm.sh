@@ -172,6 +172,7 @@ EONG
         remove_network $OSM_STACK_NAME
         echo "Removing $OSM_DOCKER_WORK_DIR"
         rm -rf $OSM_DOCKER_WORK_DIR
+        sg lxd -c "juju destroy-controller --yes $OSM_STACK_NAME"
     fi
     echo "Some docker images will be kept in case they are used by other docker stacks"
     echo "To remove them, just run 'docker image prune' in a terminal"

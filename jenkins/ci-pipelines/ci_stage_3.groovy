@@ -40,6 +40,14 @@ properties([
     ])
 ])
 
+def uninstall_osm( stackName ) {
+    sh """
+         export OSM_USE_LOCAL_DEVOPS=true
+         export PATH=$PATH:/snap/bin
+         installers/full_install_osm.sh -y -s ${stackName} --test --nolxd --nodocker --nojuju --nohostports --nohostclient --uninstall
+       """
+}
+
 node("${params.NODE}") {
 
     sh 'env'
@@ -179,9 +187,8 @@ node("${params.NODE}") {
                 }
          
                 sh """
-                    export OSM_USE_LOCAL_DEVOPS=true
                     export PATH=$PATH:/snap/bin
-                    installers/full_install_osm.sh -y -s ${container_name} --nolxd --nodocker --nojuju --nohostports --nohostclient \
+                    installers/full_install_osm.sh -y -s ${container_name} --test --nolxd --nodocker --nojuju --nohostports --nohostclient \
                                                     ${commit_id} \
                                                     ${repo_distro} \
                                                     ${repo_base_url} \
@@ -240,15 +247,13 @@ node("${params.NODE}") {
         if ( params.DO_INSTALL ) {
             if (error) {
                 if ( !params.SAVE_CONTAINER_ON_FAIL ) {
-                    sh "docker stack rm ${container_name}"
-                    sh "export PATH=$PATH:/snap/bin; juju destroy-controller ${container_name}"
+                    uninstall_osm ${container_name}
                 }
                 throw error 
             }
             else {
                 if ( !params.SAVE_CONTAINER_ON_PASS ) {
-                    sh "docker stack rm ${container_name}"
-                    sh "export PATH=$PATH:/snap/bin; juju destroy-controller ${container_name}"
+                    uninstall_osm ${container_name}
                 }
             }
         }
