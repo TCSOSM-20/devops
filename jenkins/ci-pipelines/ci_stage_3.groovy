@@ -40,7 +40,7 @@ properties([
     ])
 ])
 
-def uninstall_osm( stackName ) {
+def uninstall_osm(stackName) {
     sh """
          export OSM_USE_LOCAL_DEVOPS=true
          export PATH=$PATH:/snap/bin
@@ -247,13 +247,13 @@ node("${params.NODE}") {
         if ( params.DO_INSTALL ) {
             if (error) {
                 if ( !params.SAVE_CONTAINER_ON_FAIL ) {
-                    uninstall_osm ${container_name}
+                    uninstall_osm container_name
                 }
                 throw error 
             }
             else {
                 if ( !params.SAVE_CONTAINER_ON_PASS ) {
-                    uninstall_osm ${container_name}
+                    uninstall_osm container_name
                 }
             }
         }
