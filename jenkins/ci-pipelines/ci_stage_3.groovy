@@ -34,6 +34,7 @@ properties([
         booleanParam(defaultValue: false, description: '', name: 'SAVE_CONTAINER_ON_FAIL'),
         booleanParam(defaultValue: false, description: '', name: 'SAVE_CONTAINER_ON_PASS'),
         booleanParam(defaultValue: false, description: '', name: 'DO_STAGE_4'),
+        booleanParam(defaultValue: true, description: '',  name: 'DO_BUILD'),
         booleanParam(defaultValue: false, description: '', name: 'DO_INSTALL'),
         booleanParam(defaultValue: false, description: '', name: 'DO_SMOKE'),
         booleanParam(defaultValue: false, description: '', name: 'SAVE_ARTIFACTS_OVERRIDE'),
@@ -153,6 +154,11 @@ node("${params.NODE}") {
     }
 
     error = null
+    if ( params.DO_BUILD ) {
+        stage("Build") {
+            sh "make -j4 -C docker CMD_DOCKER_ARGS= TAG=${container_name}"
+        }
+    }
 
     try {
         if ( params.DO_INSTALL ) {
@@ -189,6 +195,7 @@ node("${params.NODE}") {
                 sh """
                     export PATH=$PATH:/snap/bin
                     installers/full_install_osm.sh -y -s ${container_name} --test --nolxd --nodocker --nojuju --nohostports --nohostclient \
+                                                    --nodockerbuild -t ${container_name} \
                                                     ${commit_id} \
                                                     ${repo_distro} \
                                                     ${repo_base_url} \
