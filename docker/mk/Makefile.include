@@ -27,7 +27,7 @@ $(MKBUILD):
 	$Qmkdir -p $(MKBUILD)
 
 $(MKBUILD)/.dep_%:
-	$Q$(MKINCLUDE)/get_version.sh -m $* > $@
+	$Q$(MKINCLUDE)/get_version.sh -r $(REPOSITORY) -R $(RELEASE) -k $(REPOSITORY_KEY) -u $(REPOSITORY_BASE) -m $* > $@
 
 build: $(MKBUILD) $(DEPS_TARGETS)
 	$Qdocker build -t osm/$(LOWER_MDG):$(TAG) \
