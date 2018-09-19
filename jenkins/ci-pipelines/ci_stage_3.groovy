@@ -197,7 +197,7 @@ node("${params.NODE}") {
                     export PATH=$PATH:/snap/bin
                     installers/full_install_osm.sh -y -s ${container_name} --test --nolxd --nodocker --nojuju --nohostports --nohostclient \
                                                     --nodockerbuild -t ${container_name} \
-                                                    -w /tmp/osm
+                                                    -w /tmp/osm \
                                                     ${commit_id} \
                                                     ${repo_distro} \
                                                     ${repo_base_url} \
