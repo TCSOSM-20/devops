@@ -156,7 +156,7 @@ node("${params.NODE}") {
     error = null
     if ( params.DO_BUILD ) {
         stage("Build") {
-            sh "make clean"
+            sh "make -C docker clean"
             sh "make -j4 -C docker CMD_DOCKER_ARGS= TAG=${container_name} RELEASE=${params.RELEASE} REPOSITORY_BASE=${repo_base_url} REPOSITORY_KEY=${params.REPO_KEY_NAME} REPOSITORY=${params.REPO_DISTRO}"
         }
     }
