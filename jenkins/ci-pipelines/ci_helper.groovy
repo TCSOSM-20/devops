@@ -58,7 +58,7 @@ def lxc_file_push(container_name,file,destination) {
 def start_http_server(repo_dir,server_name) {
     sh "docker run -dit --name ${server_name} -v ${repo_dir}:/usr/local/apache2/htdocs/ httpd:2.4"
     def http_server_ip = sh(returnStdout:true,  script: "docker inspect --format '{{ .NetworkSettings.IPAddress }}' ${server_name}").trim()
-    return "-u http://${http_server_ip}/"
+    return "http://${http_server_ip}/"
 }
 
 def lxc_get_file(container_name,file,destination) {
