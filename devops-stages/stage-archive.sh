@@ -39,6 +39,8 @@ for dir in $PKG_DIRECTORIES; do
     ln -s $PWD/$dir $PKG_DIR/.
     echo "$dir/* usr/share/osm-$MDG_NAME/$dir" >> $DEB_INSTALL
 done
+cp LICENSE $PKG_DIR/.
+echo "LICENSE usr/share/osm-$MDG_NAME" >> $DEB_INSTALL
 cp -R debian $PKG_DIR/.
 
 cd $PKG_DIR
