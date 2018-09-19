@@ -26,19 +26,22 @@ LABEL authors="Guillermo Calvino"
 
 RUN apt-get update && apt-get -y install curl software-properties-common
 
+RUN apt-get --yes update \
+ && apt-get --yes install git python python-pip python3 python3-pip libmysqlclient-dev libssl-dev libffi-dev \
+ && pip3 install pip==9.0.3
+
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
 ARG RELEASE=ReleaseFOUR-daily
 ARG REPOSITORY_KEY=OSM%20ETSI%20Release%20Key.gpg
 ARG REPOSITORY=testing
 
 RUN curl ${REPOSITORY_BASE}/${RELEASE}/${REPOSITORY_KEY} | apt-key add -
-RUN add-apt-repository -y "deb ${REPOSITORY_BASE}/${RELEASE} ${REPOSITORY} MON IM common" && apt update
+RUN add-apt-repository -y "deb ${REPOSITORY_BASE}/${RELEASE} ${REPOSITORY} MON common" && apt update
 
-RUN apt-get --yes update \
- && apt-get --yes install git python python-pip python3 python3-pip libmysqlclient-dev libssl-dev libffi-dev \
- && pip3 install pip==9.0.3
+ARG MON_VERSION
+ARG COMMON_VERSION
 
-RUN apt-get --yes update  && apt-get -y install python3-osm-common python3-osm-mon
+RUN apt-get --yes update  && apt-get -y install python3-osm-common${COMMON_VERSION} python3-osm-mon${MON_VERSION}
 
 COPY scripts/ scripts/
 

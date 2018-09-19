@@ -4,6 +4,12 @@ FROM ubuntu:16.04
 
 RUN apt-get update && apt-get -y install curl software-properties-common
 
+RUN apt-get update && apt-get install -y git python3 python3-jsonschema \
+    python3-pymongo python3-yaml python3-pip \
+    && pip3 install pip==9.0.3 \
+    && pip3 install aiokafka cherrypy pyangbind \
+    && mkdir -p /app/storage/kafka && mkdir -p /app/log
+
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
 ARG RELEASE=ReleaseFOUR-daily
 ARG REPOSITORY_KEY=OSM%20ETSI%20Release%20Key.gpg
@@ -12,18 +18,20 @@ ARG REPOSITORY=testing
 RUN curl ${REPOSITORY_BASE}/${RELEASE}/${REPOSITORY_KEY} | apt-key add -
 RUN add-apt-repository -y "deb ${REPOSITORY_BASE}/${RELEASE} ${REPOSITORY} NBI IM common" && apt update
 
-RUN apt-get -y install python3-osm-nbi python3-osm-common python3-osm-im
+ARG NBI_VERSION
+ARG COMMON_VERSION
+ARG IM_VERSION
+
+RUN apt-get update && apt-get -y install python3-osm-nbi${NBI_VERSION} python3-osm-common${COMMON_VERSION} python3-osm-im${IM_VERSION}
 
 # Set the working directory to /app
 WORKDIR /app/osm_nbi
 
-RUN apt-get update && apt-get install -y git python3 python3-jsonschema \
-    python3-pymongo python3-yaml python3-pip \
-    && pip3 install pip==9.0.3 \
-    && pip3 install aiokafka cherrypy pyangbind \
-    && mkdir -p /app/storage/kafka && mkdir -p /app/log
-
 EXPOSE 9999
+
+RUN cp -R /usr/lib/python3/dist-packages/osm_nbi/html_public /app/osm_nbi/html_public
+RUN cp /usr/lib/python3/dist-packages/osm_nbi/nbi.cfg /app/osm_nbi/
+RUN cp -R /usr/lib/python3/dist-packages/osm_nbi/http /app/osm_nbi/
 
 LABEL Maintainer="alfonso.tiernosepulveda@telefonica.com" \
       Description="This implements a north bound interface for OSM" \
@@ -46,7 +54,7 @@ ENV OSMNBI_DATABASE_DRIVER mongo
 ENV OSMNBI_DATABASE_HOST   mongo
 ENV OSMNBI_DATABASE_PORT   27017
 # web
-ENV OSMNBI_STATIC_DIR      /usr/lib/python3/dist-packages/osm_nbi/html_public
+ENV OSMNBI_STATIC_DIR      /app/osm_nbi/html_public
 # logs
 ENV OSMNBI_LOG_FILE        /app/log
 ENV OSMNBI_LOG_LEVEL       DEBUG

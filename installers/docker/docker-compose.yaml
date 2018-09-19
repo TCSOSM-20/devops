@@ -13,13 +13,13 @@ networks:
     #  com.docker.network.driver.mtu: "1446"
 services:
   zookeeper:
-    image: wurstmeister/zookeeper
+    image: wurstmeister/zookeeper:${ZOOKEEPER_TAG:-latest}
 #    ports:
 #      - "2181:2181"
     networks:
       - netOSM
   kafka:
-    image: wurstmeister/kafka
+    image: wurstmeister/kafka:${KAFKA_TAG:-latest}
     ports:
       - "9092"
     networks:
@@ -41,7 +41,7 @@ services:
     volumes:
       - mongo_db:/data/db
   nbi:
-    image: osm/nbi
+    image: osm/nbi:${TAG:-latest}
     networks:
       - netOSM
     volumes:
@@ -55,7 +55,7 @@ services:
     #  - kafka
     #  - mongo
   lcm:
-    image: osm/lcm
+    image: osm/lcm:${TAG:-latest}
     networks:
       - netOSM
     volumes:
@@ -81,7 +81,7 @@ services:
 #    ports:
 #      - "3306:3306"
   ro:
-    image: osm/ro
+    image: osm/ro:${TAG:-latest}
     networks:
       - netOSM
     environment:
@@ -93,7 +93,7 @@ services:
     ports:
       - "${OSM_RO_PORTS:-9090:9090}"
   mon:
-    image: osm/mon
+    image: osm/mon:${TAG:-latest}
     networks:
       - netOSM
     volumes:
@@ -108,7 +108,7 @@ services:
     ports:
       - "8662"
   pm:
-    image: osm/pm
+    image: osm/pm:${TAG:-latest}
     networks:
       - netOSM
     environment:
@@ -117,7 +117,7 @@ services:
     #  - kafka
     #  - mon
   light-ui:
-    image: osm/light-ui
+    image: osm/light-ui:${TAG:-latest}
     networks:
       - netOSM
     environment:

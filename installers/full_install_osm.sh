@@ -36,6 +36,7 @@ function usage(){
     echo -e "     -o <ADDON>:     ONLY (un)installs one of the addons (vimemu, elk_stack, pm_stack)"
     echo -e "     -D <devops path> use local devops installation path"
     echo -e "     -w <work dir>   Location to store runtime installation"
+    echo -e "     -t <docker tag> specify osm docker tag (default is latest)"
     echo -e "     --nolxd:        do not install and configure LXD, allowing unattended installations (assumes LXD is already installed and confifured)"
     echo -e "     --nodocker:     do not install docker, do not initialize a swarm (assumes docker is already installed and a swarm has been initialized)"
     echo -e "     --nojuju:       do not juju, assumes already installed"
@@ -629,7 +630,7 @@ function juju_createcontroller() {
         # Not found created, create the controller
         sg lxd -c "juju bootstrap --bootstrap-series=xenial localhost $OSM_STACK_NAME"
     fi
-    [ $(sg lxd -c "juju controllers" |grep "$OSM_STACK_NAME" |wc -l) -eq 1 ] || FATAL "Juju installation failed"
+    [ $(sg lxd -c "juju controllers" | awk "/^${OSM_STACK_NAME}[\*| ]/{print $1}"|wc -l) -eq 1 ] || FATAL "Juju installation failed"
 }
 
 function generate_docker_images() {
@@ -720,7 +721,7 @@ function generate_docker_env_files() {
 }
 
 function generate_osmclient_script () {
-    echo "docker run -ti --network net${OSM_STACK_NAME} osm/osmclient" | $WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/osm
+    echo "docker run -ti --network net${OSM_STACK_NAME} osm/osmclient:${OSM_DOCKER_TAG}" | $WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/osm
     $WORKDIR_SUDO chmod +x "$OSM_DOCKER_WORK_DIR/osm"
     echo "osmclient sidecar container can be found at: $OSM_DOCKER_WORK_DIR/osm"
 }
@@ -759,6 +760,7 @@ function deploy_lightweight() {
     fi
     echo "export ${OSM_PORTS[@]}" | $WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/osm_ports.sh
     echo "export OSM_NETWORK=net${OSM_STACK_NAME}" | $WORKDIR_SUDO tee --append $OSM_DOCKER_WORK_DIR/osm_ports.sh
+    echo "export TAG=${OSM_DOCKER_TAG}" | $WORKDIR_SUDO tee --append $OSM_DOCKER_WORK_DIR/osm_ports.sh
 
     pushd $OSM_DOCKER_WORK_DIR
     sg docker -c "source ./osm_ports.sh; docker stack deploy -c $OSM_DOCKER_WORK_DIR/docker-compose.yaml $OSM_STACK_NAME"
@@ -1013,8 +1015,9 @@ REPOSITORY_KEY="OSM%20ETSI%20Release%20Key.gpg"
 REPOSITORY_BASE="http://osm-download.etsi.org/repository/osm/debian"
 WORKDIR_SUDO=sudo
 OSM_WORK_DIR="/etc/osm"
+OSM_DOCKER_TAG=latest
 
-while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:H:S:s:w:" o; do
+while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:H:S:s:w:t:" o; do
     case "${o}" in
         h)
             usage && exit 0
@@ -1060,6 +1063,9 @@ while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:H:S:s:w:" o; do
             # when specifying workdir, do not use sudo for access
             WORKDIR_SUDO=
             OSM_WORK_DIR="${OPTARG}"
+            ;;
+        t)
+            OSM_DOCKER_TAG="${OPTARG}"
             ;;
         o)
             INSTALL_ONLY="y"

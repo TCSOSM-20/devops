@@ -2,7 +2,8 @@ from ubuntu:xenial
 
 MAINTAINER Gennadiy Dubina <gennadiy.dubina@dataat.com>; Alfonso Tierno <alfonso.tiernosepulveda@telefoncia.com>
 
-RUN apt-get update && apt-get -y install curl software-properties-common
+RUN apt-get update && apt-get -y install curl software-properties-common git
+RUN apt-get update && apt-get install -y python-setuptools python-wheel mysql-client python-bitarray
 
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
 ARG RELEASE=ReleaseFOUR-daily
@@ -12,8 +13,10 @@ ARG REPOSITORY=testing
 RUN curl ${REPOSITORY_BASE}/${RELEASE}/${REPOSITORY_KEY} | apt-key add -
 RUN add-apt-repository -y "deb ${REPOSITORY_BASE}/${RELEASE} ${REPOSITORY} RO IM common openvim" && apt update
 
-RUN apt-get update && apt-get install -y python-setuptools python-wheel mysql-client python-bitarray
-RUN apt-get update && apt-get install -y python-osm-ro python-osm-im
+ARG RO_VERSION
+ARG IM_VERSION
+
+RUN apt-get update && apt-get install -y python-osm-ro${RO_VERSION} python-osm-im${IM_VERSION}
 
 RUN mkdir -p /bin/RO
 
