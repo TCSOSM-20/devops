@@ -45,7 +45,7 @@ def uninstall_osm(stackName) {
     sh """
          export OSM_USE_LOCAL_DEVOPS=true
          export PATH=$PATH:/snap/bin
-         installers/full_install_osm.sh -y -s ${stackName} --test --nolxd --nodocker --nojuju --nohostports --nohostclient --uninstall
+         installers/full_install_osm.sh -y -w /tmp/osm -t ${stackName} -s ${stackName} --test --nolxd --nodocker --nojuju --nohostports --nohostclient --uninstall
        """
 }
 
@@ -197,6 +197,7 @@ node("${params.NODE}") {
                     export PATH=$PATH:/snap/bin
                     installers/full_install_osm.sh -y -s ${container_name} --test --nolxd --nodocker --nojuju --nohostports --nohostclient \
                                                     --nodockerbuild -t ${container_name} \
+                                                    -w /tmp/osm
                                                     ${commit_id} \
                                                     ${repo_distro} \
                                                     ${repo_base_url} \
