@@ -12,7 +12,7 @@ RELEASE_NAME="$4"
 tag_header="OSM Release $RELEASE_NAME:"
 tag_message="$tag_header version $TAG"
 
-modules="common devops IM LCM LW-UI MON N2VC NBI openvim osmclient RO vim-emu"
+modules="common devops IM LCM LW-UI MON N2VC NBI openvim osmclient RO vim-emu POL"
 list=""
 for i in $modules; do
     if [ "$1" == "$i" -o "$1" == "all" ]; then
