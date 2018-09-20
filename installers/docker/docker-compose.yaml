@@ -18,6 +18,11 @@ services:
 #      - "2181:2181"
     networks:
       - netOSM
+    healthcheck:
+      test: echo stat | nc localhost 2181
+      interval: 10s
+      timeout: 10s
+      retries: 3
   kafka:
     image: wurstmeister/kafka:${KAFKA_TAG:-latest}
     ports:
