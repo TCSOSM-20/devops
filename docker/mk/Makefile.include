@@ -43,6 +43,7 @@ build: $(MKBUILD) $(DEPS_TARGETS)
                    --build-arg OSMCLIENT_VERSION==$(shell cat $(MKBUILD)/.dep_osmclient) \
                    --build-arg NBI_VERSION==$(shell cat $(MKBUILD)/.dep_NBI) \
                    --build-arg POL_VERSION==$(shell cat $(MKBUILD)/.dep_POL) \
+                   --build-arg DEVOPS_VERSION==$(shell cat $(MKBUILD)/.dep_devops) \
                    $(DOCKER_ARGS) .
 
 clean:
