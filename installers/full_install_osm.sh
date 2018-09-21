@@ -726,9 +726,13 @@ function generate_docker_env_files() {
     fi
     if [ ! -f $OSM_DOCKER_WORK_DIR/keystone.env ]; then
         echo "ROOT_DB_PASSWORD=${MYSQL_ROOT_PASSWORD}" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/keystone.env
-        echo "KEYSTONE_DB_PASSWORD=${KEYSTONE_DB_PASSWORD}" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/keystone.env
-        #echo "ADMIN_PASSWORD=${ADMIN_PASSWORD}" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/keystone.env
-        echo "NBI_PASSWORD=${NBI_PASSWORD}" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/keystone.env
+        echo "KEYSTONE_DB_PASSWORD=${KEYSTONE_DB_PASSWORD}" |$WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/keystone.env
+        #echo "ADMIN_PASSWORD=${ADMIN_PASSWORD}" |$WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/keystone.env
+        echo "NBI_PASSWORD=${NBI_PASSWORD}" |$WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/keystone.env
+    fi
+
+    if [ ! -f $OSM_DOCKER_WORK_DIR/nbi.env ]; then
+        echo "OSMNBI_AUTHENTICATION_SERVICE_PASSWORD=${NBI_PASSWORD}" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/nbi.env
     fi
 
     echo "OS_NOTIFIER_URI=http://${DEFAULT_IP}:8662" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/mon.env
