@@ -52,8 +52,7 @@ def uninstall_osm(stackName) {
 def run_systest(stackName,tagName,testName) {
     tempdir = sh(returnStdout: true, script: "mktemp -d").trim()
     sh "docker run --network net${stackName} -v ${tempdir}:/usr/share/osm-devops/systest/reports osm/osmclient:${tagName} make -C /usr/share/osm-devops/systest ${testName}"
-    cp "${tempdir}/*.xml ."
-    junit  '*.xml'
+    junit  "${tempdir}/*.xml"
 }
 
 node("${params.NODE}") {
