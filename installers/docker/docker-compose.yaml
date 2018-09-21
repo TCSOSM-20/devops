@@ -4,6 +4,7 @@ volumes:
   mongo_db:
   mon_db:
   osm_packages:
+  keystone_db:
 networks:
   netOSM:
     external:
@@ -45,6 +46,26 @@ services:
       - netOSM
     volumes:
       - mongo_db:/data/db
+  keystone-db:
+    image: mariadb:10
+    networks:
+      - netOSM
+    volumes:
+      - keystone_db:/var/lib/mysql
+    env_file:
+      - ./keystone-db.env
+#    ports:
+#      - "3306:3306"
+  keystone:
+    image: osm/keystone:${TAG:-latest}
+    networks:
+      - netOSM
+    environment:
+      DB_HOST: keystone-db
+    env_file:
+      - ./keystone.env
+    ports:
+      - "${OSM_KEYSTONE_PORTS:-5000:5000}"
   nbi:
     image: osm/nbi:${TAG:-latest}
     networks:

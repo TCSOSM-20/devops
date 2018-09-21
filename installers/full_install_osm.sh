@@ -165,6 +165,7 @@ function uninstall_lightweight() {
         docker image rm osm/ro
         docker image rm osm/lcm
         docker image rm osm/light-ui
+        docker image rm osm/keystone
         docker image rm osm/nbi
         docker image rm osm/mon
         docker image rm osm/pm
@@ -715,6 +716,21 @@ function generate_docker_env_files() {
     if [ ! -f $OSM_DOCKER_WORK_DIR/ro.env ]; then
         echo "RO_DB_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/ro.env
     fi
+
+    MYSQL_ROOT_PASSWORD=`date +%s | sha256sum | base64 | head -c 32` && sleep 1
+    KEYSTONE_DB_PASSWORD=`date +%s | sha256sum | base64 | head -c 32` && sleep 1
+    #ADMIN_PASSWORD=`date +%s | sha256sum | base64 | head -c 32` && sleep 1
+    NBI_PASSWORD=`date +%s | sha256sum | base64 | head -c 32`
+    if [ ! -f $OSM_DOCKER_WORK_DIR/keystone-db.env ]; then
+        echo "MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/keystone-db.env
+    fi
+    if [ ! -f $OSM_DOCKER_WORK_DIR/keystone.env ]; then
+        echo "ROOT_DB_PASSWORD=${MYSQL_ROOT_PASSWORD}" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/keystone.env
+        echo "KEYSTONE_DB_PASSWORD=${KEYSTONE_DB_PASSWORD}" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/keystone.env
+        #echo "ADMIN_PASSWORD=${ADMIN_PASSWORD}" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/keystone.env
+        echo "NBI_PASSWORD=${NBI_PASSWORD}" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/keystone.env
+    fi
+
     echo "OS_NOTIFIER_URI=http://${DEFAULT_IP}:8662" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/mon.env
 
     echo "Finished generation of docker env files"
@@ -747,15 +763,18 @@ function deploy_lightweight() {
     echo "Deploying lightweight build"
     OSM_NBI_PORT=9999
     OSM_RO_PORT=9090
+    OSM_KEYSTONE_PORT=5000
     OSM_UI_PORT=80
 
     if [ -n "$NO_HOST_PORTS" ]; then
         OSM_PORTS+=(OSM_NBI_PORTS=$OSM_NBI_PORT)
         OSM_PORTS+=(OSM_RO_PORTS=$OSM_RO_PORT)
+        OSM_PORTS+=(OSM_KEYSTONE_PORTS=$OSM_KEYSTONE_PORT)
         OSM_PORTS+=(OSM_UI_PORTS=$OSM_UI_PORT)
     else
         OSM_PORTS+=(OSM_NBI_PORTS=$OSM_NBI_PORT:$OSM_NBI_PORT)
         OSM_PORTS+=(OSM_RO_PORTS=$OSM_RO_PORT:$OSM_RO_PORT)
+        OSM_PORTS+=(OSM_KEYSTONE_PORTS=$OSM_KEYSTONE_PORT:$OSM_KEYSTONE_PORT)
         OSM_PORTS+=(OSM_UI_PORTS=$OSM_UI_PORT:$OSM_UI_PORT)
     fi
     echo "export ${OSM_PORTS[@]}" | $WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/osm_ports.sh
