@@ -122,6 +122,9 @@ node("${params.NODE}") {
                     // the upstream job name contains suffix with the project. Need this stripped off
                     def project_without_branch = params.UPSTREAM_JOB_NAME.split('/')[0]
 
+                    // Remove the previous artifact for this component. Use the new upstream artifact
+                    sh "rm -rf pool/${component}"
+
                     ci_helper.get_archive(params.ARTIFACTORY_SERVER,component,GERRIT_BRANCH, "${project_without_branch} :: ${GERRIT_BRANCH}", build_num)
 
                     sh "rm -rf dists"
