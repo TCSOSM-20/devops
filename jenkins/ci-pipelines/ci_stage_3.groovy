@@ -35,8 +35,8 @@ properties([
         booleanParam(defaultValue: false, description: '', name: 'SAVE_CONTAINER_ON_PASS'),
         booleanParam(defaultValue: false, description: '', name: 'DO_STAGE_4'),
         booleanParam(defaultValue: true, description: '',  name: 'DO_BUILD'),
-        booleanParam(defaultValue: false, description: '', name: 'DO_INSTALL'),
-        booleanParam(defaultValue: false, description: '', name: 'DO_SMOKE'),
+        booleanParam(defaultValue: true, description: '', name: 'DO_INSTALL'),
+        booleanParam(defaultValue: true, description: '', name: 'DO_SMOKE'),
         booleanParam(defaultValue: false, description: '', name: 'SAVE_ARTIFACTS_OVERRIDE'),
     ])
 ])
@@ -47,6 +47,15 @@ def uninstall_osm(stackName) {
          export PATH=$PATH:/snap/bin
          installers/full_install_osm.sh -y -w /tmp/osm -t ${stackName} -s ${stackName} --test --nolxd --nodocker --nojuju --nohostports --nohostclient --uninstall
        """
+}
+
+def run_systest(stackName,tagName,testName) {
+    sh """
+        tempdir=$(mktemp -d)
+        docker run -ti --network net${stackName} -v $tempdir:/usr/share/osm-devops/systest/reports osm/osmclient:${tagName} make -C /usr/share/osm-devops/systest ${testName}
+        cp $tempdir/*.xml .
+       """
+    junit  '*.xml'
 }
 
 node("${params.NODE}") {
@@ -209,9 +218,11 @@ node("${params.NODE}") {
         }
 
         if ( params.DO_SMOKE ) {
+            stage("OSM Health") {
+                sh "installers/osm_health.sh -s ${container_name}"
+            }
             stage("Smoke") {
-                ci_helper.systest_run(container_name, 'smoke')
-                junit '*.xml'
+                run_systest(container_name,container_name,"smoke")
             }
         }
 

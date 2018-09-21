@@ -66,5 +66,8 @@ ENV OSMNBI_MESSAGE_PORT    9092
 ENV OSMNBI_LOG_FILE        /app/log/nbi.log
 ENV OSMNBI_LOG_LEVEL       DEBUG
 
+HEALTHCHECK --interval=5s --timeout=2s --retries=12 \
+  CMD curl -k https://localhost:9999/osm/ | grep Welcome || exit 1
+
 # Run app.py when the container launches
 CMD ["python3", "/usr/lib/python3/dist-packages/osm_nbi/nbi.py"]
