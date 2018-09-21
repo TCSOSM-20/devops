@@ -28,11 +28,23 @@ RUN apt-get --yes update \
  && apt-get --yes install python3 python3-pip libmysqlclient-dev git \
  && pip3 install pip==9.0.3
 
-RUN git clone https://osm.etsi.org/gerrit/osm/MON MON
-#COPY requirements.txt /policy_module/requirements.txt
+RUN apt-get update && apt-get -y install curl software-properties-common
 
-RUN pip3 install -r /MON/policy_module/requirements.txt
+RUN apt-get --yes update \
+ && apt-get --yes install git python python-pip python3 python3-pip libmysqlclient-dev libssl-dev libffi-dev \
+ && pip3 install pip==9.0.3
 
-RUN pip3 install /MON/policy_module
+ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
+ARG RELEASE=ReleaseFOUR-daily
+ARG REPOSITORY_KEY=OSM%20ETSI%20Release%20Key.gpg
+ARG REPOSITORY=testing
 
-CMD bash /MON/policy_module/scripts/gen_config_from_env.sh && osm-policy-agent --config osm_policy_agent.cfg
+RUN curl ${REPOSITORY_BASE}/${RELEASE}/${REPOSITORY_KEY} | apt-key add -
+RUN add-apt-repository -y "deb ${REPOSITORY_BASE}/${RELEASE} ${REPOSITORY} POL common" && apt update
+
+ARG POL_VERSION
+ARG COMMON_VERSION
+
+RUN apt-get --yes update  && apt-get -y install python3-osm-policy-module${POL_VERSION}
+
+#CMD bash /MON/policy_module/scripts/gen_config_from_env.sh && osm-policy-agent --config osm_policy_agent.cfg

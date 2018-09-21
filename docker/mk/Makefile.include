@@ -17,7 +17,7 @@ LOWER_MDG = $(shell echo $(MDG) | tr '[:upper:]' '[:lower:]')
 CMD_DOCKER_ARGS ?= -q
 DOCKER_ARGS     = $(CMD_DOCKER_ARGS)
 
-DEPS := MON IM LCM RO common osmclient devops NBI
+DEPS := MON IM LCM RO common osmclient devops NBI POL
 
 DEPS_TARGETS = $(addprefix $(MKBUILD)/.dep_, $(DEPS))
 
@@ -42,6 +42,7 @@ build: $(MKBUILD) $(DEPS_TARGETS)
                    --build-arg COMMON_VERSION==$(shell cat $(MKBUILD)/.dep_common) \
                    --build-arg OSMCLIENT_VERSION==$(shell cat $(MKBUILD)/.dep_osmclient) \
                    --build-arg NBI_VERSION==$(shell cat $(MKBUILD)/.dep_NBI) \
+                   --build-arg POL_VERSION==$(shell cat $(MKBUILD)/.dep_POL) \
                    $(DOCKER_ARGS) .
 
 clean:
