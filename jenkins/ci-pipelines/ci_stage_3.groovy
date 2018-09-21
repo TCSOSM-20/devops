@@ -33,6 +33,7 @@ properties([
         string(defaultValue: 'osm-stage_4', description: '', name: 'DOWNSTREAM_STAGE_NAME'),
         booleanParam(defaultValue: false, description: '', name: 'SAVE_CONTAINER_ON_FAIL'),
         booleanParam(defaultValue: false, description: '', name: 'SAVE_CONTAINER_ON_PASS'),
+        booleanParam(defaultValue: true, description: '', name: 'SAVE_ARTIFACTS_ON_SMOKE_SUCCESS'),
         booleanParam(defaultValue: false, description: '', name: 'DO_STAGE_4'),
         booleanParam(defaultValue: true, description: '',  name: 'DO_BUILD'),
         booleanParam(defaultValue: true, description: '', name: 'DO_INSTALL'),
@@ -214,16 +215,18 @@ node("${params.NODE}") {
             }
         }
 
+        stage_archive = false
         if ( params.DO_SMOKE ) {
             stage("OSM Health") {
                 sh "installers/osm_health.sh -s ${container_name}"
             }
             stage("Smoke") {
                 run_systest(container_name,container_name,"smoke")
+                // archive smoke success until stage_4 is ready
+                stage_archive = params.SAVE_ARTIFACTS_ON_SMOKE_SUCCESS
             }
         }
 
-        stage_4_archive = false
         if ( params.DO_STAGE_4 ) {
             stage("stage_4") {
                 def downstream_params = [
@@ -234,13 +237,13 @@ node("${params.NODE}") {
                 currentBuild.result = stage_4_result.result
 
                 if ( stage_4_result.getResult().equals('SUCCESS') ) {
-                    stage_4_archive = true;
+                    stage_archive = true;
                 }
             }
         }
 
         // override to save the artifacts
-        if ( params.SAVE_ARTIFACTS_OVERRIDE || stage_4_archive ) {
+        if ( params.SAVE_ARTIFACTS_OVERRIDE || stage_archive ) {
             stage("Archive") {
                 sh "echo ${container_name} > build_version.txt"
                 archiveArtifacts artifacts: "build_version.txt", fingerprint: true
