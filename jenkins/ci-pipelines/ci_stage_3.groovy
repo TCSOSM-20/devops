@@ -152,6 +152,7 @@ node("${params.NODE}") {
                    rm -f changelog/changelog-osm.html
                    [ ! -d changelog ] || for mdgchange in \$(ls changelog); do cat changelog/\$mdgchange >> changelog/changelog-osm.html; done
                    """
+                RELEASE_DIR = sh(returnStdout:true,  script: 'pwd').trim()
             }
             // start an apache server to serve up the images
             http_server_name = "${container_name}-apache"
@@ -257,7 +258,7 @@ node("${params.NODE}") {
                     archiveArtifacts artifacts: "build_version.txt", fingerprint: true
 
                     // Archive the tested repo
-                    dir("repo/${RELEASE}") {
+                    dir("${RELEASE_DIR}") {
                         ci_helper.archive(params.ARTIFACTORY_SERVER,RELEASE,GERRIT_BRANCH,'tested')
                     }
                 }
