@@ -47,4 +47,16 @@ ARG COMMON_VERSION
 
 RUN apt-get --yes update  && apt-get -y install python3-osm-policy-module${POL_VERSION}
 
-#CMD bash /MON/policy_module/scripts/gen_config_from_env.sh && osm-policy-agent --config osm_policy_agent.cfg
+ENV OSMPOL_MESSAGE_DRIVER kafka
+ENV OSMPOL_MESSAGE_HOST kafka
+ENV OSMPOL_MESSAGE_PORT 9092
+
+ENV OSMPOL_DATABASE_DRIVER mongo
+ENV OSMPOL_DATABASE_HOST mongo
+ENV OSMPOL_DATABASE_PORT 27017
+
+ENV OSMPOL_SQL_DATABASE_URI sqlite:///mon_sqlite.db
+
+ENV OSMPOL_LOG_LEVEL INFO
+
+CMD osm-policy-agent
