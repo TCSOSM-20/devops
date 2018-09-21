@@ -159,122 +159,130 @@ node("${params.NODE}") {
             pwd = sh(returnStdout:true,  script: 'pwd').trim()
             repo_base_url = ci_helper.start_http_server(pwd,http_server_name)
         }
+
+        // now pull the devops package and install in temporary location
+        tempdir = sh(returnStdout: true, script: "mktemp -d").trim()
+        osm_devops_dpkg = sh(returnStdout: true, script: "find . -name osm-devops*.deb").trim()
+        sh "dpkg -x ${osm_devops_dpkg} ${tempdir}"
+        OSM_DEVOPS="${tempdir}/usr/share/osm-devops"
     }
 
-    error = null
-    if ( params.DO_BUILD ) {
-        stage("Build") {
-            sh "make -C docker clean"
-            sh "make -j4 -C docker CMD_DOCKER_ARGS= TAG=${container_name} RELEASE=${params.RELEASE} REPOSITORY_BASE=${repo_base_url} REPOSITORY_KEY=${params.REPO_KEY_NAME} REPOSITORY=${params.REPO_DISTRO}"
-        }
-    }
-
-    try {
-        if ( params.DO_INSTALL ) {
-            stage("Install") {
-
-                //will by default always delete containers on complete
-                //sh "jenkins/system/delete_old_containers.sh ${container_name_prefix}"
-
-                commit_id = ''
-                repo_distro = ''
-                repo_key_name = ''
-                release = ''
-
-                if ( params.COMMIT_ID )
-                {
-                    commit_id = "-b ${params.COMMIT_ID}"
-                }
-
-                if ( params.REPO_DISTRO )
-                {
-                    repo_distro = "-r ${params.REPO_DISTRO}"
-                }
-
-                if ( params.REPO_KEY_NAME )
-                {
-                    repo_key_name = "-k ${params.REPO_KEY_NAME}"
-                }
-
-                if ( params.RELEASE )
-                {
-                    release = "-R ${params.RELEASE}"
-                }
-         
-                sh """
-                    export PATH=$PATH:/snap/bin
-                    installers/full_install_osm.sh -y -s ${container_name} --test --nolxd --nodocker --nojuju --nohostports --nohostclient \
-                                                    --nodockerbuild -t ${container_name} \
-                                                    -w /tmp/osm \
-                                                    ${commit_id} \
-                                                    ${repo_distro} \
-                                                    ${repo_base_url} \
-                                                    ${repo_key_name} \
-                                                    ${release} \
-                                                    ${params.BUILD_FROM_SOURCE}
-                   """
+    dir(OSM_DEVOPS) {
+        error = null
+        if ( params.DO_BUILD ) {
+            stage("Build") {
+                sh "make -C docker clean"
+                sh "make -j4 -C docker CMD_DOCKER_ARGS= TAG=${container_name} RELEASE=${params.RELEASE} REPOSITORY_BASE=${repo_base_url} REPOSITORY_KEY=${params.REPO_KEY_NAME} REPOSITORY=${params.REPO_DISTRO}"
             }
         }
 
-        stage_archive = false
-        if ( params.DO_SMOKE ) {
-            stage("OSM Health") {
-                sh "installers/osm_health.sh -s ${container_name}"
-            }
-            stage("Smoke") {
-                run_systest(container_name,container_name,"smoke")
-                // archive smoke success until stage_4 is ready
-                stage_archive = params.SAVE_ARTIFACTS_ON_SMOKE_SUCCESS
-            }
-        }
+        try {
+            if ( params.DO_INSTALL ) {
+                stage("Install") {
 
-        if ( params.DO_STAGE_4 ) {
-            stage("stage_4") {
-                def downstream_params = [
-                    string(name: 'CONTAINER_NAME', value: container_name),
-                    string(name: 'NODE', value: NODE_NAME.split()[0]),
-                ]
-                stage_4_result = build job: "${params.DOWNSTREAM_STAGE_NAME}/${GERRIT_BRANCH}", parameters: downstream_params, propagate: false 
-                currentBuild.result = stage_4_result.result
+                    //will by default always delete containers on complete
+                    //sh "jenkins/system/delete_old_containers.sh ${container_name_prefix}"
 
-                if ( stage_4_result.getResult().equals('SUCCESS') ) {
-                    stage_archive = true;
+                    commit_id = ''
+                    repo_distro = ''
+                    repo_key_name = ''
+                    release = ''
+
+                    if ( params.COMMIT_ID )
+                    {
+                        commit_id = "-b ${params.COMMIT_ID}"
+                    }
+
+                    if ( params.REPO_DISTRO )
+                    {
+                        repo_distro = "-r ${params.REPO_DISTRO}"
+                    }
+
+                    if ( params.REPO_KEY_NAME )
+                    {
+                        repo_key_name = "-k ${params.REPO_KEY_NAME}"
+                    }
+
+                    if ( params.RELEASE )
+                    {
+                        release = "-R ${params.RELEASE}"
+                    }
+             
+                    sh """
+                        export PATH=$PATH:/snap/bin
+                        installers/full_install_osm.sh -y -s ${container_name} --test --nolxd --nodocker --nojuju --nohostports --nohostclient \
+                                                        --nodockerbuild -t ${container_name} \
+                                                        -w /tmp/osm \
+                                                        ${commit_id} \
+                                                        ${repo_distro} \
+                                                        ${repo_base_url} \
+                                                        ${repo_key_name} \
+                                                        ${release} \
+                                                        ${params.BUILD_FROM_SOURCE}
+                       """
+                }
+            }
+
+            stage_archive = false
+            if ( params.DO_SMOKE ) {
+                stage("OSM Health") {
+                    sh "installers/osm_health.sh -s ${container_name}"
+                }
+                stage("Smoke") {
+                    run_systest(container_name,container_name,"smoke")
+                    // archive smoke success until stage_4 is ready
+                    stage_archive = params.SAVE_ARTIFACTS_ON_SMOKE_SUCCESS
+                }
+            }
+
+            if ( params.DO_STAGE_4 ) {
+                stage("stage_4") {
+                    def downstream_params = [
+                        string(name: 'CONTAINER_NAME', value: container_name),
+                        string(name: 'NODE', value: NODE_NAME.split()[0]),
+                    ]
+                    stage_4_result = build job: "${params.DOWNSTREAM_STAGE_NAME}/${GERRIT_BRANCH}", parameters: downstream_params, propagate: false 
+                    currentBuild.result = stage_4_result.result
+
+                    if ( stage_4_result.getResult().equals('SUCCESS') ) {
+                        stage_archive = true;
+                    }
+                }
+            }
+
+            // override to save the artifacts
+            if ( params.SAVE_ARTIFACTS_OVERRIDE || stage_archive ) {
+                stage("Archive") {
+                    sh "echo ${container_name} > build_version.txt"
+                    archiveArtifacts artifacts: "build_version.txt", fingerprint: true
+
+                    // Archive the tested repo
+                    dir("repo/${RELEASE}") {
+                        ci_helper.archive(params.ARTIFACTORY_SERVER,RELEASE,GERRIT_BRANCH,'tested')
+                    }
                 }
             }
         }
-
-        // override to save the artifacts
-        if ( params.SAVE_ARTIFACTS_OVERRIDE || stage_archive ) {
-            stage("Archive") {
-                sh "echo ${container_name} > build_version.txt"
-                archiveArtifacts artifacts: "build_version.txt", fingerprint: true
-
-                // Archive the tested repo
-                dir("repo/${RELEASE}") {
-                    ci_helper.archive(params.ARTIFACTORY_SERVER,RELEASE,GERRIT_BRANCH,'tested')
-                }
-            }
+        catch(caughtError) {
+            println("Caught error!")
+            error = caughtError
+            currentBuild.result = 'FAILURE'
         }
-    }
-    catch(caughtError) {
-        println("Caught error!")
-        error = caughtError
-        currentBuild.result = 'FAILURE'
-    }
-    finally {
-        sh "docker stop ${http_server_name}"
-        sh "docker rm ${http_server_name}"
+        finally {
+            sh "docker stop ${http_server_name}"
+            sh "docker rm ${http_server_name}"
 
-        if ( params.DO_INSTALL ) {
-            if (error) {
-                if ( !params.SAVE_CONTAINER_ON_FAIL ) {
-                    uninstall_osm container_name
+            if ( params.DO_INSTALL ) {
+                if (error) {
+                    if ( !params.SAVE_CONTAINER_ON_FAIL ) {
+                        uninstall_osm container_name
+                    }
+                    throw error 
                 }
-                throw error 
-            }
-            else {
-                if ( !params.SAVE_CONTAINER_ON_PASS ) {
-                    uninstall_osm container_name
+                else {
+                    if ( !params.SAVE_CONTAINER_ON_PASS ) {
+                        uninstall_osm container_name
+                    }
                 }
             }
         }

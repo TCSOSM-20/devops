@@ -14,7 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-PKG_DIRECTORIES="jenkins installers systest juju-charms descriptor-packages tools"
+PKG_DIRECTORIES="jenkins installers systest juju-charms descriptor-packages tools docker"
 MDG_NAME=devops
 DEB_INSTALL=debian/osm-$MDG_NAME.install
 export DEBEMAIL="mmarchetti@sandvine.com"
