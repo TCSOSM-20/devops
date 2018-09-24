@@ -28,4 +28,8 @@ while [ $time -le "$WAIT_TIME" ]; do
     sleep $step
     time=$((time+step))
 done
+
+echo "Not all Docker services are healthy"
+docker ps | grep " ${STACK_NAME}_"
+
 exit 1
