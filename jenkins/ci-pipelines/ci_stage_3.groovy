@@ -236,7 +236,7 @@ node("${params.NODE}") {
                     run_systest(container_name,container_name,"smoke")
                     // archive smoke success until stage_4 is ready
 
-                    if ( currentBuild.result.equals('SUCCESS') ) {
+                    if ( ! currentBuild.result.equals('UNSTABLE') ) {
                         stage_archive = params.SAVE_ARTIFACTS_ON_SMOKE_SUCCESS
                     }
                 }
