@@ -1,6 +1,6 @@
 #!/bin/sh
 
-WAIT_TIME=30
+WAIT_TIME=60
 NUM_SERVICES_WITH_HEALTH=3
 
 while getopts "w:s:n:" o; do
