@@ -4,7 +4,9 @@ WORKDIR /usr/src/app
 
 RUN apt-get update && apt-get install -y npm git python-pip nginx supervisor
 RUN npm install -g bower
-RUN git clone https://osm.etsi.org/gerrit/osm/LW-UI /usr/src/app
+
+ARG LWUI_VERSION=
+RUN git clone https://osm.etsi.org/gerrit/osm/LW-UI /usr/src/app && echo LWUI_VERSION
 
 RUN ln -s /usr/bin/nodejs /usr/bin/node
 RUN bower install --allow-root

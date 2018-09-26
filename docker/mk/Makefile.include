@@ -44,6 +44,7 @@ build: $(MKBUILD) $(DEPS_TARGETS)
                    --build-arg NBI_VERSION==$(shell cat $(MKBUILD)/.dep_NBI) \
                    --build-arg POL_VERSION==$(shell cat $(MKBUILD)/.dep_POL) \
                    --build-arg DEVOPS_VERSION==$(shell cat $(MKBUILD)/.dep_devops) \
+                   --build-arg LWUI_VERSION==$(shell date +%s) \
                    $(DOCKER_ARGS) .
 
 clean:
