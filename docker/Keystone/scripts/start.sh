@@ -37,8 +37,6 @@ function is_db_created() {
     fi
 }
 
-KEYSTONE_IP=`ifconfig eth0 | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*'`
-
 wait_db "$DB_HOST" "$DB_PORT" || exit 1
 
 is_db_created "$DB_HOST" "$DB_PORT" "$ROOT_DB_USER" "$ROOT_DB_PASSWORD" "keystone" && DB_EXISTS="Y"
@@ -67,19 +65,32 @@ keystone-manage credential_setup --keystone-user keystone --keystone-group keyst
 # Bootstrap Keystone service
 if [ -z $DB_EXISTS ]; then
     keystone-manage bootstrap --bootstrap-password "$ADMIN_PASSWORD" \
-        --bootstrap-admin-url http://"$KEYSTONE_IP":5000/v3/ \
-        --bootstrap-internal-url http://"$KEYSTONE_IP":5000/v3/ \
-        --bootstrap-public-url http://"$KEYSTONE_IP":5000/v3/ \
+        --bootstrap-admin-url http://keystone:5000/v3/ \
+        --bootstrap-internal-url http://keystone:5000/v3/ \
+        --bootstrap-public-url http://keystone:5000/v3/ \
         --bootstrap-region-id RegionOne
 fi
 
 # Restart Apache Service
 service apache2 restart
 
+cat << EOF >> setup_env
+export OS_PROJECT_DOMAIN_NAME=default
+export OS_USER_DOMAIN_NAME=default
+export OS_PROJECT_NAME=admin
+export OS_USERNAME=admin
+export OS_PASSWORD=$ADMIN_PASSWORD
+export OS_AUTH_URL=http://keystone:5000/v3
+export OS_IDENTITY_API_VERSION=3
+export OS_IMAGE_API_VERSION=2
+EOF
+
+source setup_env
+
 # Create NBI User
 if [ -z $DB_EXISTS ]; then
     openstack user create --domain default --password "$NBI_PASSWORD" nbi
-    openstack project create --domain defaul --description "Service Project" service
+    openstack project create --domain default --description "Service Project" service
     openstack role add --project service --user nbi admin
 fi
 

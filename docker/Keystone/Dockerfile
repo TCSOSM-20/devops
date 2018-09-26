@@ -42,4 +42,4 @@ ENV ADMIN_PASSWORD          admin
 # NBI password
 ENV NBI_PASSWORD            nbi
 
-ENTRYPOINT ./install.sh
+ENTRYPOINT ./start.sh

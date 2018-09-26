@@ -75,6 +75,8 @@ services:
     environment:
       OSMNBI_DATABASE_HOST: mongo
       OSMNBI_MESSAGE_HOST: kafka
+    env_file:
+      - ./nbi.env
     ports:
       - "${OSM_NBI_PORTS:-9999:9999}"
     #depends_on:

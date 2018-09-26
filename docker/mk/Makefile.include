@@ -17,7 +17,7 @@ LOWER_MDG = $(shell echo $(MDG) | tr '[:upper:]' '[:lower:]')
 CMD_DOCKER_ARGS ?= -q
 DOCKER_ARGS     = $(CMD_DOCKER_ARGS)
 
-DEPS := MON IM LCM RO common osmclient devops NBI POL
+DEPS := MON IM LCM RO common osmclient devops NBI POL Keystone
 
 DEPS_TARGETS = $(addprefix $(MKBUILD)/.dep_, $(DEPS))
 
