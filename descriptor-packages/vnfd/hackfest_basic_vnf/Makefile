@@ -15,7 +15,6 @@
 #
 DESCRIPTORS_TOPDIR ?= ../..
 
-VNFD_CHARM = simple
 include $(DESCRIPTORS_TOPDIR)/mk/pkg.mk
 
 all: $(BUILD_DIR)/$(PKG_NAME)
