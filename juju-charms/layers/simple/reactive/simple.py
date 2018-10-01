@@ -39,6 +39,6 @@ def touch():
     except:
         action_fail('command failed:' + err)
     else:
-        action_set({'outout': result})
+        action_set({'output': result})
     finally:
         clear_flag('actions.touch')
