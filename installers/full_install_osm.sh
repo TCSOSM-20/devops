@@ -48,6 +48,7 @@ function usage(){
     echo -e "     --develop:      (deprecated, use '-b master') install OSM from source code using the master branch"
     echo -e "     --soui:         install classic build of OSM (Rel THREE v3.1, based on LXD containers, with SO and UI)"
     echo -e "     --lxdimages:    (only for Rel THREE with --soui) download lxd images from OSM repository instead of creating them from scratch"
+    echo -e "     --pullimages:   pull/run osm images from docker.io/opensourcemano"
     echo -e "     -l <lxd_repo>:  (only for Rel THREE with --soui) use specified repository url for lxd images"
     echo -e "     -p <path>:      (only for Rel THREE with --soui) use specified repository path for lxd images"
 #    echo -e "     --reconfigure:  reconfigure the modules (DO NOT change NAT rules)"
@@ -162,14 +163,14 @@ function uninstall_lightweight() {
         remove_stack osm_metrics
         echo "Now osm docker images and volumes will be deleted"
         newgrp docker << EONG
-        docker image rm osm/ro
-        docker image rm osm/lcm
-        docker image rm osm/light-ui
-        docker image rm osm/keystone
-        docker image rm osm/nbi
-        docker image rm osm/mon
-        docker image rm osm/pm
-        docker image rm osm/kafka-exporter
+        docker image rm ${DOCKERUSER}/ro
+        docker image rm ${DOCKERUSER}/lcm
+        docker image rm ${DOCKERUSER}/light-ui
+        docker image rm ${DOCKERUSER}/keystone
+        docker image rm ${DOCKERUSER}/nbi
+        docker image rm ${DOCKERUSER}/mon
+        docker image rm ${DOCKERUSER}/pm
+        docker image rm ${DOCKERUSER}/kafka-exporter
 EONG
         remove_volumes $OSM_STACK_NAME
         remove_network $OSM_STACK_NAME
@@ -650,37 +651,57 @@ function generate_docker_images() {
         sg docker -c "docker pull wurstmeister/zookeeper" || FATAL "cannot get zookeeper docker image"
         sg docker -c "docker pull wurstmeister/kafka" || FATAL "cannot get kafka docker image"
     fi
+
     if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q MONGO ; then
         sg docker -c "docker pull mongo" || FATAL "cannot get mongo docker image"
     fi
-    if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q MON ; then
+
+    if [ -n "$PULL_IMAGES" ]; then
+        sg docker -c "docker pull ${DOCKER_USER}/mon:${OSM_DOCKER_TAG}" || FATAL "cannot pull MON docker image"
+        sg docker -c "docker pull ${DOCKER_USER}/pol:${OSM_DOCKER_TAG}" || FATAL "cannot pull POL docker image"
+    elif [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q MON ; then
         git -C ${LWTEMPDIR} clone https://osm.etsi.org/gerrit/osm/MON
         git -C ${LWTEMPDIR}/MON checkout ${COMMIT_ID}
         sg docker -c "docker build ${LWTEMPDIR}/MON -f ${LWTEMPDIR}/MON/docker/Dockerfile -t osm/mon --no-cache" || FATAL "cannot build MON docker image"
         sg docker -c "docker build ${LWTEMPDIR}/MON/policy_module -f ${LWTEMPDIR}/MON/policy_module/Dockerfile -t osm/pm --no-cache" || FATAL "cannot build PM docker image"
     fi
-    if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q NBI ; then
+
+    if [ -n "$PULL_IMAGES" ]; then
+        sg docker -c "docker pull ${DOCKER_USER}/nbi:${OSM_DOCKER_TAG}" || FATAL "cannot pull NBI docker image"
+    elif [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q NBI ; then
         git -C ${LWTEMPDIR} clone https://osm.etsi.org/gerrit/osm/NBI
         git -C ${LWTEMPDIR}/NBI checkout ${COMMIT_ID}
         sg docker -c "docker build ${LWTEMPDIR}/NBI -f ${LWTEMPDIR}/NBI/Dockerfile.local -t osm/nbi --no-cache" || FATAL "cannot build NBI docker image"
     fi
-    if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q RO ; then
+
+    if [ -n "$PULL_IMAGES" ]; then
+        sg docker -c "docker pull ${DOCKER_USER}/ro:${OSM_DOCKER_TAG}" || FATAL "cannot pull RO docker image"
+    elif [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q RO ; then
         sg docker -c "docker pull mysql:5" || FATAL "cannot get mysql docker image"
         git -C ${LWTEMPDIR} clone https://osm.etsi.org/gerrit/osm/RO
         git -C ${LWTEMPDIR}/RO checkout ${COMMIT_ID}
         sg docker -c "docker build ${LWTEMPDIR}/RO -f ${LWTEMPDIR}/RO/docker/Dockerfile-local -t osm/ro --no-cache" || FATAL "cannot build RO docker image"
     fi
-    if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q LCM ; then
+
+    if [ -n "$PULL_IMAGES" ]; then
+        sg docker -c "docker pull ${DOCKER_USER}/lcm:${OSM_DOCKER_TAG}" || FATAL "cannot pull LCM RO docker image"
+    elif [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q LCM ; then
         git -C ${LWTEMPDIR} clone https://osm.etsi.org/gerrit/osm/LCM
         git -C ${LWTEMPDIR}/LCM checkout ${COMMIT_ID}
         sg docker -c "docker build ${LWTEMPDIR}/LCM -f ${LWTEMPDIR}/LCM/Dockerfile.local -t osm/lcm --no-cache" || FATAL "cannot build LCM docker image"
     fi
-    if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q LW-UI ; then
+
+    if [ -n "$PULL_IMAGES" ]; then
+        sg docker -c "docker pull ${DOCKER_USER}/light-ui:${OSM_DOCKER_TAG}" || FATAL "cannot pull light-ui docker image"
+    elif [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q LW-UI ; then
         git -C ${LWTEMPDIR} clone https://osm.etsi.org/gerrit/osm/LW-UI
         git -C ${LWTEMPDIR}/LW-UI checkout ${COMMIT_ID}
         sg docker -c "docker build ${LWTEMPDIR}/LW-UI -t osm/light-ui -f ${LWTEMPDIR}/LW-UI/Dockerfile --no-cache" || FATAL "cannot build LW-UI docker image"
     fi
-    if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q LW-osmclient; then
+
+    if [ -n "$PULL_IMAGES" ]; then
+        sg docker -c "docker pull ${DOCKER_USER}/osmclient:${OSM_DOCKER_TAG}" || FATAL "cannot pull osmclient docker image"
+    elif [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q LW-osmclient; then
         sg docker -c "docker build -t osm/osmclient ${BUILD_ARGS[@]} -f $OSM_DEVOPS/docker/osmclient ."
     fi
     echo "Finished generation of docker images"
@@ -784,6 +805,9 @@ function deploy_lightweight() {
     echo "export ${OSM_PORTS[@]}" | $WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/osm_ports.sh
     echo "export OSM_NETWORK=net${OSM_STACK_NAME}" | $WORKDIR_SUDO tee --append $OSM_DOCKER_WORK_DIR/osm_ports.sh
     echo "export TAG=${OSM_DOCKER_TAG}" | $WORKDIR_SUDO tee --append $OSM_DOCKER_WORK_DIR/osm_ports.sh
+    echo "export DOCKER_USER=${DOCKER_USER}" | $WORKDIR_SUDO tee --append $OSM_DOCKER_WORK_DIR/osm_ports.sh
+  
+
 
     pushd $OSM_DOCKER_WORK_DIR
     sg docker -c "source ./osm_ports.sh; docker stack deploy -c $OSM_DOCKER_WORK_DIR/docker-compose.yaml $OSM_STACK_NAME"
@@ -1039,6 +1063,7 @@ REPOSITORY_BASE="http://osm-download.etsi.org/repository/osm/debian"
 WORKDIR_SUDO=sudo
 OSM_WORK_DIR="/etc/osm"
 OSM_DOCKER_TAG=latest
+DOCKER_USER=osm
 
 while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:H:S:s:w:t:" o; do
     case "${o}" in
@@ -1131,6 +1156,7 @@ while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:H:S:s:w:t:" o; do
             [ "${OPTARG}" == "nojuju" ] && INSTALL_NOJUJU="y" && continue
             [ "${OPTARG}" == "nodockerbuild" ] && DOCKER_NOBUILD="y" && continue
             [ "${OPTARG}" == "nohostclient" ] && INSTALL_NOHOSTCLIENT="y" && continue
+            [ "${OPTARG}" == "pullimages" ] && DOCKER_USER="opensourcemano" && PULL_IMAGES=true && continue
             echo -e "Invalid option: '--$OPTARG'\n" >&2
             usage && exit 1
             ;;

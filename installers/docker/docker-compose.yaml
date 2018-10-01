@@ -57,7 +57,7 @@ services:
 #    ports:
 #      - "3306:3306"
   keystone:
-    image: osm/keystone:${TAG:-latest}
+    image: ${DOCKER_USER:-osm}/keystone:${TAG:-latest}
     networks:
       - netOSM
     environment:
@@ -67,7 +67,7 @@ services:
     ports:
       - "${OSM_KEYSTONE_PORTS:-5000:5000}"
   nbi:
-    image: osm/nbi:${TAG:-latest}
+    image: ${DOCKER_USER:-osm}/nbi:${TAG:-latest}
     networks:
       - netOSM
     volumes:
@@ -83,7 +83,7 @@ services:
     #  - kafka
     #  - mongo
   lcm:
-    image: osm/lcm:${TAG:-latest}
+    image: ${DOCKER_USER:-osm}/lcm:${TAG:-latest}
     networks:
       - netOSM
     volumes:
@@ -109,7 +109,7 @@ services:
 #    ports:
 #      - "3306:3306"
   ro:
-    image: osm/ro:${TAG:-latest}
+    image: ${DOCKER_USER:-osm}/ro:${TAG:-latest}
     networks:
       - netOSM
     environment:
@@ -121,7 +121,7 @@ services:
     ports:
       - "${OSM_RO_PORTS:-9090:9090}"
   mon:
-    image: osm/mon:${TAG:-latest}
+    image: ${DOCKER_USER:-osm}/mon:${TAG:-latest}
     networks:
       - netOSM
     volumes:
@@ -135,8 +135,8 @@ services:
     #  - kafka
     ports:
       - "8662"
-  pm:
-    image: osm/pm:${TAG:-latest}
+  pol:
+    image: ${DOCKER_USER:-osm}/pol:${TAG:-latest}
     networks:
       - netOSM
     environment:
@@ -145,7 +145,7 @@ services:
     #  - kafka
     #  - mon
   light-ui:
-    image: osm/light-ui:${TAG:-latest}
+    image: ${DOCKER_USER:-osm}/light-ui:${TAG:-latest}
     networks:
       - netOSM
     environment:
