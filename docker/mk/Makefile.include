@@ -14,10 +14,12 @@ NO_CACHE        ?= --no-cache
 
 LOWER_MDG = $(shell echo $(MDG) | tr '[:upper:]' '[:lower:]')
 
+CONTAINER_NAME ?= $(LOWER_MDG)
+
 CMD_DOCKER_ARGS ?= -q
 DOCKER_ARGS     = $(CMD_DOCKER_ARGS)
 
-DEPS := MON IM LCM RO common osmclient devops NBI POL Keystone
+DEPS := MON IM LCM RO common osmclient devops NBI policy-module Keystone
 
 DEPS_TARGETS = $(addprefix $(MKBUILD)/.dep_, $(DEPS))
 
@@ -25,6 +27,9 @@ Q=@
 
 $(MKBUILD):
 	$Qmkdir -p $(MKBUILD)
+
+$(MKBUILD)/.dep_policy-module:
+	$Q$(MKINCLUDE)/get_version.sh -r $(REPOSITORY) -R $(RELEASE) -k $(REPOSITORY_KEY) -u $(REPOSITORY_BASE) -m POL -p policy-module > $@
 
 $(MKBUILD)/.dep_%:
 	$Q$(MKINCLUDE)/get_version.sh -r $(REPOSITORY) -R $(RELEASE) -k $(REPOSITORY_KEY) -u $(REPOSITORY_BASE) -m $* > $@
@@ -42,7 +47,7 @@ build: $(MKBUILD) $(DEPS_TARGETS)
                    --build-arg COMMON_VERSION==$(shell cat $(MKBUILD)/.dep_common) \
                    --build-arg OSMCLIENT_VERSION==$(shell cat $(MKBUILD)/.dep_osmclient) \
                    --build-arg NBI_VERSION==$(shell cat $(MKBUILD)/.dep_NBI) \
-                   --build-arg POL_VERSION==$(shell cat $(MKBUILD)/.dep_POL) \
+                   --build-arg POL_VERSION==$(shell cat $(MKBUILD)/.dep_policy-module) \
                    --build-arg DEVOPS_VERSION==$(shell cat $(MKBUILD)/.dep_devops) \
                    --build-arg LWUI_VERSION==$(shell date +%s) \
                    $(DOCKER_ARGS) .
@@ -51,4 +56,4 @@ clean:
 	rm -f $(MKBUILD)/.dep*
 
 tag:
-	docker tag osm/$(LOWER_MDG) osm/$(LOWER_MDG):$(TAG)
+	docker tag osm/$(CONTAINER_NAME) osm/$(LOWER_MDG):$(TAG)
