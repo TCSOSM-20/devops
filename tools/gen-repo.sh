@@ -155,4 +155,12 @@ cd $CURR_DIR/$REPO_BASE
 # copy over the changelog file
 [ "$CHANGE_LOG_FILE" ] && cp "$CHANGE_LOG_FILE" osm/debian/$RELEASE_DIR
 
+IM_BASE="osm/debian/$RELEASE_DIR/pool/IM/osm-imdocs_"
+if ls "$IM_BASE"* 1> /dev/null 2>&1; then
+    IM_TMP_DIR=$(mktemp -d)
+    dpkg -x "$IM_BASE"* $IM_TMP_DIR
+    mkdir osm/debian/$RELEASE_DIR/docs
+    cp -R $IM_TMP_DIR/usr/share/osm-im osm/debian/$RELEASE_DIR/docs
+fi
+
 rsync -avR $RSYNC_OPTIONS osm/debian/$RELEASE_DIR rsync://$RSYNC_USER_HOST/repos
