@@ -33,10 +33,29 @@ properties([
         string(defaultValue: 'osm-stage_4', description: '', name: 'DOWNSTREAM_STAGE_NAME'),
         booleanParam(defaultValue: false, description: '', name: 'SAVE_CONTAINER_ON_FAIL'),
         booleanParam(defaultValue: false, description: '', name: 'SAVE_CONTAINER_ON_PASS'),
+        booleanParam(defaultValue: true, description: '', name: 'SAVE_ARTIFACTS_ON_SMOKE_SUCCESS'),
         booleanParam(defaultValue: false, description: '', name: 'DO_STAGE_4'),
+        booleanParam(defaultValue: true, description: '',  name: 'DO_BUILD'),
+        booleanParam(defaultValue: true, description: '', name: 'DO_INSTALL'),
+        booleanParam(defaultValue: true, description: '', name: 'DO_SMOKE'),
         booleanParam(defaultValue: false, description: '', name: 'SAVE_ARTIFACTS_OVERRIDE'),
     ])
 ])
+
+def uninstall_osm(stackName) {
+    sh """
+         export OSM_USE_LOCAL_DEVOPS=true
+         export PATH=$PATH:/snap/bin
+         installers/full_install_osm.sh -y -w /tmp/osm -t ${stackName} -s ${stackName} --test --nolxd --nodocker --nojuju --nohostports --nohostclient --uninstall
+       """
+}
+
+def run_systest(stackName,tagName,testName) {
+    tempdir = sh(returnStdout: true, script: "mktemp -d").trim()
+    sh "docker run --network net${stackName} -v ${tempdir}:/usr/share/osm-devops/systest/reports osm/osmclient:${tagName} make -C /usr/share/osm-devops/systest ${testName}"
+    sh "cp ${tempdir}/* ."
+    junit  '*.xml'
+}
 
 node("${params.NODE}") {
 
@@ -69,7 +88,7 @@ node("${params.NODE}") {
             // grab all stable upstream builds based on the
 
             dir("${RELEASE}") {
-                def list = ["SO", "UI", "RO", "openvim", "osmclient", "IM", "devops", "MON", "N2VC", "NBI", "common" ]
+                def list = ["RO", "openvim", "osmclient", "IM", "devops", "MON", "N2VC", "NBI", "common", "LCM"]
                 for (component in list) {
                     step ([$class: 'CopyArtifact',
                            projectName: "${component}${upstream_main_job}/${GERRIT_BRANCH}"])
@@ -103,6 +122,9 @@ node("${params.NODE}") {
                     // the upstream job name contains suffix with the project. Need this stripped off
                     def project_without_branch = params.UPSTREAM_JOB_NAME.split('/')[0]
 
+                    // Remove the previous artifact for this component. Use the new upstream artifact
+                    sh "rm -rf pool/${component}"
+
                     ci_helper.get_archive(params.ARTIFACTORY_SERVER,component,GERRIT_BRANCH, "${project_without_branch} :: ${GERRIT_BRANCH}", build_num)
 
                     sh "rm -rf dists"
@@ -133,6 +155,7 @@ node("${params.NODE}") {
                    rm -f changelog/changelog-osm.html
                    [ ! -d changelog ] || for mdgchange in \$(ls changelog); do cat changelog/\$mdgchange >> changelog/changelog-osm.html; done
                    """
+                RELEASE_DIR = sh(returnStdout:true,  script: 'pwd').trim()
             }
             // start an apache server to serve up the images
             http_server_name = "${container_name}-apache"
@@ -140,104 +163,134 @@ node("${params.NODE}") {
             pwd = sh(returnStdout:true,  script: 'pwd').trim()
             repo_base_url = ci_helper.start_http_server(pwd,http_server_name)
         }
+
+        // now pull the devops package and install in temporary location
+        tempdir = sh(returnStdout: true, script: "mktemp -d").trim()
+        osm_devops_dpkg = sh(returnStdout: true, script: "find . -name osm-devops*.deb").trim()
+        sh "dpkg -x ${osm_devops_dpkg} ${tempdir}"
+        OSM_DEVOPS="${tempdir}/usr/share/osm-devops"
     }
 
-    error = null
-
-    try {
-        stage("Install") {
-
-            //will by default always delete containers on complete
-            //sh "jenkins/system/delete_old_containers.sh ${container_name_prefix}"
-
-            commit_id = ''
-            repo_distro = ''
-            repo_key_name = ''
-            release = ''
-
-            if ( params.COMMIT_ID )
-            {
-                commit_id = "-b ${params.COMMIT_ID}"
+    dir(OSM_DEVOPS) {
+        error = null
+        if ( params.DO_BUILD ) {
+            stage("Build") {
+                sh "make -C docker clean"
+                sh "make -C docker Q= CMD_DOCKER_ARGS= TAG=${container_name} RELEASE=${params.RELEASE} REPOSITORY_BASE=${repo_base_url} REPOSITORY_KEY=${params.REPO_KEY_NAME} REPOSITORY=${params.REPO_DISTRO}"
             }
-
-            if ( params.REPO_DISTRO )
-            {
-                repo_distro = "-r ${params.REPO_DISTRO}"
-            }
-
-            if ( params.REPO_KEY_NAME )
-            {
-                repo_key_name = "-k ${params.REPO_KEY_NAME}"
-            }
-
-            if ( params.RELEASE )
-            {
-                release = "-R ${params.RELEASE}"
-            }
-     
-            sh """
-                export OSM_USE_LOCAL_DEVOPS=true
-                jenkins/host/start_build system --build-container ${container_name} \
-                                                ${commit_id} \
-                                                ${repo_distro} \
-                                                ${repo_base_url} \
-                                                ${repo_key_name} \
-                                                ${release} \
-                                                ${params.BUILD_FROM_SOURCE}
-               """
         }
 
-        stage("Smoke") {
-            ci_helper.systest_run(container_name, 'smoke')
-            junit '*.xml'
-        }
+        try {
+            if ( params.DO_INSTALL ) {
+                stage("Install") {
 
-        stage_4_archive = false
-        if ( params.DO_STAGE_4 ) {
-            stage("stage_4") {
-                def downstream_params = [
-                    string(name: 'CONTAINER_NAME', value: container_name),
-                    string(name: 'NODE', value: NODE_NAME.split()[0]),
-                ]
-                stage_4_result = build job: "${params.DOWNSTREAM_STAGE_NAME}/${GERRIT_BRANCH}", parameters: downstream_params, propagate: false 
-                currentBuild.result = stage_4_result.result
+                    //will by default always delete containers on complete
+                    //sh "jenkins/system/delete_old_containers.sh ${container_name_prefix}"
 
-                if ( stage_4_result.getResult().equals('SUCCESS') ) {
-                    stage_4_archive = true;
+                    commit_id = ''
+                    repo_distro = ''
+                    repo_key_name = ''
+                    release = ''
+
+                    if ( params.COMMIT_ID )
+                    {
+                        commit_id = "-b ${params.COMMIT_ID}"
+                    }
+
+                    if ( params.REPO_DISTRO )
+                    {
+                        repo_distro = "-r ${params.REPO_DISTRO}"
+                    }
+
+                    if ( params.REPO_KEY_NAME )
+                    {
+                        repo_key_name = "-k ${params.REPO_KEY_NAME}"
+                    }
+
+                    if ( params.RELEASE )
+                    {
+                        release = "-R ${params.RELEASE}"
+                    }
+             
+                    sh """
+                        export PATH=$PATH:/snap/bin
+                        installers/full_install_osm.sh -y -s ${container_name} --test --nolxd --nodocker --nojuju --nohostports --nohostclient \
+                                                        --nodockerbuild -t ${container_name} \
+                                                        -w /tmp/osm \
+                                                        ${commit_id} \
+                                                        ${repo_distro} \
+                                                        ${repo_base_url} \
+                                                        ${repo_key_name} \
+                                                        ${release} \
+                                                        ${params.BUILD_FROM_SOURCE}
+                       """
+                }
+            }
+
+            stage_archive = false
+            if ( params.DO_SMOKE ) {
+                stage("OSM Health") {
+                    sh "installers/osm_health.sh -s ${container_name}"
+                }
+                stage("Smoke") {
+                    run_systest(container_name,container_name,"smoke")
+                    // archive smoke success until stage_4 is ready
+
+                    if ( ! currentBuild.result.equals('UNSTABLE') ) {
+                        stage_archive = params.SAVE_ARTIFACTS_ON_SMOKE_SUCCESS
+                    }
+                }
+            }
+
+            if ( params.DO_STAGE_4 ) {
+                stage("stage_4") {
+                    def downstream_params = [
+                        string(name: 'CONTAINER_NAME', value: container_name),
+                        string(name: 'NODE', value: NODE_NAME.split()[0]),
+                    ]
+                    stage_4_result = build job: "${params.DOWNSTREAM_STAGE_NAME}/${GERRIT_BRANCH}", parameters: downstream_params, propagate: false 
+                    currentBuild.result = stage_4_result.result
+
+                    if ( stage_4_result.getResult().equals('SUCCESS') ) {
+                        stage_archive = true;
+                    }
+                }
+            }
+
+            // override to save the artifacts
+            if ( params.SAVE_ARTIFACTS_OVERRIDE || stage_archive ) {
+                stage("Archive") {
+                    sh "echo ${container_name} > build_version.txt"
+                    archiveArtifacts artifacts: "build_version.txt", fingerprint: true
+
+                    // Archive the tested repo
+                    dir("${RELEASE_DIR}") {
+                        ci_helper.archive(params.ARTIFACTORY_SERVER,RELEASE,GERRIT_BRANCH,'tested')
+                    }
                 }
             }
         }
+        catch(caughtError) {
+            println("Caught error!")
+            error = caughtError
+            currentBuild.result = 'FAILURE'
+        }
+        finally {
+            sh "docker stop ${http_server_name}"
+            sh "docker rm ${http_server_name}"
 
-        // override to save the artifacts
-        if ( params.SAVE_ARTIFACTS_OVERRIDE || stage_4_archive ) {
-            stage("Archive") {
-                sh "echo ${container_name} > build_version.txt"
-                archiveArtifacts artifacts: "build_version.txt", fingerprint: true
-
-                // Archive the tested repo
-                dir("repo/${RELEASE}") {
-                    ci_helper.archive(params.ARTIFACTORY_SERVER,RELEASE,GERRIT_BRANCH,'tested')
+            if ( params.DO_INSTALL ) {
+                if (error) {
+                    if ( !params.SAVE_CONTAINER_ON_FAIL ) {
+                        uninstall_osm container_name
+                    }
+                    throw error 
                 }
-            }
-        }
-    }
-    catch(caughtError) {
-        println("Caught error!")
-        error = caughtError
-        currentBuild.result = 'FAILURE'
-    }
-    finally {
-        sh "docker stop ${http_server_name}"
-
-        if (error) {
-            if ( !params.SAVE_CONTAINER_ON_FAIL ) {
-                sh "lxc delete ${container_name} --force"
-            }
-            throw error 
-        }
-        else {
-            if ( !params.SAVE_CONTAINER_ON_PASS ) {
-                sh "lxc delete ${container_name} --force"
+                else {
+                    if ( !params.SAVE_CONTAINER_ON_PASS ) {
+                        uninstall_osm container_name
+                    }
+                }
             }
         }
     }

@@ -46,6 +46,28 @@ def usage():
     print("      -i|--input FILE: (same as param FILE) descriptor file to be upgraded")
     return
 
+def remove_prefix(desc, prefix):
+    """
+    Recursively removes prefix from keys
+    :param desc: dictionary or list to change
+    :param prefix: prefix to remove. Must
+    :return: None, param desc is changed
+    """
+    prefix_len = len(prefix)
+    if isinstance(desc, dict):
+        prefixed_list=[]
+        for k,v in desc.items():
+            if isinstance(v, (list, tuple, dict)):
+                remove_prefix(v, prefix)
+            if isinstance(k, str) and k.startswith(prefix) and k != prefix:
+                prefixed_list.append(k)
+        for k in prefixed_list:
+            desc[k[prefix_len:]] = desc.pop(k)
+    elif isinstance(desc, (list, tuple)):
+        for i in desc:
+            if isinstance(desc, (list, tuple, dict)):
+                remove_prefix(i, prefix)
+
 if __name__=="__main__":
     error_position = []
     format_output_yaml = True
@@ -91,6 +113,31 @@ if __name__=="__main__":
 
         if "vnfd:vnfd-catalog" in data or "vnfd-catalog" in data:
             descriptor = "VNF"
+            # Check if mgmt-interface is defined:
+            remove_prefix(data, "vnfd:")
+            vnfd_descriptor = data["vnfd-catalog"]
+            vnfd_list = vnfd_descriptor["vnfd"]
+            mgmt_iface = False
+            for vnfd in vnfd_list:
+                vdu_list = vnfd["vdu"]
+                for vdu in vdu_list:
+                    interface_list = []
+                    external_interface_list = vdu.pop("external-interface", ())
+                    for external_interface in external_interface_list:
+                        if external_interface.get("virtual-interface", {}).get("type") == "OM-MGMT":
+                            raise KeyError(
+                                "Wrong 'Virtual-interface type': Deprecated 'OM-MGMT' value. Please, use 'VIRTIO' instead")
+                    interface_list = vdu.pop("interface", ())
+                    for interface in interface_list:
+                        if interface.get("virtual-interface", {}).get("type") == "OM-MGMT":
+                            raise KeyError(
+                                "Wrong 'Virtual-interface type': Deprecated 'OM-MGMT' value. Please, use 'VIRTIO' instead")
+                if vnfd.get("mgmt-interface"):
+                    mgmt_iface = True
+                    if vnfd["mgmt-interface"].get("vdu-id"):
+                        raise KeyError("'mgmt-iface': Deprecated 'vdu-id' field. Please, use 'cp' field instead")
+            if not mgmt_iface:
+                raise KeyError("'mgmt-iface' is a mandatory field and it is not defined")
             myvnfd = vnfd_catalog.vnfd()
             pybindJSONDecoder.load_ietf_json(data, None, None, obj=myvnfd)
         elif "nsd:nsd-catalog" in data or "nsd-catalog" in data:

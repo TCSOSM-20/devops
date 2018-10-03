@@ -14,13 +14,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-PKG_DIRECTORIES="jenkins installers systest juju-charms descriptor-packages tools"
+PKG_DIRECTORIES="jenkins installers systest juju-charms descriptor-packages tools docker"
 MDG_NAME=devops
 DEB_INSTALL=debian/osm-$MDG_NAME.install
 export DEBEMAIL="mmarchetti@sandvine.com"
 export DEBFULLNAME="Michael Marchetti"
 
-PKG_VERSION=$(git describe --tags --abbrev=0)
+PKG_VERSION=$(git describe --match "v*" --tags --abbrev=0)
 PKG_VERSION_PREFIX=$(echo $PKG_VERSION | sed -e 's/v//g')
 PKG_VERSION_POST=$(git rev-list $PKG_VERSION..HEAD | wc -l)
 if [ "$PKG_VERSION_POST" -eq 0 ]; then

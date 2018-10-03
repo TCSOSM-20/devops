@@ -51,11 +51,10 @@ class TestClass(object):
 
         resp=osm.get_api().vim.get(vim_name)
         assert resp['name'] == vim_name
-        assert resp['type'] == 'openstack'
+        assert resp['vim_type'] == 'openstack'
         assert resp['vim_url'] == os_access['vim-url']
-        assert resp['vim_url_admin'] == os_access['vim-url']
-        assert resp['vim_tenants'][0]['user'] == os_access['vim-username']
-        assert resp['vim_tenants'][0]['vim_tenant_name'] == os_access['vim-tenant-name']
+        assert resp['vim_user'] == os_access['vim-username']
+        assert resp['vim_tenant_name'] == os_access['vim-tenant-name']
         assert not osm.get_api().vim.delete(vim_name)
 
     @pytest.mark.vmware
@@ -73,12 +72,10 @@ class TestClass(object):
 
         resp=osm.get_api().vim.get(vim_name)
         assert resp['name'] == vim_name
-        assert resp['type'] == 'vmware'
+        assert resp['vim_type'] == 'vmware'
         assert resp['vim_url'] == os_access['vim-url']
-        assert resp['vim_url_admin'] == os_access['vim-url']
-        assert resp['vim_tenants'][0]['user'] == os_access['vim-username']
-        assert resp['vim_tenants'][0]['vim_tenant_name'] == os_access['vim-tenant-name']
-
+        assert resp['vim_user'] == os_access['vim-username']
+        assert resp['vim_tenant_name'] == os_access['vim-tenant-name']
         assert not osm.get_api().vim.delete(vim_name)
 
     #@pytest.mark.smoke
@@ -96,11 +93,10 @@ class TestClass(object):
             assert not osm.get_api().vim.create(vim['name'],os_access)
             resp=osm.get_api().vim.get(vim['name'])
             assert resp['name'] == vim['name'] 
-            assert resp['type'] == vim['vim-type']
+            assert resp['vim_type'] == vim['vim-type']
             assert resp['vim_url'] == os_access['vim-url']
-            assert resp['vim_url_admin'] == os_access['vim-url']
-            assert resp['vim_tenants'][0]['user'] == os_access['vim-username']
-            assert resp['vim_tenants'][0]['vim_tenant_name'] == os_access['vim-tenant-name']
+            assert resp['vim_user'] == os_access['vim-username']
+            assert resp['vim_tenant_name'] == os_access['vim-tenant-name']
 
         for vim in osm.get_api().vim.list(False):
             osm.get_api().vim.delete(vim['name'])

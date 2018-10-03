@@ -15,11 +15,11 @@
 #    under the License.
 
 
-from osmclient.client import client
+from osmclient import client
 
 class Osm():
-    def __init__(self,osmhost,ro_host=None,descriptors_dir=None,vnfd_descriptors_list=None,nsd_descriptors_list=None,ns_name_prefix=None):
-        self._OsmApi=client.Client(host=osmhost,ro_host=ro_host)
+    def __init__(self,osmhost,sol005=None,ro_host=None,descriptors_dir=None,vnfd_descriptors_list=None,nsd_descriptors_list=None,ns_name_prefix=None):
+        self._OsmApi=client.Client(host=osmhost,sol005=sol005,ro_host=ro_host)
         self._descriptors_dir = descriptors_dir
         self.vnfd_descriptors_list = vnfd_descriptors_list
         self.nsd_descriptors_list  = nsd_descriptors_list 

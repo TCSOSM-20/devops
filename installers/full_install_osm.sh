@@ -26,19 +26,29 @@ function usage(){
     echo -e "                     -b v2.0            (v2.0 branch)"
     echo -e "                     -b tags/v1.1.0     (a specific tag)"
     echo -e "                     ..."
+    echo -e "     -s <stack name> user defined stack name, default is osm"
+    echo -e "     -H <VCA host>   use specific juju host controller IP"
+    echo -e "     -S <VCA secret> use VCA/juju secret key"
     echo -e "     --vimemu:       additionally deploy the VIM emulator as a docker container"
     echo -e "     --elk_stack:    additionally deploy an ELK docker stack for event logging"
     echo -e "     --pm_stack:     additionally deploy a Prometheus+Grafana stack for performance monitoring (PM)"
     echo -e "     -m <MODULE>:    install OSM but only rebuild the specified docker images (RO, LCM, NBI, LW-UI, MON, KAFKA, MONGO, NONE)"
     echo -e "     -o <ADDON>:     ONLY (un)installs one of the addons (vimemu, elk_stack, pm_stack)"
     echo -e "     -D <devops path> use local devops installation path"
+    echo -e "     -w <work dir>   Location to store runtime installation"
+    echo -e "     -t <docker tag> specify osm docker tag (default is latest)"
     echo -e "     --nolxd:        do not install and configure LXD, allowing unattended installations (assumes LXD is already installed and confifured)"
     echo -e "     --nodocker:     do not install docker, do not initialize a swarm (assumes docker is already installed and a swarm has been initialized)"
+    echo -e "     --nojuju:       do not juju, assumes already installed"
+    echo -e "     --nodockerbuild:do not build docker images (use existing locally cached images)"
+    echo -e "     --nohostports:  do not expose docker ports to host (useful for creating multiple instances of osm on the same host)"
+    echo -e "     --nohostclient: do not install the osmclient"
     echo -e "     --uninstall:    uninstall OSM: remove the containers and delete NAT rules"
     echo -e "     --source:       install OSM from source code using the latest stable tag"
     echo -e "     --develop:      (deprecated, use '-b master') install OSM from source code using the master branch"
     echo -e "     --soui:         install classic build of OSM (Rel THREE v3.1, based on LXD containers, with SO and UI)"
     echo -e "     --lxdimages:    (only for Rel THREE with --soui) download lxd images from OSM repository instead of creating them from scratch"
+    echo -e "     --pullimages:   pull/run osm images from docker.io/opensourcemano"
     echo -e "     -l <lxd_repo>:  (only for Rel THREE with --soui) use specified repository url for lxd images"
     echo -e "     -p <path>:      (only for Rel THREE with --soui) use specified repository path for lxd images"
 #    echo -e "     --reconfigure:  reconfigure the modules (DO NOT change NAT rules)"
@@ -72,6 +82,42 @@ function uninstall(){
     return 0
 }
 
+# takes a juju/accounts.yaml file and returns the password specific
+# for a controller. I wrote this using only bash tools to minimize 
+# additions of other packages
+function parse_juju_password {
+   password_file="${HOME}/.local/share/juju/accounts.yaml"
+   local controller_name=$1
+   local s='[[:space:]]*' w='[a-zA-Z0-9_-]*' fs=$(echo @|tr @ '\034')
+   sed -ne "s|^\($s\):|\1|" \
+        -e "s|^\($s\)\($w\)$s:$s[\"']\(.*\)[\"']$s\$|\1$fs\2$fs\3|p" \
+        -e "s|^\($s\)\($w\)$s:$s\(.*\)$s\$|\1$fs\2$fs\3|p" $password_file |
+   awk -F$fs -v controller=$controller_name '{
+      indent = length($1)/2;
+      vname[indent] = $2;
+      for (i in vname) {if (i > indent) {delete vname[i]}}
+      if (length($3) > 0) {
+         vn=""; for (i=0; i<indent; i++) {vn=(vn)(vname[i])("_")}
+         if (match(vn,controller) && match($2,"password")) {
+             printf("%s",$3);
+         }
+      }
+   }'
+}
+
+function remove_volumes() {
+    stack=$1
+    volumes="mongo_db mon_db osm_packages ro_db"
+    for volume in $volumes; do
+        sg docker -c "docker volume rm ${stack}_${volume}"
+    done
+}
+
+function remove_network() {
+    stack=$1
+    sg docker -c "docker network rm net${stack}"
+}
+
 function remove_stack() {
     stack=$1
     if sg docker -c "docker stack ps ${stack}" ; then
@@ -102,36 +148,35 @@ function uninstall_lightweight() {
         if [ -n "$INSTALL_ELK" ]; then
             echo -e "\nUninstalling OSM ELK stack"
             remove_stack osm_elk
-            sudo rm -rf /etc/osm/docker/osm_elk
+            $WORKDIR_SUDO rm -rf $OSM_DOCKER_WORK_DIR/osm_elk
         fi
         if [ -n "$INSTALL_PERFMON" ]; then
             echo -e "\nUninstalling OSM Performance Monitoring stack"
             remove_stack osm_metrics
             sg docker -c "docker image rm osm/kafka-exporter"
-            sudo rm -rf /etc/osm/docker/osm_metrics
+            $WORKDIR_SUDO rm -rf $OSM_DOCKER_WORK_DIR/osm_metrics
         fi
     else
         echo -e "\nUninstalling OSM"
-        remove_stack osm
+        remove_stack $OSM_STACK_NAME
         remove_stack osm_elk
         remove_stack osm_metrics
         echo "Now osm docker images and volumes will be deleted"
         newgrp docker << EONG
-        docker image rm osm/ro
-        docker image rm osm/lcm
-        docker image rm osm/light-ui
-        docker image rm osm/nbi
-        docker image rm osm/mon
-        docker image rm osm/pm
-        docker image rm osm/kafka-exporter
-        docker volume rm osm_mon_db
-        docker volume rm osm_mongo_db
-        docker volume rm osm_osm_packages
-        docker volume rm osm_ro_db
+        docker image rm ${DOCKERUSER}/ro
+        docker image rm ${DOCKERUSER}/lcm
+        docker image rm ${DOCKERUSER}/light-ui
+        docker image rm ${DOCKERUSER}/keystone
+        docker image rm ${DOCKERUSER}/nbi
+        docker image rm ${DOCKERUSER}/mon
+        docker image rm ${DOCKERUSER}/pm
+        docker image rm ${DOCKERUSER}/kafka-exporter
 EONG
-        echo "Removing /etc/osm and /var/log/osm files"
-        sudo rm -rf /etc/osm
-        sudo rm -rf /var/log/osm
+        remove_volumes $OSM_STACK_NAME
+        remove_network $OSM_STACK_NAME
+        echo "Removing $OSM_DOCKER_WORK_DIR"
+        $WORKDIR_SUDO rm -rf $OSM_DOCKER_WORK_DIR
+        sg lxd -c "juju destroy-controller --yes $OSM_STACK_NAME"
     fi
     echo "Some docker images will be kept in case they are used by other docker stacks"
     echo "To remove them, just run 'docker image prune' in a terminal"
@@ -488,7 +533,6 @@ function install_osmclient(){
     CLIENT_RELEASE=${RELEASE#"-R "}
     CLIENT_REPOSITORY_KEY="OSM%20ETSI%20Release%20Key.gpg"
     CLIENT_REPOSITORY=${REPOSITORY#"-r "}
-    [ -z "$REPOSITORY_BASE" ] && REPOSITORY_BASE="-u https://osm-download.etsi.org/repository/osm/debian"
     CLIENT_REPOSITORY_BASE=${REPOSITORY_BASE#"-u "}
     key_location=$CLIENT_REPOSITORY_BASE/$CLIENT_RELEASE/$CLIENT_REPOSITORY_KEY
     curl $key_location | sudo apt-key add -
@@ -579,46 +623,86 @@ function install_juju() {
     echo "Installing juju"
     sudo snap install juju --classic
     [ -z "$INSTALL_NOLXD" ] && sudo dpkg-reconfigure -p medium lxd
-    sg lxd -c "juju bootstrap --bootstrap-series=xenial localhost osm"
-    [ $(sg lxd -c "juju status" |grep "osm" |wc -l) -eq 1 ] || FATAL "Juju installation failed"
     echo "Finished installation of juju"
+    return 0
+}
+
+function juju_createcontroller() {
+    if ! sg lxd -c "juju show-controller $OSM_STACK_NAME &> /dev/null"; then
+        # Not found created, create the controller
+        sg lxd -c "juju bootstrap --bootstrap-series=xenial localhost $OSM_STACK_NAME"
+    fi
+    [ $(sg lxd -c "juju controllers" | awk "/^${OSM_STACK_NAME}[\*| ]/{print $1}"|wc -l) -eq 1 ] || FATAL "Juju installation failed"
 }
 
 function generate_docker_images() {
     echo "Pulling and generating docker images"
+    _build_from=$COMMIT_ID
+    [ -z "$_build_from" ] && _build_from="master"
+
+    echo "OSM Docker images generated from $_build_from"
+
+    BUILD_ARGS+=(--build-arg REPOSITORY="$REPOSITORY")
+    BUILD_ARGS+=(--build-arg RELEASE="$RELEASE")
+    BUILD_ARGS+=(--build-arg REPOSITORY_KEY="$REPOSITORY_KEY")
+    BUILD_ARGS+=(--build-arg REPOSITORY_BASE="$REPOSITORY_BASE")
+    
     if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q KAFKA ; then
         sg docker -c "docker pull wurstmeister/zookeeper" || FATAL "cannot get zookeeper docker image"
         sg docker -c "docker pull wurstmeister/kafka" || FATAL "cannot get kafka docker image"
     fi
+
     if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q MONGO ; then
         sg docker -c "docker pull mongo" || FATAL "cannot get mongo docker image"
     fi
-    if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q MON ; then
+
+    if [ -n "$PULL_IMAGES" ]; then
+        sg docker -c "docker pull ${DOCKER_USER}/mon:${OSM_DOCKER_TAG}" || FATAL "cannot pull MON docker image"
+        sg docker -c "docker pull ${DOCKER_USER}/pol:${OSM_DOCKER_TAG}" || FATAL "cannot pull POL docker image"
+    elif [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q MON ; then
         git -C ${LWTEMPDIR} clone https://osm.etsi.org/gerrit/osm/MON
         git -C ${LWTEMPDIR}/MON checkout ${COMMIT_ID}
         sg docker -c "docker build ${LWTEMPDIR}/MON -f ${LWTEMPDIR}/MON/docker/Dockerfile -t osm/mon --no-cache" || FATAL "cannot build MON docker image"
         sg docker -c "docker build ${LWTEMPDIR}/MON/policy_module -f ${LWTEMPDIR}/MON/policy_module/Dockerfile -t osm/pm --no-cache" || FATAL "cannot build PM docker image"
     fi
-    if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q NBI ; then
+
+    if [ -n "$PULL_IMAGES" ]; then
+        sg docker -c "docker pull ${DOCKER_USER}/nbi:${OSM_DOCKER_TAG}" || FATAL "cannot pull NBI docker image"
+    elif [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q NBI ; then
         git -C ${LWTEMPDIR} clone https://osm.etsi.org/gerrit/osm/NBI
         git -C ${LWTEMPDIR}/NBI checkout ${COMMIT_ID}
         sg docker -c "docker build ${LWTEMPDIR}/NBI -f ${LWTEMPDIR}/NBI/Dockerfile.local -t osm/nbi --no-cache" || FATAL "cannot build NBI docker image"
     fi
-    if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q RO ; then
+
+    if [ -n "$PULL_IMAGES" ]; then
+        sg docker -c "docker pull ${DOCKER_USER}/ro:${OSM_DOCKER_TAG}" || FATAL "cannot pull RO docker image"
+    elif [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q RO ; then
         sg docker -c "docker pull mysql:5" || FATAL "cannot get mysql docker image"
         git -C ${LWTEMPDIR} clone https://osm.etsi.org/gerrit/osm/RO
         git -C ${LWTEMPDIR}/RO checkout ${COMMIT_ID}
         sg docker -c "docker build ${LWTEMPDIR}/RO -f ${LWTEMPDIR}/RO/docker/Dockerfile-local -t osm/ro --no-cache" || FATAL "cannot build RO docker image"
     fi
-    if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q LCM ; then
+
+    if [ -n "$PULL_IMAGES" ]; then
+        sg docker -c "docker pull ${DOCKER_USER}/lcm:${OSM_DOCKER_TAG}" || FATAL "cannot pull LCM RO docker image"
+    elif [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q LCM ; then
         git -C ${LWTEMPDIR} clone https://osm.etsi.org/gerrit/osm/LCM
         git -C ${LWTEMPDIR}/LCM checkout ${COMMIT_ID}
         sg docker -c "docker build ${LWTEMPDIR}/LCM -f ${LWTEMPDIR}/LCM/Dockerfile.local -t osm/lcm --no-cache" || FATAL "cannot build LCM docker image"
     fi
-    if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q LW-UI ; then
+
+    if [ -n "$PULL_IMAGES" ]; then
+        sg docker -c "docker pull ${DOCKER_USER}/light-ui:${OSM_DOCKER_TAG}" || FATAL "cannot pull light-ui docker image"
+    elif [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q LW-UI ; then
         git -C ${LWTEMPDIR} clone https://osm.etsi.org/gerrit/osm/LW-UI
         git -C ${LWTEMPDIR}/LW-UI checkout ${COMMIT_ID}
         sg docker -c "docker build ${LWTEMPDIR}/LW-UI -t osm/light-ui -f ${LWTEMPDIR}/LW-UI/Dockerfile --no-cache" || FATAL "cannot build LW-UI docker image"
+    fi
+
+    if [ -n "$PULL_IMAGES" ]; then
+        sg docker -c "docker pull ${DOCKER_USER}/osmclient:${OSM_DOCKER_TAG}" || FATAL "cannot pull osmclient docker image"
+    elif [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q LW-osmclient; then
+        sg docker -c "docker build -t osm/osmclient ${BUILD_ARGS[@]} -f $OSM_DEVOPS/docker/osmclient ."
     fi
     echo "Finished generation of docker images"
 }
@@ -628,35 +712,59 @@ function cmp_overwrite() {
     file2="$2"
     if ! $(cmp "${file1}" "${file2}" >/dev/null 2>&1); then
         if [ -f "${file2}" ]; then
-            ask_user "The file ${file2} already exists. Overwrite (y/N)? " n && sudo cp -b ${file1} ${file2}
+            ask_user "The file ${file2} already exists. Overwrite (y/N)? " n && cp -b ${file1} ${file2}
         else
-            sudo cp -b ${file1} ${file2}
+            cp -b ${file1} ${file2}
         fi
     fi
 }
 
 function generate_config_log_folders() {
     echo "Generating config and log folders"
-    sudo mkdir -p /etc/osm/docker
-    sudo cp -b ${OSM_DEVOPS}/installers/docker/docker-compose.yaml /etc/osm/docker/docker-compose.yaml
-    sudo mkdir -p /var/log/osm
+    $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/docker-compose.yaml $OSM_DOCKER_WORK_DIR/docker-compose.yaml
     echo "Finished generation of config and log folders"
 }
 
 function generate_docker_env_files() {
     echo "Generating docker env files"
-    echo "OSMLCM_VCA_HOST=${OSMLCM_VCA_HOST}" |sudo tee /etc/osm/docker/lcm.env
-    echo "OSMLCM_VCA_SECRET=${OSMLCM_VCA_SECRET}" |sudo tee -a /etc/osm/docker/lcm.env
+    echo "OSMLCM_VCA_HOST=${OSMLCM_VCA_HOST}" | $WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/lcm.env
+    echo "OSMLCM_VCA_SECRET=${OSMLCM_VCA_SECRET}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lcm.env
+
     MYSQL_ROOT_PASSWORD=`date +%s | sha256sum | base64 | head -c 32`
-    if [ ! -f /etc/osm/docker/ro-db.env ]; then
-        echo "MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}" |sudo tee /etc/osm/docker/ro-db.env
+    if [ ! -f $OSM_DOCKER_WORK_DIR/ro-db.env ]; then
+        echo "MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/ro-db.env
     fi
-    if [ ! -f /etc/osm/docker/ro.env ]; then
-        echo "RO_DB_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}" |sudo tee /etc/osm/docker/ro.env
+    if [ ! -f $OSM_DOCKER_WORK_DIR/ro.env ]; then
+        echo "RO_DB_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/ro.env
     fi
-    echo "OS_NOTIFIER_URI=http://${DEFAULT_IP}:8662" |sudo tee ${OSM_DEVOPS}/installers/docker/mon.env
-    cmp_overwrite ${OSM_DEVOPS}/installers/docker/mon.env /etc/osm/docker/mon.env
+
+    MYSQL_ROOT_PASSWORD=`date +%s | sha256sum | base64 | head -c 32` && sleep 1
+    KEYSTONE_DB_PASSWORD=`date +%s | sha256sum | base64 | head -c 32` && sleep 1
+    #ADMIN_PASSWORD=`date +%s | sha256sum | base64 | head -c 32` && sleep 1
+    NBI_PASSWORD=`date +%s | sha256sum | base64 | head -c 32`
+    if [ ! -f $OSM_DOCKER_WORK_DIR/keystone-db.env ]; then
+        echo "MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/keystone-db.env
+    fi
+    if [ ! -f $OSM_DOCKER_WORK_DIR/keystone.env ]; then
+        echo "ROOT_DB_PASSWORD=${MYSQL_ROOT_PASSWORD}" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/keystone.env
+        echo "KEYSTONE_DB_PASSWORD=${KEYSTONE_DB_PASSWORD}" |$WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/keystone.env
+        #echo "ADMIN_PASSWORD=${ADMIN_PASSWORD}" |$WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/keystone.env
+        echo "NBI_PASSWORD=${NBI_PASSWORD}" |$WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/keystone.env
+    fi
+
+    if [ ! -f $OSM_DOCKER_WORK_DIR/nbi.env ]; then
+        echo "OSMNBI_AUTHENTICATION_SERVICE_PASSWORD=${NBI_PASSWORD}" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/nbi.env
+    fi
+
+    echo "OS_NOTIFIER_URI=http://${DEFAULT_IP}:8662" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/mon.env
+
     echo "Finished generation of docker env files"
+}
+
+function generate_osmclient_script () {
+    echo "docker run -ti --network net${OSM_STACK_NAME} osm/osmclient:${OSM_DOCKER_TAG}" | $WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/osm
+    $WORKDIR_SUDO chmod +x "$OSM_DOCKER_WORK_DIR/osm"
+    echo "osmclient sidecar container can be found at: $OSM_DOCKER_WORK_DIR/osm"
 }
 
 function init_docker_swarm() {
@@ -666,16 +774,45 @@ function init_docker_swarm() {
       sg docker -c "docker network create --subnet ${DOCKER_GW_NET} --opt com.docker.network.bridge.name=docker_gwbridge --opt com.docker.network.bridge.enable_icc=false --opt com.docker.network.bridge.enable_ip_masquerade=true --opt com.docker.network.driver.mtu=${DEFAULT_MTU} docker_gwbridge"
     fi
     sg docker -c "docker swarm init --advertise-addr ${DEFAULT_IP}"
-    sg docker -c "docker network create --driver=overlay --attachable --opt com.docker.network.driver.mtu=${DEFAULT_MTU} netOSM"
     return 0
 }
 
+function create_docker_network() {
+    echo "creating network"
+    sg docker -c "docker network create --driver=overlay --attachable --opt com.docker.network.driver.mtu=${DEFAULT_MTU} net${OSM_STACK_NAME}"
+    echo "creating network DONE"
+}
+
 function deploy_lightweight() {
+
     echo "Deploying lightweight build"
-    [ -n "$INSTALL_NODOCKER" ] || init_docker_swarm
-    remove_stack osm
-    sg docker -c "docker stack deploy -c /etc/osm/docker/docker-compose.yaml osm"
-    #docker-compose -f /etc/osm/docker/docker-compose.yaml up -d
+    OSM_NBI_PORT=9999
+    OSM_RO_PORT=9090
+    OSM_KEYSTONE_PORT=5000
+    OSM_UI_PORT=80
+
+    if [ -n "$NO_HOST_PORTS" ]; then
+        OSM_PORTS+=(OSM_NBI_PORTS=$OSM_NBI_PORT)
+        OSM_PORTS+=(OSM_RO_PORTS=$OSM_RO_PORT)
+        OSM_PORTS+=(OSM_KEYSTONE_PORTS=$OSM_KEYSTONE_PORT)
+        OSM_PORTS+=(OSM_UI_PORTS=$OSM_UI_PORT)
+    else
+        OSM_PORTS+=(OSM_NBI_PORTS=$OSM_NBI_PORT:$OSM_NBI_PORT)
+        OSM_PORTS+=(OSM_RO_PORTS=$OSM_RO_PORT:$OSM_RO_PORT)
+        OSM_PORTS+=(OSM_KEYSTONE_PORTS=$OSM_KEYSTONE_PORT:$OSM_KEYSTONE_PORT)
+        OSM_PORTS+=(OSM_UI_PORTS=$OSM_UI_PORT:$OSM_UI_PORT)
+    fi
+    echo "export ${OSM_PORTS[@]}" | $WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/osm_ports.sh
+    echo "export OSM_NETWORK=net${OSM_STACK_NAME}" | $WORKDIR_SUDO tee --append $OSM_DOCKER_WORK_DIR/osm_ports.sh
+    echo "export TAG=${OSM_DOCKER_TAG}" | $WORKDIR_SUDO tee --append $OSM_DOCKER_WORK_DIR/osm_ports.sh
+    echo "export DOCKER_USER=${DOCKER_USER}" | $WORKDIR_SUDO tee --append $OSM_DOCKER_WORK_DIR/osm_ports.sh
+  
+
+
+    pushd $OSM_DOCKER_WORK_DIR
+    sg docker -c "source ./osm_ports.sh; docker stack deploy -c $OSM_DOCKER_WORK_DIR/docker-compose.yaml $OSM_STACK_NAME"
+    popd
+
     echo "Finished deployment of lightweight build"
 }
 
@@ -685,11 +822,11 @@ function deploy_elk() {
     sg docker -c "docker pull docker.elastic.co/logstash/logstash-oss:6.2.3" || FATAL "cannot get logstash docker image"
     sg docker -c "docker pull docker.elastic.co/kibana/kibana-oss:6.2.3" || FATAL "cannot get kibana docker image"
     echo "Finished pulling elk docker images"
-    sudo mkdir -p /etc/osm/docker/osm_elk
-    sudo cp -b ${OSM_DEVOPS}/installers/docker/osm_elk/* /etc/osm/docker/osm_elk
+    $WORKDIR_SUDO mkdir -p "$OSM_DOCKER_WORK_DIR/osm_elk"
+    $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/osm_elk/* $OSM_DOCKER_WORK_DIR/osm_elk
     remove_stack osm_elk
     echo "Deploying ELK stack"
-    sg docker -c "docker stack deploy -c /etc/osm/docker/osm_elk/docker-compose.yml osm_elk"
+    sg docker -c "OSM_NETWORK=net${OSM_STACK_NAME} docker stack deploy -c $OSM_DOCKER_WORK_DIR/osm_elk/docker-compose.yml osm_elk"
     echo "Waiting for ELK stack to be up and running"
     time=0
     step=5
@@ -735,17 +872,20 @@ function deploy_perfmon() {
     echo "Generating osm/kafka-exporter docker image"
     sg docker -c "docker build ${OSM_DEVOPS}/installers/docker/osm_metrics/kafka-exporter -f ${OSM_DEVOPS}/installers/docker/osm_metrics/kafka-exporter/Dockerfile -t osm/kafka-exporter --no-cache" || FATAL "cannot build kafka-exporter docker image"
     echo "Finished generation of osm/kafka-exporter docker image"
-    sudo mkdir -p /etc/osm/docker/osm_metrics
-    sudo cp -b ${OSM_DEVOPS}/installers/docker/osm_metrics/*.yml /etc/osm/docker/osm_metrics
-    sudo cp -b ${OSM_DEVOPS}/installers/docker/osm_metrics/*.json /etc/osm/docker/osm_metrics
+    $WORKDIR_SUDO mkdir -p $OSM_DOCKER_WORK_DIR/osm_metrics
+    $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/osm_metrics/*.yml $OSM_DOCKER_WORK_DIR/osm_metrics
+    $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/osm_metrics/*.json $OSM_DOCKER_WORK_DIR/osm_metrics
     remove_stack osm_metrics
     echo "Deploying PM stack (Kafka exporter + Prometheus + Grafana)"
-    sg docker -c "docker stack deploy -c /etc/osm/docker/osm_metrics/docker-compose.yml osm_metrics"
+    sg docker -c "OSM_NETWORK=net${OSM_STACK_NAME} docker stack deploy -c $OSM_DOCKER_WORK_DIR/osm_metrics/docker-compose.yml osm_metrics"
     echo "Finished deployment of PM stack"
     return 0
 }
 
 function install_lightweight() {
+    OSM_DOCKER_WORK_DIR="$OSM_WORK_DIR/stack/$OSM_STACK_NAME"
+    [ ! -d "$OSM_DOCKER_WORK_DIR" ] && $WORKDIR_SUDO mkdir -p $OSM_DOCKER_WORK_DIR
+
     [ "$USER" == "root" ] && FATAL "You are running the installer as root. The installer is prepared to be executed as a normal user with sudo privileges."
     [ -z "$ASSUME_YES" ] && ! ask_user "The installation will configure LXD, install juju, install docker CE and init a docker swarm, as pre-requirements. Do you want to proceed (Y/n)? " y && echo "Cancelled!" && exit 1
     track proceed
@@ -757,7 +897,9 @@ function install_lightweight() {
     DEFAULT_IP=`ip -o -4 a |grep ${DEFAULT_IF}|awk '{split($4,a,"/"); print a[1]}'`
     [ -z "$DEFAULT_IP" ] && FATAL "Not possible to determine the IP address of the interface with the default route"
     DEFAULT_MTU=$(ip addr show ${DEFAULT_IF} | perl -ne 'if (/mtu\s(\d+)/) {print $1;}')
-    if [ -z "$INSTALL_NOLXD" ]; then
+
+    # if no host is passed in, we need to install lxd/juju, unless explicilty asked not to
+    if [ -z "$OSMLCM_VCA_HOST" ] && [ -z "$INSTALL_NOLXD" ]; then
         need_packages_lw="lxd"
         echo -e "Checking required packages: $need_packages_lw"
         dpkg -l $need_packages_lw &>/dev/null \
@@ -770,25 +912,38 @@ function install_lightweight() {
           || FATAL "failed to install $need_packages_lw"
     fi
     track prereqok
-    install_juju
-    OSMLCM_VCA_HOST=`sg lxd -c "juju show-controller"|grep api-endpoints|awk -F\' '{print $2}'|awk -F\: '{print $1}'`
-    OSMLCM_VCA_SECRET=`grep password ${HOME}/.local/share/juju/accounts.yaml |awk '{print $2}'`
-    [ -z "$OSMLCM_VCA_HOST" ] && FATAL "Cannot obtain juju controller IP address"
-    [ -z "$OSMLCM_VCA_SECRET" ] && FATAL "Cannot obtain juju secret"
+    [ -z "$INSTALL_NOJUJU" ] && install_juju
+
+    if [ -z "$OSMLCM_VCA_HOST" ]; then
+        juju_createcontroller
+        OSMLCM_VCA_HOST=`sg lxd -c "juju show-controller $OSM_STACK_NAME"|grep api-endpoints|awk -F\' '{print $2}'|awk -F\: '{print $1}'`
+        [ -z "$OSMLCM_VCA_HOST" ] && FATAL "Cannot obtain juju controller IP address"
+    fi
+    if [ -z "$OSMLCM_VCA_SECRET" ]; then
+        OSMLCM_VCA_SECRET=$(parse_juju_password $OSM_STACK_NAME)
+        [ -z "$OSMLCM_VCA_SECRET" ] && FATAL "Cannot obtain juju secret"
+    fi
+
     track juju
     [ -n "$INSTALL_NODOCKER" ] || install_docker_ce
     track docker_ce
     #install_docker_compose
-    generate_docker_images
+    [ -z "$DOCKER_NOBUILD" ] && generate_docker_images
     track docker_build
-    generate_config_log_folders
     generate_docker_env_files
+    generate_config_log_folders
+
+    [ -n "$INSTALL_NODOCKER" ] || init_docker_swarm
+    # remove old stack
+    remove_stack $OSM_STACK_NAME
+    create_docker_network
     deploy_lightweight
+    generate_osmclient_script
     track docker_deploy
     [ -n "$INSTALL_VIMEMU" ] && install_vimemu && track vimemu
     [ -n "$INSTALL_ELK" ] && deploy_elk && track elk
     [ -n "$INSTALL_PERFMON" ] && deploy_perfmon && track perfmon
-    install_osmclient
+    [ -z "$INSTALL_NOHOSTCLIENT" ] && install_osmclient
     track osmclient
     wget -q -O- https://osm-download.etsi.org/ftp/osm-4.0-four/README2.txt &> /dev/null
     track end
@@ -804,19 +959,20 @@ function install_vimemu() {
     git clone https://osm.etsi.org/gerrit/osm/vim-emu.git $EMUTEMPDIR
     # build vim-emu docker
     echo "Building vim-emu Docker container..."
-    sudo docker build -t vim-emu-img -f $EMUTEMPDIR/Dockerfile --no-cache $EMUTEMPDIR/ || FATAL "cannot build vim-emu-img docker image"
+
+    sg docker -c "docker build -t vim-emu-img -f $EMUTEMPDIR/Dockerfile --no-cache $EMUTEMPDIR/" || FATAL "cannot build vim-emu-img docker image"
     # start vim-emu container as daemon
     echo "Starting vim-emu Docker container 'vim-emu' ..."
     if [ -n "$INSTALL_LIGHTWEIGHT" ]; then
         # in lightweight mode, the emulator needs to be attached to netOSM
-        sudo docker run --name vim-emu -t -d --restart always --privileged --pid='host' --network=netOSM -v /var/run/docker.sock:/var/run/docker.sock vim-emu-img python examples/osm_default_daemon_topology_2_pop.py
+        sg docker -c "docker run --name vim-emu -t -d --restart always --privileged --pid='host' --network=net${OSM_STACK_NAME} -v /var/run/docker.sock:/var/run/docker.sock vim-emu-img python examples/osm_default_daemon_topology_2_pop.py"
     else
         # classic build mode
-        sudo docker run --name vim-emu -t -d --restart always --privileged --pid='host' -v /var/run/docker.sock:/var/run/docker.sock vim-emu-img python examples/osm_default_daemon_topology_2_pop.py
+        sg docker -c "docker run --name vim-emu -t -d --restart always --privileged --pid='host' -v /var/run/docker.sock:/var/run/docker.sock vim-emu-img python examples/osm_default_daemon_topology_2_pop.py"
     fi
     echo "Waiting for 'vim-emu' container to start ..."
     sleep 5
-    export VIMEMU_HOSTNAME=$(sudo docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' vim-emu)
+    export VIMEMU_HOSTNAME=$(sg docker -c "docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' vim-emu")
     echo "vim-emu running at ${VIMEMU_HOSTNAME} ..."
     # print vim-emu connection info
     echo -e "\nYou might be interested in adding the following vim-emu env variables to your .bashrc file:"
@@ -879,8 +1035,8 @@ SHOWOPTS=""
 COMMIT_ID=""
 ASSUME_YES=""
 INSTALL_FROM_SOURCE=""
-RELEASE="-R ReleaseFOUR"
-REPOSITORY="-r stable"
+RELEASE="ReleaseFOUR"
+REPOSITORY="stable"
 INSTALL_VIMEMU=""
 INSTALL_FROM_LXDIMAGES=""
 LXD_REPOSITORY_BASE="https://osm-download.etsi.org/repository/osm/lxd"
@@ -892,12 +1048,24 @@ INSTALL_PERFMON=""
 TO_REBUILD=""
 INSTALL_NOLXD=""
 INSTALL_NODOCKER=""
+INSTALL_NOJUJU=""
 NOCONFIGURE=""
 RELEASE_DAILY=""
 SESSION_ID=`date +%s`
 OSM_DEVOPS=
+OSMLCM_VCA_HOST=
+OSMLCM_VCA_SECRET=
+OSM_STACK_NAME=osm
+NO_HOST_PORTS=""
+DOCKER_NOBUILD=""
+REPOSITORY_KEY="OSM%20ETSI%20Release%20Key.gpg"
+REPOSITORY_BASE="http://osm-download.etsi.org/repository/osm/debian"
+WORKDIR_SUDO=sudo
+OSM_WORK_DIR="/etc/osm"
+OSM_DOCKER_TAG=latest
+DOCKER_USER=osm
 
-while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:" o; do
+while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:H:S:s:w:t:" o; do
     case "${o}" in
         h)
             usage && exit 0
@@ -906,16 +1074,20 @@ while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:" o; do
             COMMIT_ID=${OPTARG}
             ;;
         r)
-            REPOSITORY="-r ${OPTARG}"
+            REPOSITORY="${OPTARG}"
+            REPO_ARGS+=(-r "$REPOSITORY")
             ;;
         R)
-            RELEASE="-R ${OPTARG}"
+            RELEASE="${OPTARG}"
+            REPO_ARGS+=(-R "$RELEASE")
             ;;
         k)
-            REPOSITORY_KEY="-k ${OPTARG}"
+            REPOSITORY_KEY="${OPTARG}"
+            REPO_ARGS+=(-k "$REPOSITORY_KEY")
             ;;
         u)
-            REPOSITORY_BASE="-u ${OPTARG}"
+            REPOSITORY_BASE="${OPTARG}"
+            REPO_ARGS+=(-u "$REPOSITORY_BASE")
             ;;
         l)
             LXD_REPOSITORY_BASE="${OPTARG}"
@@ -925,6 +1097,23 @@ while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:" o; do
             ;;
         D)
             OSM_DEVOPS="${OPTARG}"
+            ;;
+        s)
+            OSM_STACK_NAME="${OPTARG}"
+            ;;
+        H)
+            OSMLCM_VCA_HOST="${OPTARG}"
+            ;;
+        S)
+            OSMLCM_VCA_SECRET="${OPTARG}"
+            ;;
+        w)
+            # when specifying workdir, do not use sudo for access
+            WORKDIR_SUDO=
+            OSM_WORK_DIR="${OPTARG}"
+            ;;
+        t)
+            OSM_DOCKER_TAG="${OPTARG}"
             ;;
         o)
             INSTALL_ONLY="y"
@@ -963,6 +1152,11 @@ while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:" o; do
             [ "${OPTARG}" == "noconfigure" ] && NOCONFIGURE="y" && continue
             [ "${OPTARG}" == "showopts" ] && SHOWOPTS="y" && continue
             [ "${OPTARG}" == "daily" ] && RELEASE_DAILY="y" && continue
+            [ "${OPTARG}" == "nohostports" ] && NO_HOST_PORTS="y" && continue
+            [ "${OPTARG}" == "nojuju" ] && INSTALL_NOJUJU="y" && continue
+            [ "${OPTARG}" == "nodockerbuild" ] && DOCKER_NOBUILD="y" && continue
+            [ "${OPTARG}" == "nohostclient" ] && INSTALL_NOHOSTCLIENT="y" && continue
+            [ "${OPTARG}" == "pullimages" ] && DOCKER_USER="opensourcemano" && PULL_IMAGES=true && continue
             echo -e "Invalid option: '--$OPTARG'\n" >&2
             usage && exit 1
             ;;
@@ -998,20 +1192,6 @@ fi
 # if develop, we force master
 [ -z "$COMMIT_ID" ] && [ -n "$DEVELOP" ] && COMMIT_ID="master"
 
-# forcing source from master removed. Now only install from source when explicit
-# [ -n "$COMMIT_ID" ] && [ "$COMMIT_ID" == "master" ] && INSTALL_FROM_SOURCE="y"
-
-if [ -z "$OSM_DEVOPS" ]; then
-    if [ -n "$TEST_INSTALLER" ]; then
-        echo -e "\nUsing local devops repo for OSM installation"
-        TEMPDIR="$(dirname $(realpath $(dirname $0)))"
-    else
-        echo -e "\nCreating temporary dir for OSM installation"
-        TEMPDIR="$(mktemp -d -q --tmpdir "installosm.XXXXXX")"
-        trap 'rm -rf "$TEMPDIR"' EXIT
-    fi
-fi
-
 need_packages="git jq wget curl tar"
 echo -e "Checking required packages: $need_packages"
 dpkg -l $need_packages &>/dev/null \
@@ -1024,25 +1204,28 @@ dpkg -l $need_packages &>/dev/null \
   || FATAL "failed to install $need_packages"
 
 if [ -z "$OSM_DEVOPS" ]; then
-    if [ -z "$TEST_INSTALLER" ]; then
-        echo -e "\nCloning devops repo temporarily"
-        git clone https://osm.etsi.org/gerrit/osm/devops.git $TEMPDIR
-        RC_CLONE=$?
-    fi
+    if [ -n "$TEST_INSTALLER" ]; then
+        echo -e "\nUsing local devops repo for OSM installation"
+        OSM_DEVOPS="$(dirname $(realpath $(dirname $0)))"
+    else
+        echo -e "\nCreating temporary dir for OSM installation"
+        OSM_DEVOPS="$(mktemp -d -q --tmpdir "installosm.XXXXXX")"
+        trap 'rm -rf "$OSM_DEVOPS"' EXIT
 
-    echo -e "\nGuessing the current stable release"
-    LATEST_STABLE_DEVOPS=`git -C $TEMPDIR tag -l v[0-9].* | sort -V | tail -n1`
-    [ -z "$COMMIT_ID" ] && [ -z "$LATEST_STABLE_DEVOPS" ] && echo "Could not find the current latest stable release" && exit 0
-    echo "Latest tag in devops repo: $LATEST_STABLE_DEVOPS"
-    [ -z "$COMMIT_ID" ] && [ -n "$LATEST_STABLE_DEVOPS" ] && COMMIT_ID="tags/$LATEST_STABLE_DEVOPS"
+        git clone https://osm.etsi.org/gerrit/osm/devops.git $OSM_DEVOPS
 
-    if [ -n "$RELEASE_DAILY" ]; then
-        echo "Using master/HEAD devops"
-        git -C $TEMPDIR checkout master
-    elif [ -z "$TEST_INSTALLER" ]; then
-        git -C $TEMPDIR checkout tags/$LATEST_STABLE_DEVOPS
+        if [ -z "$COMMIT_ID" ]; then
+            echo -e "\nGuessing the current stable release"
+            LATEST_STABLE_DEVOPS=`git -C $OSM_DEVOPS tag -l v[0-9].* | sort -V | tail -n1`
+            [ -z "$LATEST_STABLE_DEVOPS" ] && echo "Could not find the current latest stable release" && exit 0
+
+            echo "Latest tag in devops repo: $LATEST_STABLE_DEVOPS"
+            COMMIT_ID="tags/$LATEST_STABLE_DEVOPS"
+        else
+            echo -e "\nDEVOPS Using commit $COMMIT_ID"
+        fi
+        git -C $OSM_DEVOPS checkout $COMMIT_ID
     fi
-    OSM_DEVOPS=$TEMPDIR
 fi
 
 OSM_JENKINS="$OSM_DEVOPS/jenkins"
@@ -1091,14 +1274,14 @@ elif [ -n "$INSTALL_FROM_LXDIMAGES" ]; then #install from LXD images stored in O
     install_from_lxdimages
 else #install from binaries
     echo -e "\nCreating the containers and installing from binaries ..."
-    $OSM_DEVOPS/jenkins/host/install RO $REPOSITORY $RELEASE $REPOSITORY_KEY $REPOSITORY_BASE || FATAL "RO install failed"
+    $OSM_DEVOPS/jenkins/host/install RO ${REPO_ARGS[@]} || FATAL "RO install failed"
     ro_is_up && track RO
     $OSM_DEVOPS/jenkins/host/start_build VCA || FATAL "VCA install failed"
     vca_is_up && track VCA
     $OSM_DEVOPS/jenkins/host/install MON || FATAL "MON build failed"
     mon_is_up && track MON
-    $OSM_DEVOPS/jenkins/host/install SO $REPOSITORY $RELEASE $REPOSITORY_KEY $REPOSITORY_BASE || FATAL "SO install failed"
-    $OSM_DEVOPS/jenkins/host/install UI $REPOSITORY $RELEASE $REPOSITORY_KEY $REPOSITORY_BASE || FATAL "UI install failed"
+    $OSM_DEVOPS/jenkins/host/install SO ${REPO_ARGS[@]} || FATAL "SO install failed"
+    $OSM_DEVOPS/jenkins/host/install UI ${REPO_ARGS[@]} || FATAL "UI install failed"
     #so_is_up && track SOUI
     track SOUI
 fi

@@ -46,4 +46,4 @@ StandardOutput=journal+console
 WantedBy=multi-user.target
 EOF
 
-systemctl enable osm-vimemu-setup.service
+#systemctl enable osm-vimemu-setup.service

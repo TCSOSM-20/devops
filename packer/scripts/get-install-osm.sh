@@ -3,9 +3,9 @@ export PATH=$PATH:/snap/bin
 echo "PATH=$PATH"
 juju status
 
-git clone https://osm.etsi.org/gerrit/osm/vim-emu.git
-git clone https://osm.etsi.org/gerrit/osm/devops.git
-eval devops/installers/full_install_osm.sh --nolxd -y "$1"
+wget https://osm-download.etsi.org/ftp/osm-5.0-five/install_osm.sh
+chmod +x install_osm.sh
+./install_osm.sh --nolxd --nodocker --nojuju -y
 
 cat >> ~/.bashrc <<-EOF
 export OSM_HOSTNAME=127.0.0.1

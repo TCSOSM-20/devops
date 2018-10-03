@@ -129,6 +129,31 @@ if __name__=="__main__":
 
             if "vnfd:vnfd-catalog" in data or "vnfd-catalog" in data:
                 descriptor = "VNF"
+                #Check if mgmt-interface is defined:
+                remove_prefix(data, "vnfd:")
+                vnfd_descriptor = data["vnfd-catalog"]
+                vnfd_list = vnfd_descriptor["vnfd"]
+                mgmt_iface = False
+                for vnfd in vnfd_list:
+                    vdu_list = vnfd["vdu"]
+                    for vdu in vdu_list:
+                        interface_list = []
+                        external_interface_list = vdu.pop("external-interface", ())
+                        for external_interface in external_interface_list:
+                            if external_interface.get("virtual-interface", {}).get("type") == "OM-MGMT":
+                                raise KeyError(
+                                    "Wrong 'Virtual-interface type': Deprecated 'OM-MGMT' value. Please, use 'VIRTIO' instead")
+                        interface_list = vdu.pop("interface", ())
+                        for interface in interface_list:
+                            if interface.get("virtual-interface", {}).get("type") == "OM-MGMT":
+                                raise KeyError(
+                                    "Wrong 'Virtual-interface type': Deprecated 'OM-MGMT' value. Please, use 'VIRTIO' instead")
+                    if vnfd.get("mgmt-interface"):
+                        mgmt_iface = True
+                        if vnfd["mgmt-interface"].get("vdu-id"):
+                            raise KeyError("'mgmt-iface': Deprecated 'vdu-id' field. Please, use 'cp' field instead")
+                if not mgmt_iface:
+                    raise KeyError("'mgmt-iface' is a mandatory field and it is not defined")
                 myvnfd = vnfd_catalog.vnfd()
                 pybindJSONDecoder.load_ietf_json(data, None, None, obj=myvnfd)
             elif "nsd:nsd-catalog" in data or "nsd-catalog" in data:
@@ -192,6 +217,8 @@ if __name__=="__main__":
                     error_position.append("external-interface")
                     for external_interface in external_interface_list:
                         error_position[-1] = "external-interface[{}]".format(external_interface["name"])
+                        if "rw-vnfd:floating-ip-needed" in external_interface:
+                            del external_interface["rw-vnfd:floating-ip-needed"]
                         external_interface["type"] = "EXTERNAL"
                         external_interface["external-connection-point-ref"] = \
                             external_interface.pop("vnfd-connection-point-ref")
@@ -210,6 +237,14 @@ if __name__=="__main__":
                             internal_interface.pop("vdu-internal-connection-point-ref")
                         interface_list.append(internal_interface)
                     error_position.pop()
+
+                    #Removing "rw-vnfd:floating-ip-needed" items from V3 descriptors
+                    interfaces = vdu.pop("interface", ())
+                    for iface in interfaces:
+                        if "rw-vnfd:floating-ip-needed" in iface:
+                            del iface["rw-vnfd:floating-ip-needed"]
+                        interface_list.append(iface)
+
                     # order interface alphabetically and set position
                     if interface_list:
                         interface_list = sorted(interface_list,
