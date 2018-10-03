@@ -1,29 +1,29 @@
 vnfd:vnfd-catalog:
-    vnfd:vnfd:
-    -   vnfd:id: hackfest_basic-vnf
-        vnfd:name: hackfest_basic-vnf
-        vnfd:short-name: hackfest_basic-vnf
-        vnfd:version: '1.0'
-        vnfd:description: A basic VNF descriptor w/ one VDU
-        vnfd:logo: osm.png
-        vnfd:connection-point:
-        -   vnfd:name: vnf-cp0
-            vnfd:type: VPORT
-        vnfd:vdu:
-        -   vnfd:id: hackfest_basic-VM
-            vnfd:name: hackfest_basic-VM
-            vnfd:image: ubuntu1604
-            vnfd:count: '1'
-            vnfd:vm-flavor:
-                vnfd:vcpu-count: '1'
-                vnfd:memory-mb: '1024'
-                vnfd:storage-gb: '10'
-            vnfd:interface:
-            -   vnfd:name: vdu-eth0
-                vnfd:type: EXTERNAL
-                vnfd:virtual-interface:
-                    vnfd:type: VIRTIO
-                vnfd:external-connection-point-ref: vnf-cp0
-        vnfd:mgmt-interface:
-            vnfd:cp: vnf-cp0
+    vnfd:
+    -   id: hackfest_basic-vnf
+        name: hackfest_basic-vnf
+        short-name: hackfest_basic-vnf
+        version: '1.0'
+        description: A basic VNF descriptor w/ one VDU
+        logo: osm.png
+        connection-point:
+        -   name: vnf-cp0
+            type: VPORT
+        vdu:
+        -   id: hackfest_basic-VM
+            name: hackfest_basic-VM
+            image: ubuntu1604
+            count: '1'
+            vm-flavor:
+                vcpu-count: '1'
+                memory-mb: '1024'
+                storage-gb: '10'
+            interface:
+            -   name: vdu-eth0
+                type: EXTERNAL
+                virtual-interface:
+                    type: VIRTIO
+                external-connection-point-ref: vnf-cp0
+        mgmt-interface:
+            cp: vnf-cp0
 
