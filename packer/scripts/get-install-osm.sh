@@ -5,7 +5,7 @@ juju status
 
 wget https://osm-download.etsi.org/ftp/osm-5.0-five/install_osm.sh
 chmod +x install_osm.sh
-./install_osm.sh --nolxd --nodocker --nojuju -y
+./install_osm.sh --nolxd --nojuju -y
 
 cat >> ~/.bashrc <<-EOF
 export OSM_HOSTNAME=127.0.0.1
