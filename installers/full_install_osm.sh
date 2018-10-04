@@ -649,7 +649,7 @@ function generate_docker_images() {
     
     if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q KAFKA ; then
         sg docker -c "docker pull wurstmeister/zookeeper" || FATAL "cannot get zookeeper docker image"
-        sg docker -c "docker pull wurstmeister/kafka" || FATAL "cannot get kafka docker image"
+        sg docker -c "docker pull wurstmeister/kafka:${KAFKA_TAG}" || FATAL "cannot get kafka docker image"
     fi
 
     if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q MONGO ; then
@@ -806,7 +806,8 @@ function deploy_lightweight() {
     echo "export OSM_NETWORK=net${OSM_STACK_NAME}" | $WORKDIR_SUDO tee --append $OSM_DOCKER_WORK_DIR/osm_ports.sh
     echo "export TAG=${OSM_DOCKER_TAG}" | $WORKDIR_SUDO tee --append $OSM_DOCKER_WORK_DIR/osm_ports.sh
     echo "export DOCKER_USER=${DOCKER_USER}" | $WORKDIR_SUDO tee --append $OSM_DOCKER_WORK_DIR/osm_ports.sh
-  
+    echo "export KAFKA_TAG=${KAFKA_TAG}" | $WORKDIR_SUDO tee --append $OSM_DOCKER_WORK_DIR/osm_ports.sh
+
 
 
     pushd $OSM_DOCKER_WORK_DIR
@@ -1064,6 +1065,7 @@ WORKDIR_SUDO=sudo
 OSM_WORK_DIR="/etc/osm"
 OSM_DOCKER_TAG=latest
 DOCKER_USER=osm
+KAFKA_TAG=2.11-1.0.2
 
 while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:H:S:s:w:t:" o; do
     case "${o}" in
