@@ -131,10 +131,10 @@ services:
       DATABASE: sqlite:///app/database/mon_sqlite.db
     env_file:
       - ./mon.env
+    ports:
+      - "${OSM_MON_PORTS:-8662:8662}"
     #depends_on:
     #  - kafka
-    ports:
-      - "8662"
   pol:
     image: ${DOCKER_USER:-osm}/pol:${TAG:-latest}
     networks:
