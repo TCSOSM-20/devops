@@ -45,8 +45,6 @@ RUN apt-get --yes update  && apt-get -y install python3-osm-common${COMMON_VERSI
 
 COPY scripts/ scripts/
 
-RUN pip3 install -r scripts/requirements.txt
-
 ENV BROKER_URI kafka:9092
 ENV MONGO_URI mongo:27017
 ENV DATABASE sqlite:///mon_sqlite.db
