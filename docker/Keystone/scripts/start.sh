@@ -1,5 +1,7 @@
 #!/bin/bash
 
+DB_EXISTS=""
+
 max_attempts=120
 function wait_db(){
     db_host=$1
@@ -27,8 +29,7 @@ function is_db_created() {
     db_pswd=$4
     db_name=$5
 
-    RESULT=`mysqlshow -h"$db_host" -P"$db_port" -u"$db_user" -p"$db_pswd" | grep -v Wildcard | grep -o $db_name`
-    if [ "$RESULT" == "$db_name" ]; then
+    if mysqlshow -h"$db_host" -P"$db_port" -u"$db_user" -p"$db_pswd" | grep -v Wildcard | grep -q $db_name; then
         echo "DB $db_name exists"
         return 0
     else
@@ -94,9 +95,11 @@ if [ -z $DB_EXISTS ]; then
     openstack role add --project service --user nbi admin
 fi
 
-while [ $(ps -ef | grep -v grep | grep apache2 | wc -l) -ne 0 ]
+while ps -ef | grep -v grep | grep -q apache2
 do
     sleep 60
 done
 
+# Only reaches this point if apache2 stops running
+# When this happens exits with error code
 exit 1

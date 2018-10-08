@@ -21,25 +21,12 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* && \
     chmod +x start.sh
 
-# DB Hostname
-ENV DB_HOST                 keystone-db
-
-# DB Port
-ENV DB_PORT                 3306
-
-# DB Root User
-ENV ROOT_DB_USER            root
-
-# DB Root Password
-ENV ROOT_DB_PASSWORD        admin
-
-# Keystone user password
-ENV KEYSTONE_DB_PASSWORD    admin
-
-# Admin password
-ENV ADMIN_PASSWORD          admin
-
-# NBI password
-ENV NBI_PASSWORD            nbi
+ENV DB_HOST                 keystone-db     # DB Hostname
+ENV DB_PORT                 3306            # DB Port
+ENV ROOT_DB_USER            root            # DB Root User
+ENV ROOT_DB_PASSWORD        admin           # DB Root Password
+ENV KEYSTONE_DB_PASSWORD    admin           # Keystone user password
+ENV ADMIN_PASSWORD          admin           # Admin password
+ENV NBI_PASSWORD            nbi             # NBI password
 
 ENTRYPOINT ./start.sh
