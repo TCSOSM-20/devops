@@ -47,9 +47,12 @@ COPY scripts/ scripts/
 
 RUN pip3 install -r scripts/requirements.txt
 
-# These ENV must be provided
-# ENV BROKER_URI=kafka:9092
-# ENV OS_NOTIFIER_URI=<IP_ACCESIBLE_FROM_OPENSTACK>:8662
+ENV BROKER_URI kafka:9092
+ENV MONGO_URI mongo:27017
+ENV DATABASE sqlite:///mon_sqlite.db
+ENV OS_NOTIFIER_URI localhost:8662
+ENV OS_DEFAULT_GRANULARITY 300
+ENV REQUEST_TIMEOUT 10
 
 EXPOSE 8662
 
