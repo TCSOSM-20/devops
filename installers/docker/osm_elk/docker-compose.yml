@@ -28,7 +28,7 @@ services:
     volumes:
       - ./kibana.yml:/usr/share/kibana/config/kibana.yml:ro
     ports:
-      - "5601:5601"
+      - "${OSM_ELK_PORTS:-5601:5601}"
     networks:
       - elk
     depends_on:
