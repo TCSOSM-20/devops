@@ -85,11 +85,11 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "kafka_exporter_topic_cpu_utilization",
+          "expr": "cpu_utilization",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{resource_uuid}}",
+          "legendFormat": "{{vdu_name}}",
           "refId": "A"
         }
       ],
@@ -166,11 +166,11 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "kafka_exporter_topic_average_memory_utilization",
+          "expr": "average_memory_utilization",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{resource_uuid}}",
+          "legendFormat": "{{vdu_name}}",
           "refId": "A"
         }
       ],

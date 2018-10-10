@@ -42,4 +42,4 @@ scrape_configs:
     # scheme defaults to 'http'.
 
     static_configs:
-    - targets: ['kafka-exporter:12340']
+    - targets: ['mon:8000']

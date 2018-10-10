@@ -4,22 +4,6 @@ networks:
     external:
        name: ${OSM_NETWORK:-netOSM}
 services:
-  kafka-exporter:
-    image: osm/kafka-exporter
-    hostname: kafka-exporter
-    ports:
-      - "12340:12340"
-    networks:
-      - netOSM
-  prometheus:
-    image: prom/prometheus
-    hostname: prometheus
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    networks:
-      - netOSM
-    depends_on:
-      - kafka-exporter
   grafana:
     image: grafana/grafana
     volumes:
@@ -31,5 +15,3 @@ services:
       - "${OSM_PM_PORTS:-3000:3000}"
     networks:
       - netOSM
-    depends_on:
-      - prometheus
