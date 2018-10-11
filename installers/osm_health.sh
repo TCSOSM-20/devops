@@ -2,8 +2,9 @@
 
 WAIT_TIME=60
 NUM_SERVICES_WITH_HEALTH=3
+SERVICES_WITH_HEALTH="nbi ro kafka"
 
-while getopts "w:s:n:" o; do
+while getopts "w:s:n:c:" o; do
     case "${o}" in
         w)
             WAIT_TIME=${OPTARG}
@@ -13,6 +14,9 @@ while getopts "w:s:n:" o; do
             ;;
         n)
             NUM_SERVICES_WITH_HEALTH=${OPTARG}
+            ;;
+        c)
+            SERVICES_WITH_HEALTH="${OPTARG}"
             ;;
     esac
 done
@@ -32,4 +36,14 @@ done
 echo "Not all Docker services are healthy"
 docker ps | grep " ${STACK_NAME}_"
 
+for S_WITH_HEALTH in $SERVICES_WITH_HEALTH ; do
+    docker ps | grep " ${STACK_NAME}_" | grep -i healthy | grep -q "_${S_WITH_HEALTH}."  && continue
+    echo
+    echo BEGIN LOGS of container ${S_WITH_HEALTH} not healthy
+    docker service logs ${STACK_NAME}_${S_WITH_HEALTH} 2>&1 | tail -n 100
+    echo END LOGS of container ${S_WITH_HEALTH} not healthy
+    echo
+done
+
 exit 1
+
