@@ -32,6 +32,8 @@ test: $(SUBDIRS_TEST)
 
 tag: $(SUBDIRS_TAG)
 
+push: $(SUBDIRS_PUSH)
+
 $(SUBDIRS_CLEAN): %.clean:
 	@$(MAKE) --no-print-directory -C $* clean
 
