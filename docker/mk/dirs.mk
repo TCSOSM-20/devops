@@ -20,8 +20,9 @@ TOOLS_DIR := $(TOPDIR)/tools
 SUBDIRS_CLEAN = $(addsuffix .clean, $(SUBDIRS))
 SUBDIRS_TEST = $(addsuffix .test, $(SUBDIRS))
 SUBDIRS_TAG = $(addsuffix .tag, $(SUBDIRS))
+SUBDIRS_PUSH = $(addsuffix .push, $(SUBDIRS))
 
-.PHONY: $(SUBDIRS) $(SUBDIRS_CLEAN) clean test tag
+.PHONY: $(SUBDIRS) $(SUBDIRS_CLEAN) clean test tag push
 
 all: $(SUBDIRS)
 
@@ -39,6 +40,9 @@ $(SUBDIRS_TEST): %.test:
 
 $(SUBDIRS_TAG): %.tag:
 	@$(MAKE) --no-print-directory -C $* tag 
+
+$(SUBDIRS_PUSH): %.push:
+	@$(MAKE) --no-print-directory -C $* push
 
 $(SUBDIRS):
 	@$(MAKE) --no-print-directory -C $@

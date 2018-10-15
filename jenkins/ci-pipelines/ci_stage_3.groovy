@@ -31,6 +31,7 @@ properties([
         string(defaultValue: 'dpkg1', description: '', name: 'GPG_KEY_NAME'),
         string(defaultValue: 'artifactory-osm', description: '', name: 'ARTIFACTORY_SERVER'),
         string(defaultValue: 'osm-stage_4', description: '', name: 'DOWNSTREAM_STAGE_NAME'),
+        string(defaultValue: 'releasefive-daily', description: '', name: 'DOCKER_TAG'),
         booleanParam(defaultValue: false, description: '', name: 'SAVE_CONTAINER_ON_FAIL'),
         booleanParam(defaultValue: false, description: '', name: 'SAVE_CONTAINER_ON_PASS'),
         booleanParam(defaultValue: true, description: '', name: 'SAVE_ARTIFACTS_ON_SMOKE_SUCCESS'),
@@ -38,6 +39,7 @@ properties([
         booleanParam(defaultValue: true, description: '',  name: 'DO_BUILD'),
         booleanParam(defaultValue: true, description: '', name: 'DO_INSTALL'),
         booleanParam(defaultValue: true, description: '', name: 'DO_SMOKE'),
+        booleanParam(defaultValue: true, description: '', name: 'DO_DOCKERPUSH'),
         booleanParam(defaultValue: false, description: '', name: 'SAVE_ARTIFACTS_OVERRIDE'),
     ])
 ])
@@ -75,8 +77,13 @@ node("${params.NODE}") {
     upstream_main_job += '-merge'
     container_name_prefix = "osm-${tag_or_branch}"
     container_name = "${container_name_prefix}"
+
+    keep_artifacts = false
     if ( JOB_NAME.contains('merge') ) {
         container_name += "-merge"
+
+        // On a merge job, we keep artifacts on smoke success
+        keep_artifacts = params.SAVE_ARTIFACTS_ON_SMOKE_SUCCESS
     }
     container_name += "-${BUILD_NUMBER}"
 
@@ -237,7 +244,7 @@ node("${params.NODE}") {
                     // archive smoke success until stage_4 is ready
 
                     if ( ! currentBuild.result.equals('UNSTABLE') ) {
-                        stage_archive = params.SAVE_ARTIFACTS_ON_SMOKE_SUCCESS
+                        stage_archive = keep_artifacts
                     }
                 }
             }
@@ -266,6 +273,11 @@ node("${params.NODE}") {
                     // Archive the tested repo
                     dir("${RELEASE_DIR}") {
                         ci_helper.archive(params.ARTIFACTORY_SERVER,RELEASE,GERRIT_BRANCH,'tested')
+                    }
+                    if ( params.DO_DOCKERPUSH ) {
+                        stage("Docker Push") {
+                            sh "make -C docker push INPUT_TAG=${container_name} TAG=${params.DOCKER_TAG}"
+                        }
                     }
                 }
             }
