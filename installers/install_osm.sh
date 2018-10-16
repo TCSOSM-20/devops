@@ -13,12 +13,12 @@ add_repo() {
     dpkg -l $need_packages_lw &>/dev/null \
       || ! echo -e "One or several required packages are not installed. Updating apt cache requires root privileges." \
       || sudo apt-get -q update \
-      || ! echo "failed to run apt-get update"
+      || ! echo "failed to run apt-get update" \
       || exit 1
     dpkg -l $need_packages_lw &>/dev/null \
       || ! echo -e "Installing $need_packages_lw requires root privileges." \
       || sudo apt-get install -y $need_packages_lw \
-      || ! echo "failed to install $need_packages_lw"
+      || ! echo "failed to install $need_packages_lw" \
       || exit 1
     wget -qO - $REPOSITORY_BASE/$RELEASE/OSM%20ETSI%20Release%20Key.gpg | sudo apt-key add -
     sudo DEBIAN_FRONTEND=noninteractive add-apt-repository -y "$1" && sudo DEBIAN_FRONTEND=noninteractive apt-get update
