@@ -28,7 +28,7 @@ RUN apt-get update && apt-get -y install curl software-properties-common
 
 RUN apt-get --yes update \
  && apt-get --yes install git python python-pip python3 python3-pip libmysqlclient-dev libssl-dev libffi-dev \
- && pip3 install pip==9.0.3
+ && apt-get --yes install python3-pymongo && pip3 install pip==9.0.3
 
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
 ARG RELEASE=ReleaseFOUR-daily
