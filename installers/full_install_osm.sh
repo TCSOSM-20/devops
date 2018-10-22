@@ -959,12 +959,12 @@ function install_lightweight() {
     [ -n "$INSTALL_NODOCKER" ] || install_docker_ce
     track docker_ce
     #install_docker_compose
+    [ -n "$INSTALL_NODOCKER" ] || init_docker_swarm
     [ -z "$DOCKER_NOBUILD" ] && generate_docker_images
     track docker_build
     generate_docker_env_files
     generate_config_log_folders
 
-    [ -n "$INSTALL_NODOCKER" ] || init_docker_swarm
     # remove old stack
     remove_stack $OSM_STACK_NAME
     create_docker_network
