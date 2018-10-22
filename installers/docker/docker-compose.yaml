@@ -46,6 +46,15 @@ services:
       - netOSM
     volumes:
       - mongo_db:/data/db
+  prometheus:
+    image: prom/prometheus:${PROMETHEUS_TAG:-latest}
+    hostname: prometheus
+    ports:
+      - "${OSM_PROM_PORTS:-9091:9090}"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - netOSM
   keystone-db:
     image: mariadb:10
     networks:

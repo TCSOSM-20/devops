@@ -646,7 +646,7 @@ function generate_docker_images() {
     BUILD_ARGS+=(--build-arg RELEASE="$RELEASE")
     BUILD_ARGS+=(--build-arg REPOSITORY_KEY="$REPOSITORY_KEY")
     BUILD_ARGS+=(--build-arg REPOSITORY_BASE="$REPOSITORY_BASE")
-    
+
     if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q KAFKA ; then
         sg docker -c "docker pull wurstmeister/zookeeper" || FATAL "cannot get zookeeper docker image"
         sg docker -c "docker pull wurstmeister/kafka:${KAFKA_TAG}" || FATAL "cannot get kafka docker image"
@@ -654,6 +654,10 @@ function generate_docker_images() {
 
     if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q MONGO ; then
         sg docker -c "docker pull mongo" || FATAL "cannot get mongo docker image"
+    fi
+
+    if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q PROMETHEUS ; then
+        sg docker -c "docker pull prom/prometheus:${PROMETHEUS_TAG}" || FATAL "cannot get prometheus docker image"
     fi
 
     if [ -n "$PULL_IMAGES" ]; then
@@ -722,6 +726,7 @@ function cmp_overwrite() {
 function generate_config_log_folders() {
     echo "Generating config and log folders"
     $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/docker-compose.yaml $OSM_DOCKER_WORK_DIR/docker-compose.yaml
+    $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/prometheus.yml $OSM_DOCKER_WORK_DIR/prometheus.yml
     echo "Finished generation of config and log folders"
 }
 
@@ -791,15 +796,18 @@ function deploy_lightweight() {
     OSM_KEYSTONE_PORT=5000
     OSM_UI_PORT=80
     OSM_MON_PORT=8662
+    OSM_PROM_PORT=9090
+    OSM_PROM_HOSTPORT=9091
     [ -n "$INSTALL_ELK" ] && OSM_ELK_PORT=5601
     [ -n "$INSTALL_PERFMON" ] && OSM_PM_PORT=3000
-    
+
     if [ -n "$NO_HOST_PORTS" ]; then
         OSM_PORTS+=(OSM_NBI_PORTS=$OSM_NBI_PORT)
         OSM_PORTS+=(OSM_RO_PORTS=$OSM_RO_PORT)
         OSM_PORTS+=(OSM_KEYSTONE_PORTS=$OSM_KEYSTONE_PORT)
         OSM_PORTS+=(OSM_UI_PORTS=$OSM_UI_PORT)
         OSM_PORTS+=(OSM_MON_PORTS=$OSM_MON_PORT)
+        OSM_PORTS+=(OSM_PROM_PORTS=$OSM_PROM_PORT)
         [ -n "$INSTALL_PERFMON" ] && OSM_PORTS+=(OSM_PM_PORTS=$OSM_PM_PORT)
         [ -n "$INSTALL_ELK" ] && OSM_PORTS+=(OSM_ELK_PORTS=$OSM_ELK_PORT)
     else
@@ -808,6 +816,7 @@ function deploy_lightweight() {
         OSM_PORTS+=(OSM_KEYSTONE_PORTS=$OSM_KEYSTONE_PORT:$OSM_KEYSTONE_PORT)
         OSM_PORTS+=(OSM_UI_PORTS=$OSM_UI_PORT:$OSM_UI_PORT)
         OSM_PORTS+=(OSM_MON_PORTS=$OSM_MON_PORT:$OSM_MON_PORT)
+        OSM_PORTS+=(OSM_PROM_PORTS=$OSM_PROM_HOSTPORT:$OSM_PROM_PORT)
         [ -n "$INSTALL_PERFMON" ] && OSM_PORTS+=(OSM_PM_PORTS=$OSM_PM_PORT:$OSM_PM_PORT)
         [ -n "$INSTALL_ELK" ] && OSM_PORTS+=(OSM_ELK_PORTS=$OSM_ELK_PORT:$OSM_ELK_PORT)
     fi
@@ -816,6 +825,7 @@ function deploy_lightweight() {
     echo "export TAG=${OSM_DOCKER_TAG}" | $WORKDIR_SUDO tee --append $OSM_DOCKER_WORK_DIR/osm_ports.sh
     echo "export DOCKER_USER=${DOCKER_USER}" | $WORKDIR_SUDO tee --append $OSM_DOCKER_WORK_DIR/osm_ports.sh
     echo "export KAFKA_TAG=${KAFKA_TAG}" | $WORKDIR_SUDO tee --append $OSM_DOCKER_WORK_DIR/osm_ports.sh
+    echo "export PROMETHEUS_TAG=${PROMETHEUS_TAG}" | $WORKDIR_SUDO tee --append $OSM_DOCKER_WORK_DIR/osm_ports.sh
 
 
 
@@ -1075,6 +1085,7 @@ OSM_WORK_DIR="/etc/osm"
 OSM_DOCKER_TAG=latest
 DOCKER_USER=osm
 KAFKA_TAG=2.11-1.0.2
+PROMETHEUS_TAG=v2.4.3
 
 while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:H:S:s:w:t:" o; do
     case "${o}" in
