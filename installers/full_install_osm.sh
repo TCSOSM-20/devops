@@ -885,18 +885,14 @@ function deploy_elk() {
 }
 
 function deploy_perfmon() {
-    echo "Pulling docker images for PM (Grafana and Prometheus)"
-    sg docker -c "docker pull prom/prometheus" || FATAL "cannot get prometheus docker image"
+    echo "Pulling docker images for PM (Grafana)"
     sg docker -c "docker pull grafana/grafana" || FATAL "cannot get grafana docker image"
     echo "Finished pulling PM docker images"
-    echo "Generating osm/kafka-exporter docker image"
-    sg docker -c "docker build ${OSM_DEVOPS}/installers/docker/osm_metrics/kafka-exporter -f ${OSM_DEVOPS}/installers/docker/osm_metrics/kafka-exporter/Dockerfile -t osm/kafka-exporter --no-cache" || FATAL "cannot build kafka-exporter docker image"
-    echo "Finished generation of osm/kafka-exporter docker image"
     $WORKDIR_SUDO mkdir -p $OSM_DOCKER_WORK_DIR/osm_metrics
     $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/osm_metrics/*.yml $OSM_DOCKER_WORK_DIR/osm_metrics
     $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/osm_metrics/*.json $OSM_DOCKER_WORK_DIR/osm_metrics
     remove_stack osm_metrics
-    echo "Deploying PM stack (Kafka exporter + Prometheus + Grafana)"
+    echo "Deploying PM stack (Grafana)"
     sg docker -c "OSM_NETWORK=net${OSM_STACK_NAME} docker stack deploy -c $OSM_DOCKER_WORK_DIR/osm_metrics/docker-compose.yml osm_metrics"
     echo "Finished deployment of PM stack"
     return 0
