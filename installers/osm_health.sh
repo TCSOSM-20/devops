@@ -1,8 +1,8 @@
 #!/bin/sh
 
-WAIT_TIME=60
-NUM_SERVICES_WITH_HEALTH=3
-SERVICES_WITH_HEALTH="nbi ro kafka"
+WAIT_TIME=180  # LCM healthcheck needs 140 senconds
+SERVICES_WITH_HEALTH="nbi ro zookeeper lcm"
+NUM_SERVICES_WITH_HEALTH=$(echo $SERVICES_WITH_HEALTH | wc -w)
 
 while getopts "w:s:n:c:" o; do
     case "${o}" in
@@ -23,7 +23,7 @@ done
 
 
 time=0
-step=1
+step=2
 while [ $time -le "$WAIT_TIME" ]; do
     if [ "$(docker ps | grep " ${STACK_NAME}_" | grep -i healthy | wc -l)" -ge "$NUM_SERVICES_WITH_HEALTH" ]; then
         exit 0
