@@ -779,7 +779,7 @@ function generate_docker_env_files() {
 }
 
 function generate_osmclient_script () {
-    echo "docker run -ti --network net${OSM_STACK_NAME} osm/osmclient:${OSM_DOCKER_TAG}" | $WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/osm
+    echo "docker run -ti --network net${OSM_STACK_NAME} ${DOCKER_USER}/osmclient:${OSM_DOCKER_TAG}" | $WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/osm
     $WORKDIR_SUDO chmod +x "$OSM_DOCKER_WORK_DIR/osm"
     echo "osmclient sidecar container can be found at: $OSM_DOCKER_WORK_DIR/osm"
 }
