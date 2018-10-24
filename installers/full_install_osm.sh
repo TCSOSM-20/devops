@@ -660,22 +660,34 @@ function generate_docker_images() {
         sg docker -c "docker pull prom/prometheus:${PROMETHEUS_TAG}" || FATAL "cannot get prometheus docker image"
     fi
 
+    if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q KEYSTONE-DB ; then
+        sg docker -c "docker pull mariadb:${KEYSTONEDB_TAG}" || FATAL "cannot get keystone-db docker image"
+    fi
+
     if [ -n "$PULL_IMAGES" ]; then
         sg docker -c "docker pull ${DOCKER_USER}/mon:${OSM_DOCKER_TAG}" || FATAL "cannot pull MON docker image"
-        sg docker -c "docker pull ${DOCKER_USER}/pol:${OSM_DOCKER_TAG}" || FATAL "cannot pull POL docker image"
     elif [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q MON ; then
         git -C ${LWTEMPDIR} clone https://osm.etsi.org/gerrit/osm/MON
         git -C ${LWTEMPDIR}/MON checkout ${COMMIT_ID}
         sg docker -c "docker build ${LWTEMPDIR}/MON -f ${LWTEMPDIR}/MON/docker/Dockerfile -t osm/mon --no-cache" || FATAL "cannot build MON docker image"
-        sg docker -c "docker build ${LWTEMPDIR}/MON/policy_module -f ${LWTEMPDIR}/MON/policy_module/Dockerfile -t osm/pm --no-cache" || FATAL "cannot build PM docker image"
+    fi
+
+    if [ -n "$PULL_IMAGES" ]; then
+        sg docker -c "docker pull ${DOCKER_USER}/pol:${OSM_DOCKER_TAG}" || FATAL "cannot pull POL docker image"
+    elif [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q MON ; then
+        git -C ${LWTEMPDIR} clone https://osm.etsi.org/gerrit/osm/POL
+        git -C ${LWTEMPDIR}/POL checkout ${COMMIT_ID}
+        sg docker -c "docker build ${LWTEMPDIR}/POL -f ${LWTEMPDIR}/POL/docker/Dockerfile -t osm/pol --no-cache" || FATAL "cannot build PM docker image"
     fi
 
     if [ -n "$PULL_IMAGES" ]; then
         sg docker -c "docker pull ${DOCKER_USER}/nbi:${OSM_DOCKER_TAG}" || FATAL "cannot pull NBI docker image"
+        sg docker -c "docker pull ${DOCKER_USER}/keystone:${OSM_DOCKER_TAG}" || FATAL "cannot pull KEYSTONE docker image"
     elif [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q NBI ; then
         git -C ${LWTEMPDIR} clone https://osm.etsi.org/gerrit/osm/NBI
         git -C ${LWTEMPDIR}/NBI checkout ${COMMIT_ID}
         sg docker -c "docker build ${LWTEMPDIR}/NBI -f ${LWTEMPDIR}/NBI/Dockerfile.local -t osm/nbi --no-cache" || FATAL "cannot build NBI docker image"
+        sg docker -c "docker build ${LWTEMPDIR}/NBI/keystone -f ${LWTEMPDIR}/NBI/keystone/Dockerfile -t osm/keystone --no-cache" || FATAL "cannot build KEYSTONE docker image"
     fi
 
     if [ -n "$PULL_IMAGES" ]; then
@@ -826,6 +838,7 @@ function deploy_lightweight() {
     echo "export DOCKER_USER=${DOCKER_USER}" | $WORKDIR_SUDO tee --append $OSM_DOCKER_WORK_DIR/osm_ports.sh
     echo "export KAFKA_TAG=${KAFKA_TAG}" | $WORKDIR_SUDO tee --append $OSM_DOCKER_WORK_DIR/osm_ports.sh
     echo "export PROMETHEUS_TAG=${PROMETHEUS_TAG}" | $WORKDIR_SUDO tee --append $OSM_DOCKER_WORK_DIR/osm_ports.sh
+    echo "export KEYSTONEDB_TAG=${KEYSTONEDB_TAG}" | $WORKDIR_SUDO tee --append $OSM_DOCKER_WORK_DIR/osm_ports.sh
 
 
 
@@ -1082,6 +1095,7 @@ OSM_DOCKER_TAG=latest
 DOCKER_USER=osm
 KAFKA_TAG=2.11-1.0.2
 PROMETHEUS_TAG=v2.4.3
+KEYSTONEDB_TAG=10
 
 while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:H:S:s:w:t:" o; do
     case "${o}" in
