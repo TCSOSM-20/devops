@@ -744,8 +744,8 @@ function generate_config_log_folders() {
 
 function generate_docker_env_files() {
     echo "Generating docker env files"
-    echo "OSMLCM_VCA_HOST=${OSMLCM_VCA_HOST}" | $WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/lcm.env
-    echo "OSMLCM_VCA_SECRET=${OSMLCM_VCA_SECRET}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lcm.env
+    echo "OSMLCM_VCA_HOST=${OSM_VCA_HOST}" | $WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/lcm.env
+    echo "OSMLCM_VCA_SECRET=${OSM_VCA_SECRET}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lcm.env
 
     MYSQL_ROOT_PASSWORD=`date +%s | sha256sum | base64 | head -c 32`
     if [ ! -f $OSM_DOCKER_WORK_DIR/ro-db.env ]; then
@@ -774,6 +774,8 @@ function generate_docker_env_files() {
     fi
 
     echo "OS_NOTIFIER_URI=http://${DEFAULT_IP}:8662" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/mon.env
+    echo "OSMMON_VCA_HOST=${OSM_VCA_HOST}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/mon.env
+    echo "OSMMON_VCA_SECRET=${OSM_VCA_SECRET}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/mon.env
 
     echo "Finished generation of docker env files"
 }
@@ -928,7 +930,7 @@ function install_lightweight() {
     DEFAULT_MTU=$(ip addr show ${DEFAULT_IF} | perl -ne 'if (/mtu\s(\d+)/) {print $1;}')
 
     # if no host is passed in, we need to install lxd/juju, unless explicilty asked not to
-    if [ -z "$OSMLCM_VCA_HOST" ] && [ -z "$INSTALL_NOLXD" ]; then
+    if [ -z "$OSM_VCA_HOST" ] && [ -z "$INSTALL_NOLXD" ]; then
         need_packages_lw="lxd snapd"
         echo -e "Checking required packages: $need_packages_lw"
         dpkg -l $need_packages_lw &>/dev/null \
@@ -943,14 +945,14 @@ function install_lightweight() {
     track prereqok
     [ -z "$INSTALL_NOJUJU" ] && install_juju
 
-    if [ -z "$OSMLCM_VCA_HOST" ]; then
+    if [ -z "$OSM_VCA_HOST" ]; then
         juju_createcontroller
-        OSMLCM_VCA_HOST=`sg lxd -c "juju show-controller $OSM_STACK_NAME"|grep api-endpoints|awk -F\' '{print $2}'|awk -F\: '{print $1}'`
-        [ -z "$OSMLCM_VCA_HOST" ] && FATAL "Cannot obtain juju controller IP address"
+        OSM_VCA_HOST=`sg lxd -c "juju show-controller $OSM_STACK_NAME"|grep api-endpoints|awk -F\' '{print $2}'|awk -F\: '{print $1}'`
+        [ -z "$OSM_VCA_HOST" ] && FATAL "Cannot obtain juju controller IP address"
     fi
-    if [ -z "$OSMLCM_VCA_SECRET" ]; then
-        OSMLCM_VCA_SECRET=$(parse_juju_password $OSM_STACK_NAME)
-        [ -z "$OSMLCM_VCA_SECRET" ] && FATAL "Cannot obtain juju secret"
+    if [ -z "$OSM_VCA_SECRET" ]; then
+        OSM_VCA_SECRET=$(parse_juju_password $OSM_STACK_NAME)
+        [ -z "$OSM_VCA_SECRET" ] && FATAL "Cannot obtain juju secret"
     fi
 
     track juju
@@ -1082,8 +1084,8 @@ NOCONFIGURE=""
 RELEASE_DAILY=""
 SESSION_ID=`date +%s`
 OSM_DEVOPS=
-OSMLCM_VCA_HOST=
-OSMLCM_VCA_SECRET=
+OSM_VCA_HOST=
+OSM_VCA_SECRET=
 OSM_STACK_NAME=osm
 NO_HOST_PORTS=""
 DOCKER_NOBUILD=""
@@ -1134,10 +1136,10 @@ while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:H:S:s:w:t:" o; do
             OSM_STACK_NAME="${OPTARG}"
             ;;
         H)
-            OSMLCM_VCA_HOST="${OPTARG}"
+            OSM_VCA_HOST="${OPTARG}"
             ;;
         S)
-            OSMLCM_VCA_SECRET="${OPTARG}"
+            OSM_VCA_SECRET="${OPTARG}"
             ;;
         w)
             # when specifying workdir, do not use sudo for access
