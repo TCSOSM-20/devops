@@ -29,8 +29,15 @@ RUN apt-get update && apt-get install -y git make python3 \
     && pip3 install pip==9.0.3 \
     && pip3 install -U aiokafka pyang lxml six enum34 \
     && pip3 install websockets==4.0.1 \
-    && pip3 install requests \
-    && pip3 install PyNaCl
+    && pip3 install requests
+
+RUN pip3 install PyNaCl
+
+RUN git clone https://osm.etsi.org/gerrit/osm/N2VC.git \
+    && cd N2VC \
+    && git checkout BUILD_v4.0.1_1 \
+    && cd modules/libjuju && python3 setup.py develop && cd ../.. \
+    && pip3 install -U -r requirements.txt
 
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
 ARG RELEASE=ReleaseFOUR-daily
