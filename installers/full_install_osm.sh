@@ -712,7 +712,7 @@ function generate_docker_images() {
     elif [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q LW-UI ; then
         git -C ${LWTEMPDIR} clone https://osm.etsi.org/gerrit/osm/LW-UI
         git -C ${LWTEMPDIR}/LW-UI checkout ${COMMIT_ID}
-        sg docker -c "docker build ${LWTEMPDIR}/LW-UI -t osm/light-ui -f ${LWTEMPDIR}/LW-UI/Dockerfile --no-cache" || FATAL "cannot build LW-UI docker image"
+        sg docker -c "docker build ${LWTEMPDIR}/LW-UI -t osm/light-ui -f ${LWTEMPDIR}/LW-UI/docker/Dockerfile --no-cache" || FATAL "cannot build LW-UI docker image"
     fi
 
     if [ -n "$PULL_IMAGES" ]; then
