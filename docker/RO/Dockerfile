@@ -3,7 +3,8 @@ from ubuntu:xenial
 MAINTAINER Gennadiy Dubina <gennadiy.dubina@dataat.com>; Alfonso Tierno <alfonso.tiernosepulveda@telefoncia.com>
 
 RUN apt-get update && apt-get -y install curl software-properties-common git
-RUN apt-get update && apt-get install -y python-setuptools python-wheel mysql-client python-bitarray
+RUN apt-get update && apt-get install -y python-setuptools python-wheel mysql-client python-bitarray python-pip
+RUN DEBIAN_FRONTEND=noninteractive pip2 install pip==9.0.3 pyangbind
 
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
 ARG RELEASE=ReleaseFOUR-daily
