@@ -1,2 +1,16 @@
 *.pyc
 .cache
+
+#Debian packaging related files
+debian/osm-devops.install
+pool
+osm-devops-*.post*
+osm-devops_*.post*
+
+#IDEs
+.idea
+
+#local stuff files that end in ".local" or folders called "local"
+*.local
+local
+
