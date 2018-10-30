@@ -31,13 +31,15 @@ RUN apt-get update && apt-get install -y git make python3 \
     && pip3 install websockets==4.0.1 \
     && pip3 install requests
 
-RUN pip3 install PyNaCl
-
-RUN git clone https://osm.etsi.org/gerrit/osm/N2VC.git \
-    && cd N2VC \
-    && git checkout BUILD_v4.0.1_1 \
-    && cd modules/libjuju && python3 setup.py develop && cd ../.. \
-    && pip3 install -U -r requirements.txt
+# packages needed for N2VC because deb dependencies are not fine
+RUN pip3 install  'macaroonbakery>=1.1,<2.0' 'pyRFC3339>=1.0,<2.0' \
+      'pyyaml>=3.0,<4.0' 'theblues>=0.3.8,<1.0' 'websockets>=4.0,<5.0' \
+      'paramiko'   # PyNaCl
+# 
+# RUN git clone https://osm.etsi.org/gerrit/osm/N2VC.git \
+#     && cd N2VC \
+#     && cd modules/libjuju && python3 setup.py develop && cd ../.. \
+#     && pip3 install -U -r requirements.txt
 
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
 ARG RELEASE=ReleaseFOUR-daily
