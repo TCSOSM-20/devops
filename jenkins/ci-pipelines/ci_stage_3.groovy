@@ -41,6 +41,7 @@ properties([
         booleanParam(defaultValue: true, description: '', name: 'DO_SMOKE'),
         booleanParam(defaultValue: true, description: '', name: 'DO_DOCKERPUSH'),
         booleanParam(defaultValue: false, description: '', name: 'SAVE_ARTIFACTS_OVERRIDE'),
+        string(defaultValue: '/home/jenkins/hive/openstack-whitestack.rc', description: '', name: 'HIVE_VIM_1'),
     ])
 ])
 
@@ -52,9 +53,14 @@ def uninstall_osm(stackName) {
        """
 }
 
-def run_systest(stackName,tagName,testName) {
+def run_systest(stackName,tagName,testName,envfile=null) {
     tempdir = sh(returnStdout: true, script: "mktemp -d").trim()
-    sh "docker run --network net${stackName} -v ${tempdir}:/usr/share/osm-devops/systest/reports osm/osmclient:${tagName} make -C /usr/share/osm-devops/systest ${testName}"
+    if ( !envfile )
+    {
+        sh(script: "touch ${tempdir}/env")
+        envfile="${tempdir}/env"
+    }
+    sh "docker run --network net${stackName} --env-file ${envfile} -v ${tempdir}:/usr/share/osm-devops/systest/reports osm/osmclient:${tagName} make -C /usr/share/osm-devops/systest ${testName}"
     sh "cp ${tempdir}/* ."
     junit  '*.xml'
 }
@@ -251,16 +257,7 @@ node("${params.NODE}") {
 
             if ( params.DO_STAGE_4 ) {
                 stage("stage_4") {
-                    def downstream_params = [
-                        string(name: 'CONTAINER_NAME', value: container_name),
-                        string(name: 'NODE', value: NODE_NAME.split()[0]),
-                    ]
-                    stage_4_result = build job: "${params.DOWNSTREAM_STAGE_NAME}/${GERRIT_BRANCH}", parameters: downstream_params, propagate: false 
-                    currentBuild.result = stage_4_result.result
-
-                    if ( stage_4_result.getResult().equals('SUCCESS') ) {
-                        stage_archive = true;
-                    }
+                    run_systest(container_name,container_name,"openstack_stage_4",params.HIVE_VIM_1)
                 }
             }
 
