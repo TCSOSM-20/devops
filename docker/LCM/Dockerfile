@@ -23,13 +23,14 @@ RUN apt-get update && apt-get -y install curl software-properties-common
 
 RUN apt-get update && apt-get install -y git make python3 \
     python3-pip python3-pymongo python3-yaml python3-aiohttp \
-    python3-all python3-setuptools \
+    python3-all python3-setuptools openssh-client libffi-dev libssl-dev \
     python3-bitarray python3-regex python3-lxml dh-python wget tox \
     python3-cffi \
     && pip3 install pip==9.0.3 \
     && pip3 install -U aiokafka pyang lxml six enum34 \
     && pip3 install websockets==4.0.1 \
-    && pip3 install requests
+    && pip3 install requests \
+    && rm -rf /var/lib/apt/lists/*
 
 # packages needed for N2VC because deb dependencies are not fine
 RUN pip3 install  'macaroonbakery>=1.1,<2.0' 'pyRFC3339>=1.0,<2.0' \
