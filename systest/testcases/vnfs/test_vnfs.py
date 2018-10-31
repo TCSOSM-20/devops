@@ -34,7 +34,7 @@ class TestClass(object):
             for file in nsd_file_list:
                 try:
                     desc = osm.get_api().package.get_key_val_from_pkg(file)
-                    ns_name=osm.ns_name_prefix+nsd_desc['name']
+                    ns_name=osm.ns_name_prefix+desc['name']
                     osm.get_api().ns.delete(ns_name)
                 except:
                     pass
@@ -84,12 +84,12 @@ class TestClass(object):
 
             ns_name=osm.ns_name_prefix+nsd_desc['name']
 
-            assert not osm.get_api().ns.create(nsd_desc['name'],ns_name,vim.vim_name)
+            assert osm.get_api().ns.create(nsd_desc['name'],ns_name,vim.vim_name)
 
-            assert utils.wait_for_value(lambda: osm.get_api().ns.get_field(ns_name,'operational-status'),result='vnf-init-phase')
+            assert utils.wait_for_value(lambda: osm.get_api().ns.get_field(ns_name,'operational-status'),result='init', wait_time=10)
 
             # make sure ns is running
-            assert utils.wait_for_value(lambda: osm.get_api().ns.get_field(ns_name,'operational-status'),result='running',wait_time=300)
+            assert utils.wait_for_value(lambda: osm.get_api().ns.get_field(ns_name,'operational-status'),result='running',wait_time=30)
 
             if ns_scale:
                 # for each descriptor, scale it
