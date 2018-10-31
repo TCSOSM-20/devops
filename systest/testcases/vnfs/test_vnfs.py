@@ -18,7 +18,7 @@ import pytest
 import pprint
 import time
 from osmclient.common import utils
-
+import pprint
 
 class TestClass(object):
 
@@ -86,10 +86,16 @@ class TestClass(object):
 
             assert osm.get_api().ns.create(nsd_desc['name'],ns_name,vim.vim_name)
 
-            assert utils.wait_for_value(lambda: osm.get_api().ns.get_field(ns_name,'operational-status'),result='init', wait_time=10)
+            if not utils.wait_for_value(lambda: osm.get_api().ns.get_field(ns_name,'operational-status'),result='init', wait_time=10):
+                nsr=osm.get_api().ns.get(ns_name)
+                pprint.pprint(nsr)
+                assert Fail, "operational-status != init"
 
             # make sure ns is running
-            assert utils.wait_for_value(lambda: osm.get_api().ns.get_field(ns_name,'operational-status'),result='running',wait_time=30)
+            if not utils.wait_for_value(lambda: osm.get_api().ns.get_field(ns_name,'operational-status'),result='running',wait_time=30):
+                nsr=osm.get_api().ns.get(ns_name)
+                pprint.pprint(nsr)
+                assert Fail, "operational-status != running"
 
             if ns_scale:
                 # for each descriptor, scale it
