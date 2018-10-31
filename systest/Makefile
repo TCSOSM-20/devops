@@ -250,4 +250,8 @@ ping_pong: check_OSM_HOSTNAME check_openstack_env \
         JUNITXML=pytest-$@.xml \
         PYTEST_OPTIONS="$(PYTEST_OPTIONS) -m vnf" _run_test
 
-.PHONY: report_dir cirros vim smoke ping_pong
+stage_4_tests = cirros
+
+openstack_stage_4: $(stage_4_tests)
+
+.PHONY: report_dir cirros vim smoke ping_pong openstack_stage_4 stage_4_tests
