@@ -258,6 +258,10 @@ node("${params.NODE}") {
             if ( params.DO_STAGE_4 ) {
                 stage("stage_4") {
                     run_systest(container_name,container_name,"openstack_stage_4",params.HIVE_VIM_1)
+
+                    if ( ! currentBuild.result.equals('UNSTABLE') ) {
+                        stage_archive = keep_artifacts
+                    }
                 }
             }
 
