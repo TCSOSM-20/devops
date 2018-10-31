@@ -256,6 +256,8 @@ node("${params.NODE}") {
             }
 
             if ( params.DO_STAGE_4 ) {
+                // override stage_archive to only archive on stable
+                stage_archive = false
                 stage("stage_4") {
                     run_systest(container_name,container_name,"openstack_stage_4",params.HIVE_VIM_1)
 
