@@ -35,7 +35,7 @@ properties([
         booleanParam(defaultValue: false, description: '', name: 'SAVE_CONTAINER_ON_FAIL'),
         booleanParam(defaultValue: false, description: '', name: 'SAVE_CONTAINER_ON_PASS'),
         booleanParam(defaultValue: true, description: '', name: 'SAVE_ARTIFACTS_ON_SMOKE_SUCCESS'),
-        booleanParam(defaultValue: false, description: '', name: 'DO_STAGE_4'),
+        booleanParam(defaultValue: true, description: '', name: 'DO_STAGE_4'),
         booleanParam(defaultValue: true, description: '',  name: 'DO_BUILD'),
         booleanParam(defaultValue: true, description: '', name: 'DO_INSTALL'),
         booleanParam(defaultValue: true, description: '', name: 'DO_SMOKE'),
