@@ -38,6 +38,7 @@ VIM_EMU ?=
 
 TOPDIR=$(shell readlink -f .|sed -e 's/systest.*//')
 
+
 ifdef OS_AUTH_URL
     OPTION_OS_AUTH_URL=--os-url $(OS_AUTH_URL)
 endif
