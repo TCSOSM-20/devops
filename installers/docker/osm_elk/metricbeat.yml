@@ -1,0 +1,63 @@
+metricbeat.modules:
+- module: docker
+  metricsets: ["container", "cpu", "diskio", "healthcheck", "info", "memory", "network"]
+  hosts: ["unix:///var/run/docker.sock"]
+  period: 30s
+  enabled: true
+- module: mongodb
+  hosts: ["mongo"]
+  period: 30s
+  enabled: true
+- module: mysql
+  metricsets: ["status"]
+  hosts: ["tcp(ro-db:3306)/"]
+  username: root
+  password: "YjkzMDkxMzJhNGJiNzA0YjFiZTI5MzYw"
+  period: 30s
+  enabled: true
+- module: kafka
+  metricsets: ["consumergroup", "partition"]
+  period: 30s
+  hosts: ["kafka:9092"]
+  enabled: true
+- module: system
+  enabled: true
+  period: 30s
+  metricsets:
+    - cpu             # CPU usage
+    - load            # CPU load averages
+    - memory          # Memory usage
+    - network         # Network IO
+    - process         # Per process metrics
+    - process_summary # Process summary
+    - uptime          # System Uptime
+    #- core           # Per CPU core usage
+    - diskio         # Disk IO
+    - filesystem     # File system usage for each mountpoint
+    - fsstat         # File system summary metrics
+    #- raid           # Raid
+    #- socket         # Sockets and connection info (linux only)
+  processes: ['.*']
+  cpu.metrics:  ["percentages"]  # The other available options are normalized_percentages and ticks.
+  core.metrics: ["percentages"]  # The other available option is ticks.
+
+setup.dashboards.enabled: false
+
+setup.kibana.host: "kibana"
+setup.kibana.protocol: "http"
+setup.kibana.username: ""
+setup.kibana.password: ""
+
+fields:
+  env: dev
+
+output.elasticsearch:
+  hosts: ["elasticsearch:9200"]
+
+logging.level: debug
+logging.to_files: true
+logging.files:
+  path: /var/log/metricbeat
+  name: metricbeat
+  keepfiles: 7
+  permissions: 0644
