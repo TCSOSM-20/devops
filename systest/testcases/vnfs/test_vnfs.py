@@ -79,6 +79,10 @@ class TestClass(object):
         time.sleep(5)
 
     def vnf_test(self,osm, openstack, vim, vmware, vnfd_file_list, nsd_file_list, ns_scale=False):
+
+        # FIXME: need sleep after vim creation. Need a way to validate vim is ready to handle requests
+        time.sleep(20)
+
         for file in nsd_file_list:
             nsd_desc = osm.get_api().package.get_key_val_from_pkg(file)
 
