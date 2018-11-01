@@ -96,7 +96,7 @@ class TestClass(object):
                 assert Fail, "operational-status != init"
 
             # make sure ns is running
-            if not utils.wait_for_value(lambda: osm.get_api().ns.get_field(ns_name,'operational-status'),result='running',wait_time=30):
+            if not utils.wait_for_value(lambda: osm.get_api().ns.get_field(ns_name,'operational-status'),result='running',wait_time=240):
                 nsr=osm.get_api().ns.get(ns_name)
                 pprint.pprint(nsr)
                 assert Fail, "operational-status != running"
