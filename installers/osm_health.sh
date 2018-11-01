@@ -3,6 +3,7 @@
 WAIT_TIME=180  # LCM healthcheck needs 140 senconds
 SERVICES_WITH_HEALTH="nbi ro zookeeper lcm"
 NUM_SERVICES_WITH_HEALTH=$(echo $SERVICES_WITH_HEALTH | wc -w)
+WAIT_FINAL=30
 
 while getopts "w:s:n:c:" o; do
     case "${o}" in
@@ -26,6 +27,9 @@ time=0
 step=2
 while [ $time -le "$WAIT_TIME" ]; do
     if [ "$(docker ps | grep " ${STACK_NAME}_" | grep -i healthy | wc -l)" -ge "$NUM_SERVICES_WITH_HEALTH" ]; then
+        # all dockers are healthy now.
+        # final sleep is needed until more health checks are added to validate system is ready to handle requests
+        sleep $WAIT_FINAL
         exit 0
     fi
 

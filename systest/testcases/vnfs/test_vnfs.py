@@ -117,6 +117,12 @@ class TestClass(object):
 
             assert not osm.get_api().ns.delete(ns_name)
 
+            #wait for the ns to delete
+            try:
+                utils.wait_for_value( lambda: osm.get_api().ns.get(nsd_desc['name']), result=False, wait_time=60)
+            except:
+                pass
+
             assert not osm.get_api().nsd.delete(nsd_desc['name'])
 
         for file in vnfd_file_list:
