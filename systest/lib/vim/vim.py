@@ -23,4 +23,7 @@ class Vim():
         try:
             osm.get_api().vim.get(self.vim_name)
         except ClientException:
-            osm.get_api().vim.create(self.vim_name,openstack.get_access())
+            if vmware._os_access['vim-url'] and vmware._os_access['vim-type'] == 'vmware':
+                osm.get_api().vim.create(self.vim_name,vmware.get_access())
+            else:
+                osm.get_api().vim.create(self.vim_name,openstack.get_access())
