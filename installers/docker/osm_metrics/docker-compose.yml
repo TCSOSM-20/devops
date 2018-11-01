@@ -2,7 +2,7 @@ version: '3'
 networks:
   netOSM:
     external:
-       name: ${OSM_NETWORK:-netOSM}
+       name: ${OSM_NETWORK:-netosm}
 services:
   grafana:
     image: grafana/grafana
