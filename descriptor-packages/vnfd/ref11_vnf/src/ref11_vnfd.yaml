@@ -25,12 +25,12 @@ vnfd-catalog:
             -   name: iface10
                 type: EXTERNAL
                 virtual-interface:
-                    type: VIRTIO
+                    type: PARAVIRT
                 external-connection-point-ref: mgmt0
             -   name: iface11
                 type: INTERNAL
                 virtual-interface:
-                    type: VIRTIO
+                    type: PARAVIRT
                 internal-connection-point-ref: iface11
             internal-connection-point:
             -   name: iface11
@@ -47,12 +47,12 @@ vnfd-catalog:
             -   name: iface22
                 type: EXTERNAL
                 virtual-interface:
-                    type: VIRTIO
+                    type: PARAVIRT
                 external-connection-point-ref: west
             -   name: iface21
                 type: INTERNAL
                 virtual-interface:
-                    type: VIRTIO
+                    type: PARAVIRT
                 internal-connection-point-ref: iface21
             internal-connection-point:
             -   name: iface21

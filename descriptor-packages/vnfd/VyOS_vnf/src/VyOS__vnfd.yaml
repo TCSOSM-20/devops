@@ -64,35 +64,35 @@ vnfd-catalog:
                 type: EXTERNAL
                 virtual-interface:
                     bandwidth: '0'
-                    type: VIRTIO
+                    type: PARAVIRT
                     vpci: 0000:00:0a.0
                 external-connection-point-ref: eth0
             -   name: eth1
                 type: EXTERNAL
                 virtual-interface:
                     bandwidth: '0'
-                    type: VIRTIO
+                    type: PARAVIRT
                     vpci: 0000:00:0b.0
                 external-connection-point-ref: eth1
             -   name: eth2
                 type: EXTERNAL
                 virtual-interface:
                     bandwidth: '0'
-                    type: VIRTIO
+                    type: PARAVIRT
                     vpci: 0000:00:0c.0
                 external-connection-point-ref: eth2
             -   name: eth3
                 type: EXTERNAL
                 virtual-interface:
                     bandwidth: '0'
-                    type: VIRTIO
+                    type: PARAVIRT
                     vpci: 0000:00:0d.0
                 external-connection-point-ref: eth3
             -   name: eth4
                 type: EXTERNAL
                 virtual-interface:
                     bandwidth: '0'
-                    type: VIRTIO
+                    type: PARAVIRT
                     vpci: 0000:00:0e.0
                 external-connection-point-ref: eth4
             guest-epa:

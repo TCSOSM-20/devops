@@ -33,7 +33,7 @@ vnfd-catalog:
             -   name: eth0
                 type: EXTERNAL
                 virtual-interface:
-                    type: VIRTIO
+                    type: PARAVIRT
                 external-connection-point-ref: eth0
             # Specify the volume
             # There can be multiple interfaces defined

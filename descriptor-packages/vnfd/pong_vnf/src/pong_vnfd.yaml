@@ -52,13 +52,13 @@ vnfd-catalog:
                 position: 0
                 type: EXTERNAL
                 virtual-interface:
-                    type: VIRTIO
+                    type: PARAVIRT
                 external-connection-point-ref: pong_vnfd/cp0
             -   name: eth1
                 position: 1
                 type: EXTERNAL
                 virtual-interface:
-                    type: VIRTIO
+                    type: PARAVIRT
                 external-connection-point-ref: pong_vnfd/cp1
             id: iovdu_0
             image: Fedora-x86_64-20-20131211.1-sda-pong.qcow2

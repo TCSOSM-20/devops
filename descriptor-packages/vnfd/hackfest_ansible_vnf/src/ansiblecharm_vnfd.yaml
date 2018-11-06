@@ -26,7 +26,7 @@ vnfd:vnfd-catalog:
             -   name: vdu-eth0
                 type: EXTERNAL
                 virtual-interface:
-                    type: VIRTIO
+                    type: PARAVIRT
                 external-connection-point-ref: vnf-cp0
             cloud-init-file: cloud-config.txt
         vnf-configuration:

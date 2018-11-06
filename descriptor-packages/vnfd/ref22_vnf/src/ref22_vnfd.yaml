@@ -18,7 +18,7 @@ vnfd-catalog:
             -   name: iface60
                 type: EXTERNAL
                 virtual-interface:
-                    type: VIRTIO
+                    type: PARAVIRT
                 external-connection-point-ref: mgmt
             -   name: iface61
                 type: EXTERNAL

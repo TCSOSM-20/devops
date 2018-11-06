@@ -126,12 +126,12 @@ if __name__=="__main__":
                     for external_interface in external_interface_list:
                         if external_interface.get("virtual-interface", {}).get("type") == "OM-MGMT":
                             raise KeyError(
-                                "Wrong 'Virtual-interface type': Deprecated 'OM-MGMT' value. Please, use 'VIRTIO' instead")
+                                "Wrong 'Virtual-interface type': Deprecated 'OM-MGMT' value. Please, use 'PARAVIRT' instead")
                     interface_list = vdu.pop("interface", ())
                     for interface in interface_list:
                         if interface.get("virtual-interface", {}).get("type") == "OM-MGMT":
                             raise KeyError(
-                                "Wrong 'Virtual-interface type': Deprecated 'OM-MGMT' value. Please, use 'VIRTIO' instead")
+                                "Wrong 'Virtual-interface type': Deprecated 'OM-MGMT' value. Please, use 'PARAVIRT' instead")
                 if vnfd.get("mgmt-interface"):
                     mgmt_iface = True
                     if vnfd["mgmt-interface"].get("vdu-id"):

@@ -39,7 +39,7 @@ vnfd-catalog:
             -   name: eth0
                 type: EXTERNAL
                 virtual-interface:
-                    type: VIRTIO
+                    type: PARAVIRT
                     bandwidth: '0'
                     vpci: 0000:00:0a.0
                 external-connection-point-ref: eth0

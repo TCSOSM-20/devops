@@ -61,7 +61,7 @@ DEBUG=false
 ARCHIVE=false
 CREATE_NSD=false
 VENDOR='OSM'
-INTF_TYPE='VIRTIO'
+INTF_TYPE='PARAVIRT'
 VCPU=2
 MEMORY=4096
 STORAGE=10
@@ -98,8 +98,8 @@ Usage:
 
             --vendor : Vendor name for descriptor. Default OSM
 
-            --interface-type : Interface type [VIRTIO|SR-IOV|PCI-PASSTHROUGH|E1000]
-                               Default VIRTIO
+            --interface-type : Interface type [PARAVIRT|SR-IOV|PCI-PASSTHROUGH|E1000]
+                               Default PARAVIRT
 
           VM Flavour options:
 
@@ -137,7 +137,7 @@ EOF
 CP_TYPE='VPORT'
 function get_cp_type() {
     case ${INTF_TYPE} in
-        VIRTIO ) CP_TYPE='VPORT';;
+        PARAVIRT ) CP_TYPE='VPORT';;
         SR-IOV ) CP_TYPE='VPORT';;
         PCI-PASSTHROUGH ) CP_TYPE='VPORT';;
         OM-MGMT ) CP_TYPE='VPORT';;
@@ -230,7 +230,7 @@ EOF
             -   name: eth0
                 type: EXTERNAL
                 virtual-interface:
-                    type: VIRTIO
+                    type: PARAVIRT
                 external-connection-point-ref: vnf-cp0
 EOF
 

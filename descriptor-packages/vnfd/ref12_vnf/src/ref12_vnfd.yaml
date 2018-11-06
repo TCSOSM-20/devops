@@ -28,13 +28,13 @@ vnfd-catalog:
             -   name: iface30
                 type: EXTERNAL
                 virtual-interface:
-                    type: VIRTIO
+                    type: PARAVIRT
                 external-connection-point-ref: mgmt0
             -   name: iface31
                 type: INTERNAL
                 internal-connection-point-ref: iface31
                 virtual-interface:
-                    type: VIRTIO
+                    type: PARAVIRT
             guest-epa:
                 cpu-pinning-policy: DEDICATED
                 mempage-size: "LARGE"
@@ -64,7 +64,7 @@ vnfd-catalog:
                 type: INTERNAL
                 internal-connection-point-ref: iface41
                 virtual-interface:
-                    type: VIRTIO
+                    type: PARAVIRT
             guest-epa:
                 cpu-pinning-policy: DEDICATED
             id: e526e

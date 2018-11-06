@@ -48,13 +48,13 @@ vnfd:vnfd-catalog:
                 position: '1'
                 type: EXTERNAL
                 virtual-interface:
-                    type: VIRTIO
+                    type: PARAVIRT
                 external-connection-point-ref: vnf-mgmt
             -   name: mgmtVM-eth1
                 position: '2'
                 type: INTERNAL
                 virtual-interface:
-                    type: VIRTIO
+                    type: PARAVIRT
                 internal-connection-point-ref: mgmtVM-internal
             internal-connection-point:
             -   id: mgmtVM-internal
@@ -84,7 +84,7 @@ vnfd:vnfd-catalog:
                 position: '1'
                 type: INTERNAL
                 virtual-interface:
-                    type: VIRTIO
+                    type: PARAVIRT
                 internal-connection-point-ref: dataVM-internal
             -   name: xe0
                 position: '2'
