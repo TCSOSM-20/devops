@@ -3,6 +3,7 @@ volumes:
   ro_db:
   mongo_db:
   mon_db:
+  pol_db:
   osm_packages:
   keystone_db:
 networks:
@@ -148,7 +149,10 @@ services:
     image: ${DOCKER_USER:-osm}/pol:${TAG:-latest}
     networks:
       - netOSM
+    volumes:
+      - pol_db:/app/database
     environment:
+      OSMPOL_SQL_DATABASE_URI: sqlite:///app/database/policy_module.db
       BROKER_URI: kafka:9092
     #depends_on:
     #  - kafka
