@@ -6,6 +6,7 @@ volumes:
   pol_db:
   osm_packages:
   keystone_db:
+  prom_db:
 networks:
   netOSM:
     external:
@@ -54,6 +55,7 @@ services:
       - "${OSM_PROM_PORTS:-9091:9090}"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prom_db:/prometheus
     networks:
       - netOSM
   keystone-db:
