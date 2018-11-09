@@ -105,6 +105,10 @@ function parse_juju_password {
    }'
 }
 
+function generate_secret() {
+    head /dev/urandom | tr -dc A-Za-z0-9 | head -c 32
+}
+
 function remove_volumes() {
     stack=$1
     volumes="mongo_db mon_db osm_packages ro_db"
@@ -384,7 +388,7 @@ function configure_RO(){
 
 function configure_VCA(){
     echo -e "       Configuring VCA"
-    JUJU_PASSWD=`date +%s | sha256sum | base64 | head -c 32`
+    JUJU_PASSWD=$(generate_secret)
     echo -e "$JUJU_PASSWD\n$JUJU_PASSWD" | lxc exec VCA -- juju change-user-password
 }
 
@@ -744,10 +748,25 @@ function generate_config_log_folders() {
 
 function generate_docker_env_files() {
     echo "Generating docker env files"
-    echo "OSMLCM_VCA_HOST=${OSM_VCA_HOST}" | $WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/lcm.env
-    echo "OSMLCM_VCA_SECRET=${OSM_VCA_SECRET}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lcm.env
+    # LCM
+    if [ ! -f $OSM_DOCKER_WORK_DIR/lcm.env ]; then
+        echo "OSMLCM_DATABASE_COMMONKEY=${OSM_DATABASE_COMMONKEY}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lcm.env
+    fi
 
-    MYSQL_ROOT_PASSWORD=`date +%s | sha256sum | base64 | head -c 32`
+    if ! grep -Fq "OSMLCM_VCA_HOST" $OSM_DOCKER_WORK_DIR/lcm.env; then
+        echo "OSMLCM_VCA_HOST=${OSM_VCA_HOST}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lcm.env
+    else
+        $WORKDIR_SUDO sed -i "s|OSMLCM_VCA_HOST.*|OSMLCM_VCA_HOST=$OSM_VCA_HOST|g" $OSM_DOCKER_WORK_DIR/lcm.env
+    fi
+
+    if ! grep -Fq "OSMLCM_VCA_SECRET" $OSM_DOCKER_WORK_DIR/lcm.env; then
+        echo "OSMLCM_VCA_SECRET=${OSM_VCA_SECRET}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lcm.env
+    else
+        $WORKDIR_SUDO sed -i "s|OSMLCM_VCA_SECRET.*|OSMLCM_VCA_SECRET=$OSM_VCA_SECRET|g" $OSM_DOCKER_WORK_DIR/lcm.env
+    fi
+
+    # RO
+    MYSQL_ROOT_PASSWORD=$(generate_secret)
     if [ ! -f $OSM_DOCKER_WORK_DIR/ro-db.env ]; then
         echo "MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/ro-db.env
     fi
@@ -755,27 +774,47 @@ function generate_docker_env_files() {
         echo "RO_DB_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/ro.env
     fi
 
-    MYSQL_ROOT_PASSWORD=`date +%s | sha256sum | base64 | head -c 32` && sleep 1
-    KEYSTONE_DB_PASSWORD=`date +%s | sha256sum | base64 | head -c 32` && sleep 1
-    #ADMIN_PASSWORD=`date +%s | sha256sum | base64 | head -c 32` && sleep 1
-    NBI_PASSWORD=`date +%s | sha256sum | base64 | head -c 32`
+    # Keystone
+    MYSQL_ROOT_PASSWORD=$(generate_secret)
+    KEYSTONE_DB_PASSWORD=$(generate_secret)
+    NBI_PASSWORD=$(generate_secret)
     if [ ! -f $OSM_DOCKER_WORK_DIR/keystone-db.env ]; then
         echo "MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/keystone-db.env
     fi
     if [ ! -f $OSM_DOCKER_WORK_DIR/keystone.env ]; then
         echo "ROOT_DB_PASSWORD=${MYSQL_ROOT_PASSWORD}" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/keystone.env
         echo "KEYSTONE_DB_PASSWORD=${KEYSTONE_DB_PASSWORD}" |$WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/keystone.env
-        #echo "ADMIN_PASSWORD=${ADMIN_PASSWORD}" |$WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/keystone.env
         echo "NBI_PASSWORD=${NBI_PASSWORD}" |$WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/keystone.env
     fi
 
+    # NBI
     if [ ! -f $OSM_DOCKER_WORK_DIR/nbi.env ]; then
         echo "OSMNBI_AUTHENTICATION_SERVICE_PASSWORD=${NBI_PASSWORD}" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/nbi.env
+        echo "OSMNBI_DATABASE_COMMONKEY=${OSM_DATABASE_COMMONKEY}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/nbi.env
     fi
 
-    echo "OS_NOTIFIER_URI=http://${DEFAULT_IP}:8662" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/mon.env
-    echo "OSMMON_VCA_HOST=${OSM_VCA_HOST}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/mon.env
-    echo "OSMMON_VCA_SECRET=${OSM_VCA_SECRET}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/mon.env
+    # MON
+    if [ ! -f $OSM_DOCKER_WORK_DIR/mon.env ]; then
+        echo "OSMMON_DATABASE_COMMONKEY=${OSM_DATABASE_COMMONKEY}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/mon.env
+    fi
+
+    if ! grep -Fq "OS_NOTIFIER_URI" $OSM_DOCKER_WORK_DIR/mon.env; then
+        echo "OS_NOTIFIER_URI=http://${DEFAULT_IP}:8662" |$WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/mon.env
+    else
+        $WORKDIR_SUDO sed -i "s|OS_NOTIFIER_URI.*|OS_NOTIFIER_URI=http://$DEFAULT_IP:8662|g" $OSM_DOCKER_WORK_DIR/mon.env
+    fi
+
+    if ! grep -Fq "OSMMON_VCA_HOST" $OSM_DOCKER_WORK_DIR/mon.env; then
+        echo "OSMMON_VCA_HOST=${OSM_VCA_HOST}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/mon.env
+    else
+        $WORKDIR_SUDO sed -i "s|OSMMON_VCA_HOST.*|OSMMON_VCA_HOST=$OSM_VCA_HOST|g" $OSM_DOCKER_WORK_DIR/mon.env
+    fi
+
+    if ! grep -Fq "OSMMON_VCA_SECRET" $OSM_DOCKER_WORK_DIR/mon.env; then
+        echo "OSMMON_VCA_SECRET=${OSM_VCA_SECRET}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/mon.env
+    else
+        $WORKDIR_SUDO sed -i "s|OSMMON_VCA_SECRET.*|OSMMON_VCA_SECRET=$OSM_VCA_SECRET|g" $OSM_DOCKER_WORK_DIR/mon.env
+    fi
 
     echo "Finished generation of docker env files"
 }
@@ -955,6 +994,11 @@ function install_lightweight() {
         [ -z "$OSM_VCA_SECRET" ] && FATAL "Cannot obtain juju secret"
     fi
 
+    if [ -z "$OSM_DATABASE_COMMONKEY" ]; then
+        OSM_DATABASE_COMMONKEY=$(generate_secret)
+        [ -z "OSM_DATABASE_COMMONKEY" ] && FATAL "Cannot generate common db secret"
+    fi
+
     track juju
     [ -n "$INSTALL_NODOCKER" ] || install_docker_ce
     track docker_ce
@@ -1098,6 +1142,7 @@ DOCKER_USER=osm
 KAFKA_TAG=2.11-1.0.2
 PROMETHEUS_TAG=v2.4.3
 KEYSTONEDB_TAG=10
+OSM_DATABASE_COMMONKEY=
 
 while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:H:S:s:w:t:" o; do
     case "${o}" in
