@@ -27,6 +27,8 @@ def project_checkout(url_prefix,project,refspec,revision) {
 }
 
 def ci_pipeline(mdg,url_prefix,project,branch,refspec,revision,do_stage_3,artifactory_server,docker_args="",do_stage_4=false) {
+    // stage3 is disabled in branch WIM
+    do_stage_3 = false
     println("do_stage_3= ${do_stage_3}")
     ci_helper = load "devops/jenkins/ci-pipelines/ci_helper.groovy"
 
