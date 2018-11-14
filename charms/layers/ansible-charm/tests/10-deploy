@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #
-# OSM devops/juju-charms - Ansible charm inside OSM devops
+# OSM devops/charms - Ansible charm inside OSM devops
 #
 # Copyright 2017-2018 Universidad Carlos III de Madrid
 #
@@ -47,6 +47,6 @@ class TestCharm(unittest.TestCase):
         # - .directory_contents(PATH) - List files and folders in PATH on that unit
         # - .relation(relation, service:rel) - Get relation data from return service
 
-        
+
 if __name__ == '__main__':
     unittest.main()

@@ -1,4 +1,4 @@
-# OSM devops/juju-charms - Ansible charm inside OSM devops
+# OSM devops/charms - Ansible charm inside OSM devops
 #
 # Copyright 2017-2018 Universidad Carlos III de Madrid
 # Copyright 2018 Altran

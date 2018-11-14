@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env python3
 #
-# OSM devops/juju-charms - Ansible charm inside OSM devops
+# OSM devops/charms - Ansible charm inside OSM devops
 #
 # Copyright 2017-2018 Universidad Carlos III de Madrid
 #
@@ -17,6 +17,20 @@
 # limitations under the License.
 #
 
-sudo add-apt-repository ppa:juju/stable -y
-sudo apt-get update
-sudo apt-get install amulet python-requests -y
+import sys
+sys.path.append('lib')
+
+from charms.reactive import main
+from charms.reactive import set_state
+from charmhelpers.core.hookenv import action_fail, action_name
+
+"""
+`set_state` only works here because it's flushed to disk inside the `main()`
+loop. remove_state will need to be called inside the action method.
+"""
+set_state('actions.{}'.format(action_name()))
+
+try:
+    main()
+except Exception as e:
+    action_fail(repr(e))
