@@ -54,7 +54,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "cpu_utilization",
+          "expr": "osm_cpu_utilization",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -139,7 +139,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "average_memory_utilization",
+          "expr": "osm_average_memory_utilization",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -224,7 +224,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "load",
+          "expr": "osm_load",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -309,7 +309,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "users",
+          "expr": "osm_users",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
