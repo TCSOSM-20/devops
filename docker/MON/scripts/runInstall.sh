@@ -20,7 +20,6 @@
 # For those usages not covered by the Apache License, Version 2.0 please
 # contact: bdiaz@whitestack.com or glavado@whitestack.com
 ##
-/bin/bash /mon/osm_mon/plugins/vRealiseOps/vROPs_Webservice/install.sh
-python3 /usr/lib/python3/dist-packages/osm_mon/plugins/OpenStack/Aodh/notifier.py &
-python3 /usr/lib/python3/dist-packages/osm_mon/core/message_bus/common_consumer.py
+osm-mon-server &
+osm-mon-evaluator &
 osm-mon-collector
