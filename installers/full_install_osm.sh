@@ -892,9 +892,10 @@ function deploy_lightweight() {
 
 function deploy_elk() {
     echo "Pulling docker images for ELK"
-    sg docker -c "docker pull docker.elastic.co/elasticsearch/elasticsearch-oss:6.2.3" || FATAL "cannot get elasticsearch docker image"
-    sg docker -c "docker pull docker.elastic.co/logstash/logstash-oss:6.2.3" || FATAL "cannot get logstash docker image"
-    sg docker -c "docker pull docker.elastic.co/kibana/kibana-oss:6.2.3" || FATAL "cannot get kibana docker image"
+    sg docker -c "docker pull docker.elastic.co/elasticsearch/elasticsearch-oss:${ELASTIC_VERSION}" || FATAL "cannot get elasticsearch docker image"
+    sg docker -c "docker pull docker.elastic.co/beats/metricbeat:${ELASTIC_VERSION}" || FATAL "cannot get metricbeat docker image"
+    sg docker -c "docker pull docker.elastic.co/beats/filebeat:${ELASTIC_VERSION}" || FATAL "cannot get filebeat docker image"
+    sg docker -c "docker pull docker.elastic.co/kibana/kibana-oss:${ELASTIC_VERSION}" || FATAL "cannot get kibana docker image"
     echo "Finished pulling elk docker images"
     $WORKDIR_SUDO mkdir -p "$OSM_DOCKER_WORK_DIR/osm_elk"
     $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/osm_elk/* $OSM_DOCKER_WORK_DIR/osm_elk
@@ -918,21 +919,21 @@ function deploy_elk() {
         echo "ELK is up and running. Trying to create index pattern..."
         #Create index pattern
         curl -f -XPOST -H "Content-Type: application/json" -H "kbn-xsrf: anything" \
-          "http://127.0.0.1:5601/api/saved_objects/index-pattern/logstash-*" \
-          -d"{\"attributes\":{\"title\":\"logstash-*\",\"timeFieldName\":\"@timestamp\"}}" 2>/dev/null
+          "http://127.0.0.1:5601/api/saved_objects/index-pattern/filebeat-*" \
+          -d"{\"attributes\":{\"title\":\"filebeat-*\",\"timeFieldName\":\"@timestamp\"}}" 2>/dev/null
         #Make it the default index
         curl -f -XPOST -H "Content-Type: application/json" -H "kbn-xsrf: anything" \
           "http://127.0.0.1:5601/api/kibana/settings/defaultIndex" \
-          -d"{\"value\":\"logstash-*\"}" 2>/dev/null
+          -d"{\"value\":\"filebeat-*\"}" 2>/dev/null
     else
         echo "Cannot connect to Kibana to create index pattern."
         echo "Once Kibana is running, you can use the following instructions to create index pattern:"
         echo 'curl -f -XPOST -H "Content-Type: application/json" -H "kbn-xsrf: anything" \
-          "http://127.0.0.1:5601/api/saved_objects/index-pattern/logstash-*" \
-          -d"{\"attributes\":{\"title\":\"logstash-*\",\"timeFieldName\":\"@timestamp\"}}"'
+          "http://127.0.0.1:5601/api/saved_objects/index-pattern/filebeat-*" \
+          -d"{\"attributes\":{\"title\":\"filebeat-*\",\"timeFieldName\":\"@timestamp\"}}"'
         echo 'curl -XPOST -H "Content-Type: application/json" -H "kbn-xsrf: anything" \
           "http://127.0.0.1:5601/api/kibana/settings/defaultIndex" \
-          -d"{\"value\":\"logstash-*\"}"'
+          -d"{\"value\":\"filebeat-*\"}"'
     fi
     echo "Finished deployment of ELK stack"
     return 0
@@ -1143,6 +1144,7 @@ KAFKA_TAG=2.11-1.0.2
 PROMETHEUS_TAG=v2.4.3
 KEYSTONEDB_TAG=10
 OSM_DATABASE_COMMONKEY=
+ELASTIC_VERSION=6.4.2
 
 while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:H:S:s:w:t:" o; do
     case "${o}" in

@@ -54,7 +54,7 @@ fields:
 output.elasticsearch:
   hosts: ["elasticsearch:9200"]
 
-logging.level: debug
+logging.level: info
 logging.to_files: true
 logging.files:
   path: /var/log/metricbeat
