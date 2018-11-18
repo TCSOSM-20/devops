@@ -4,22 +4,6 @@ metricbeat.modules:
   hosts: ["unix:///var/run/docker.sock"]
   period: 30s
   enabled: true
-- module: mongodb
-  hosts: ["mongo"]
-  period: 30s
-  enabled: true
-- module: mysql
-  metricsets: ["status"]
-  hosts: ["tcp(ro-db:3306)/"]
-  username: root
-  password: "YjkzMDkxMzJhNGJiNzA0YjFiZTI5MzYw"
-  period: 30s
-  enabled: true
-- module: kafka
-  metricsets: ["consumergroup", "partition"]
-  period: 30s
-  hosts: ["kafka:9092"]
-  enabled: true
 - module: system
   enabled: true
   period: 30s
@@ -41,23 +25,5 @@ metricbeat.modules:
   cpu.metrics:  ["percentages"]  # The other available options are normalized_percentages and ticks.
   core.metrics: ["percentages"]  # The other available option is ticks.
 
-setup.dashboards.enabled: false
-
-setup.kibana.host: "kibana"
-setup.kibana.protocol: "http"
-setup.kibana.username: ""
-setup.kibana.password: ""
-
-fields:
-  env: dev
-
 output.elasticsearch:
   hosts: ["elasticsearch:9200"]
-
-logging.level: info
-logging.to_files: true
-logging.files:
-  path: /var/log/metricbeat
-  name: metricbeat
-  keepfiles: 7
-  permissions: 0644
