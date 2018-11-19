@@ -225,6 +225,11 @@ node("${params.NODE}") {
                         release = "-R ${params.RELEASE}"
                     }
              
+                    if ( params.REPOSITORY_BASE )
+                    {
+                        repo_base_url = "-u ${params.REPOSITORY_BASE}"
+                    }
+             
                     sh """
                         export PATH=$PATH:/snap/bin
                         installers/full_install_osm.sh -y -s ${container_name} --test --nolxd --nodocker --nojuju --nohostports --nohostclient \
