@@ -60,7 +60,7 @@ def run_systest(stackName,tagName,testName,envfile=null) {
         sh(script: "touch ${tempdir}/env")
         envfile="${tempdir}/env"
     }
-    sh "docker run --network net${stackName} --env-file ${envfile} -v ${tempdir}:/usr/share/osm-devops/systest/reports osm/osmclient:${tagName} make -C /usr/share/osm-devops/systest ${testName}"
+    sh "docker run --network net${stackName} --env-file ${envfile} -v ${tempdir}:/usr/share/osm-devops/systest/reports opensourcemano/osmclient:${tagName} make -C /usr/share/osm-devops/systest ${testName}"
     sh "cp ${tempdir}/* ."
     junit  '*.xml'
 }

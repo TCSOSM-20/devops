@@ -35,7 +35,7 @@ $(MKBUILD)/.dep_%:
 	$Q$(MKINCLUDE)/get_version.sh -r $(REPOSITORY) -R $(RELEASE) -k $(REPOSITORY_KEY) -u $(REPOSITORY_BASE) -m $* > $@
 
 build: $(MKBUILD) $(DEPS_TARGETS)
-	$Qdocker build -t osm/$(LOWER_MDG):$(TAG) \
+	$Qdocker build -t opensourcemano/$(LOWER_MDG):$(TAG) \
                    --build-arg RELEASE=$(RELEASE) \
                    --build-arg REPOSITORY=$(REPOSITORY) \
                    --build-arg REPOSITORY_KEY=$(REPOSITORY_KEY) \
@@ -57,7 +57,7 @@ clean:
 	rm -f $(MKBUILD)/.dep*
 
 tag:
-	docker tag osm/$(CONTAINER_NAME):$(INPUT_TAG) opensourcemano/$(LOWER_MDG):$(TAG)
+	docker tag opensourcemano/$(CONTAINER_NAME):$(INPUT_TAG) opensourcemano/$(LOWER_MDG):$(TAG)
 
 push: tag
 	docker push opensourcemano/$(LOWER_MDG):$(TAG)
