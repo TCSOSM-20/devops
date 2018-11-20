@@ -127,7 +127,7 @@ if __name__=="__main__":
                         if external_interface.get("virtual-interface", {}).get("type") == "OM-MGMT":
                             raise KeyError(
                                 "Wrong 'Virtual-interface type': Deprecated 'OM-MGMT' value. Please, use 'PARAVIRT' instead")
-                    interface_list = vdu.pop("interface", ())
+                    interface_list = vdu.get("interface", ())
                     for interface in interface_list:
                         if interface.get("virtual-interface", {}).get("type") == "OM-MGMT":
                             raise KeyError(
