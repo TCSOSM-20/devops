@@ -193,7 +193,7 @@ endif
 %.openstack: check_openstack_env
 	$(Q)$(MAKE) $*
 
-%s.vcd: check_vcd_env
+%.vcd: check_vcd_env
 	$(Q)$(MAKE) $*
 
 cirros: check_OSM_HOSTNAME \
