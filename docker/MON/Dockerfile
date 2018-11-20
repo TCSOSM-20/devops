@@ -30,6 +30,10 @@ RUN apt-get --yes update \
  && apt-get --yes install git python python-pip python3 python3-pip libmysqlclient-dev libssl-dev libffi-dev \
  && pip3 install pip==9.0.3
 
+RUN pip3 install  'macaroonbakery>=1.1,<2.0' 'pyRFC3339>=1.0,<2.0' \
+      'pyyaml>=3.0,<4.0' 'theblues>=0.3.8,<1.0' 'websockets>=4.0,<5.0' \
+      'paramiko'   # PyNaCl
+
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
 ARG RELEASE=ReleaseFOUR-daily
 ARG REPOSITORY_KEY=OSM%20ETSI%20Release%20Key.gpg
