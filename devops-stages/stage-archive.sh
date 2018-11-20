@@ -14,7 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-PKG_DIRECTORIES="jenkins installers systest juju-charms descriptor-packages tools docker"
+PKG_DIRECTORIES="jenkins installers systest charms descriptor-packages tools docker"
 MDG_NAME=devops
 DEB_INSTALL=debian/osm-$MDG_NAME.install
 export DEBEMAIL="mmarchetti@sandvine.com"
@@ -45,7 +45,7 @@ cp -R debian $PKG_DIR/.
 
 cd $PKG_DIR
 dh_make -y --indep --createorig --a -c apache
-dpkg-buildpackage -uc -us -tc -rfakeroot 
+dpkg-buildpackage -uc -us -tc -rfakeroot
 cd -
 
 rm -rf pool

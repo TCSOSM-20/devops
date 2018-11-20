@@ -20,7 +20,7 @@ TOOLS_DIR := $(TOPDIR)/descriptor-packages/tools
 PKG_BASE_NAME := $(shell basename $(shell pwd))
 PKG_NAME      := $(addsuffix .tar.gz, $(PKG_BASE_NAME))
 
-CHARM_DIR        := $(TOPDIR)/juju-charms
+CHARM_DIR        := $(TOPDIR)/charms
 CHARM_SRC_DIR    := $(CHARM_DIR)/layers
 CHARM_DOCKER_TAG := charm-tools
 CHARM_BUILD_DIR  := $(CHARM_DIR)/builds
@@ -69,14 +69,14 @@ else
 $(CHARM_BUILD_DIR)/%: $(CHARM_SRC_DIR)/%
 	$(Q)charm build -o $(CHARM_DIR) $<
 endif
- 
+
 clean:
 	$(Q)rm -rf $(BUILD_DIR)
 	$(Q)rm -rf $(CHARM_BUILD_DIR)
 
 test:
-	$(Q)echo -n testing $(shell readlink -f src/*.yaml)  "             " 
+	$(Q)echo -n testing $(shell readlink -f src/*.yaml)  "             "
 	$(Q)$(TEST_PKG) src/*.yaml
 	$(Q)echo OK
-        
+
 .DEFAULT_GOAL := all
