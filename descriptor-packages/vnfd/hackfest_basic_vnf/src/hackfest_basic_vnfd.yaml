@@ -13,6 +13,9 @@ vnfd:vnfd-catalog:
         -   id: hackfest_basic-VM
             name: hackfest_basic-VM
             image: ubuntu1604
+            alternative-images:
+            -   vim-type: aws
+                image: ubuntu/images/hvm-ssd/ubuntu-artful-17.10-amd64-server-20180509
             count: '1'
             vm-flavor:
                 vcpu-count: '1'
