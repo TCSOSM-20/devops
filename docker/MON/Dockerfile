@@ -36,12 +36,13 @@ ARG REPOSITORY_KEY=OSM%20ETSI%20Release%20Key.gpg
 ARG REPOSITORY=testing
 
 RUN curl ${REPOSITORY_BASE}/${RELEASE}/${REPOSITORY_KEY} | apt-key add -
-RUN add-apt-repository -y "deb ${REPOSITORY_BASE}/${RELEASE} ${REPOSITORY} MON common" && apt update
+RUN add-apt-repository -y "deb ${REPOSITORY_BASE}/${RELEASE} ${REPOSITORY} MON N2VC common" && apt update
 
 ARG MON_VERSION
 ARG COMMON_VERSION
+ARG N2VC_VERSION
 
-RUN apt-get --yes update  && apt-get -y install python3-osm-common${COMMON_VERSION} python3-osm-mon${MON_VERSION}
+RUN apt-get --yes update  && apt-get -y install python3-osm-common${COMMON_VERSION} python3-osm-mon${MON_VERSION} python3-n2vc${N2VC_VERSION}
 
 COPY scripts/ scripts/
 
