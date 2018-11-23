@@ -1149,6 +1149,7 @@ REPOSITORY_KEY="OSM%20ETSI%20Release%20Key.gpg"
 REPOSITORY_BASE="https://osm-download.etsi.org/repository/osm/debian"
 WORKDIR_SUDO=sudo
 OSM_WORK_DIR="/etc/osm"
+OSM_DOCKER_WORK_DIR="/etc/osm/docker"
 OSM_DOCKER_TAG=latest
 DOCKER_USER=opensourcemano
 PULL_IMAGES="y"
