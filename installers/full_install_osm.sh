@@ -551,12 +551,16 @@ function install_osmclient(){
     #echo 'export OSM_SOL005=True' >> ${HOME}/.bashrc
     [ -z "$INSTALL_LIGHTWEIGHT" ] && export OSM_HOSTNAME=`lxc list | awk '($2=="SO-ub"){print $6}'`
     [ -z "$INSTALL_LIGHTWEIGHT" ] && export OSM_RO_HOSTNAME=`lxc list | awk '($2=="RO"){print $6}'`
-    [ -n "$INSTALL_LIGHTWEIGHT" ] && export OSM_HOSTNAME=127.0.0.1
     echo -e "\nOSM client installed"
-    echo -e "You might be interested in adding the following OSM client env variables to your .bashrc file:"
-    echo "     export OSM_HOSTNAME=${OSM_HOSTNAME}"
-    [ -n "$INSTALL_LIGHTWEIGHT" ] && echo "     export OSM_SOL005=True"
-    [ -z "$INSTALL_LIGHTWEIGHT" ] && echo "     export OSM_RO_HOSTNAME=${OSM_RO_HOSTNAME}"
+    if [ -z "$INSTALL_LIGHTWEIGHT" ]; then
+        echo -e "You might be interested in adding the following OSM client env variables to your .bashrc file:"
+        echo "     export OSM_HOSTNAME=${OSM_HOSTNAME}"
+        echo "     export OSM_RO_HOSTNAME=${OSM_RO_HOSTNAME}"
+    else
+        echo -e "OSM client assumes that OSM host is running in localhost (127.0.0.1)."
+        echo -e "In case you want to interact with a different OSM host, you will have to configure this env variable in your .bashrc file:"
+        echo "     export OSM_HOSTNAME=<OSM_host>"
+    fi
     return 0
 }
 
