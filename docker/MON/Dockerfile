@@ -62,6 +62,9 @@ ENV OSMMON_VCA_HOST localhost
 ENV OSMMON_VCA_SECRET secret
 ENV OSMMON_VCA_USER admin
 
-EXPOSE 8662 8000
+EXPOSE 8000
+
+HEALTHCHECK --interval=5s --timeout=2s --retries=12 \
+  CMD osm-mon-healthcheck || exit 1
 
 CMD /bin/bash scripts/runInstall.sh
