@@ -38,8 +38,8 @@ class ArgumentParserError(Exception):
 
 def usage():
     print("Usage: {} [options] FILE".format(sys.argv[0]))
-    print(" EXPERIMENTAL: Validates vnfd, nsd descriptors format")
-    print(" FILE: a yaml or json vnfd-catalog or nsd-catalog descriptor")
+    print(" Validates vnfd, nsd and nst descriptors format")
+    print(" FILE: a yaml or json vnfd-catalog, nsd-catalog or nst descriptor")
     print(" OPTIONS:")
     print("      -v|--version: prints current version")
     print("      -h|--help: shows this help")
@@ -109,6 +109,7 @@ if __name__=="__main__":
 
         import osm_im.vnfd as vnfd_catalog
         import osm_im.nsd as nsd_catalog
+        import osm_im.nst as nst_catalog
         from pyangbind.lib.serialise import pybindJSONDecoder
 
         if "vnfd:vnfd-catalog" in data or "vnfd-catalog" in data:
@@ -144,6 +145,10 @@ if __name__=="__main__":
             descriptor = "NS"
             mynsd = nsd_catalog.nsd()
             pybindJSONDecoder.load_ietf_json(data, None, None, obj=mynsd)
+        elif "nst:nst" in data or "nst" in data:
+            descriptor = "NST"
+            mynst = nst_catalog.nst()
+            pybindJSONDecoder.load_ietf_json(data, None, None, obj=mynst)
         else:
             descriptor = None
             raise KeyError("This is not neither nsd-catalog nor vnfd-catalog descriptor")
