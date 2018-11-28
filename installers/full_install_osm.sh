@@ -898,6 +898,7 @@ function deploy_elk() {
     sg docker -c "docker pull docker.elastic.co/beats/metricbeat:${ELASTIC_VERSION}" || FATAL "cannot get metricbeat docker image"
     sg docker -c "docker pull docker.elastic.co/beats/filebeat:${ELASTIC_VERSION}" || FATAL "cannot get filebeat docker image"
     sg docker -c "docker pull docker.elastic.co/kibana/kibana-oss:${ELASTIC_VERSION}" || FATAL "cannot get kibana docker image"
+    sg docker -c "docker pull bobrik/curator:${ELASTIC_CURATOR_VERSION}" || FATAL "cannot get curator docker image"
     echo "Finished pulling elk docker images"
     $WORKDIR_SUDO mkdir -p "$OSM_DOCKER_WORK_DIR/osm_elk"
     $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/osm_elk/* $OSM_DOCKER_WORK_DIR/osm_elk
@@ -1162,6 +1163,7 @@ PROMETHEUS_TAG=v2.4.3
 KEYSTONEDB_TAG=10
 OSM_DATABASE_COMMONKEY=
 ELASTIC_VERSION=6.4.2
+ELASTIC_CURATOR_VERSION=5.5.4
 
 while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:H:S:s:w:t:U:" o; do
     case "${o}" in
