@@ -1,7 +1,7 @@
 #!/bin/sh
 
 WAIT_TIME=180  # LCM healthcheck needs 140 senconds
-SERVICES_WITH_HEALTH="nbi ro zookeeper lcm"
+SERVICES_WITH_HEALTH="nbi ro zookeeper lcm mon"
 NUM_SERVICES_WITH_HEALTH=$(echo $SERVICES_WITH_HEALTH | wc -w)
 WAIT_FINAL=30
 
