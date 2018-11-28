@@ -157,7 +157,6 @@ function uninstall_lightweight() {
         if [ -n "$INSTALL_PERFMON" ]; then
             echo -e "\nUninstalling OSM Performance Monitoring stack"
             remove_stack osm_metrics
-            sg docker -c "docker image rm osm/kafka-exporter"
             $WORKDIR_SUDO rm -rf $OSM_DOCKER_WORK_DIR/osm_metrics
         fi
     else
@@ -167,14 +166,14 @@ function uninstall_lightweight() {
         remove_stack osm_metrics
         echo "Now osm docker images and volumes will be deleted"
         newgrp docker << EONG
-        docker image rm ${DOCKER_USER}/ro
-        docker image rm ${DOCKER_USER}/lcm
-        docker image rm ${DOCKER_USER}/light-ui
-        docker image rm ${DOCKER_USER}/keystone
-        docker image rm ${DOCKER_USER}/nbi
-        docker image rm ${DOCKER_USER}/mon
-        docker image rm ${DOCKER_USER}/pm
-        docker image rm ${DOCKER_USER}/kafka-exporter
+        docker image rm ${DOCKER_USER}/ro:${OSM_DOCKER_TAG}
+        docker image rm ${DOCKER_USER}/lcm:${OSM_DOCKER_TAG}
+        docker image rm ${DOCKER_USER}/light-ui:${OSM_DOCKER_TAG}
+        docker image rm ${DOCKER_USER}/keystone:${OSM_DOCKER_TAG}
+        docker image rm ${DOCKER_USER}/nbi:${OSM_DOCKER_TAG}
+        docker image rm ${DOCKER_USER}/mon:${OSM_DOCKER_TAG}
+        docker image rm ${DOCKER_USER}/pol:${OSM_DOCKER_TAG}
+        docker image rm ${DOCKER_USER}/osmclient:${OSM_DOCKER_TAG}
 EONG
         remove_volumes $OSM_STACK_NAME
         remove_network $OSM_STACK_NAME
