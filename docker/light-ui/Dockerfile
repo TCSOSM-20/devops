@@ -1,20 +1,26 @@
 FROM ubuntu:16.04
 
-WORKDIR /usr/share/osm-lightui
-
-RUN apt-get update && apt-get install -y npm git python-pip nginx supervisor
+RUN apt-get update && apt-get install -y npm git python-pip nginx supervisor curl software-properties-common
 RUN npm install -g bower
-
-ARG LWUI_VERSION=
-RUN git clone https://osm.etsi.org/gerrit/osm/LW-UI /usr/share/osm-lightui && echo LWUI_VERSION
-
 RUN ln -s /usr/bin/nodejs /usr/bin/node
-RUN bower install --allow-root
+RUN echo "daemon off;" >> /etc/nginx/nginx.conf
 
+ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
+ARG RELEASE=ReleaseFOUR-daily
+ARG REPOSITORY_KEY=OSM%20ETSI%20Release%20Key.gpg
+ARG REPOSITORY=testing
+ARG LWUI_VERSION
+
+RUN curl ${REPOSITORY_BASE}/${RELEASE}/${REPOSITORY_KEY} | apt-key add -
+RUN add-apt-repository -y "deb ${REPOSITORY_BASE}/${RELEASE} ${REPOSITORY} LW-UI" && apt-get update
+
+RUN apt-get install -y osm-lightui${LWUI_VERSION} && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /usr/share/osm-lightui
+RUN bower install --allow-root
 RUN pip install -r requirements.txt
 RUN pip install uwsgi
-#
-RUN echo "daemon off;" >> /etc/nginx/nginx.conf
 RUN cp /usr/share/osm-lightui/nginx-app.conf /etc/nginx/sites-available/default
 RUN cp /usr/share/osm-lightui/supervisor-app.conf /etc/supervisor/conf.d/
 
