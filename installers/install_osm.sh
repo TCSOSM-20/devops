@@ -1,7 +1,7 @@
 #!/bin/bash
 REPOSITORY_BASE=https://osm-download.etsi.org/repository/osm/debian
-RELEASE=ReleaseFIVE-daily
-REPOSITORY=testing
+RELEASE=ReleaseFIVE
+REPOSITORY=stable
 
 add_repo() {
   REPO_CHECK="^$1"
@@ -31,4 +31,4 @@ add_repo() {
 add_repo "deb [arch=amd64] $REPOSITORY_BASE/$RELEASE $REPOSITORY devops"
 sudo DEBIAN_FRONTEND=noninteractive apt-get -q update
 sudo DEBIAN_FRONTEND=noninteractive apt-get install osm-devops
-/usr/share/osm-devops/installers/full_install_osm.sh -R $RELEASE -r $REPOSITORY -u $REPOSITORY_BASE -D /usr/share/osm-devops -t releasefive-daily "$@"
+/usr/share/osm-devops/installers/full_install_osm.sh -R $RELEASE -r $REPOSITORY -u $REPOSITORY_BASE -D /usr/share/osm-devops -t latest "$@"
