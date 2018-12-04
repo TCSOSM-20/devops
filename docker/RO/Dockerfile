@@ -49,6 +49,6 @@ ENV RO_DB_OVIM_PORT=3306
 ENV RO_DB_NAME=mano_db
 ENV RO_DB_OVIM_NAME=mano_vim_db
 
-HEALTHCHECK --interval=5s --timeout=2s --retries=12 \
+HEALTHCHECK --start-period=30s --interval=10s --timeout=5s --retries=12 \
   CMD curl --silent --fail localhost:9090/openmano/tenants || exit 1
 CMD /bin/RO/start.sh
