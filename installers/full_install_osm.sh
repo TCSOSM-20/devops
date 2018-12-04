@@ -32,7 +32,7 @@ function usage(){
     echo -e "     --vimemu:       additionally deploy the VIM emulator as a docker container"
     echo -e "     --elk_stack:    additionally deploy an ELK docker stack for event logging"
     echo -e "     --pm_stack:     additionally deploy a Prometheus+Grafana stack for performance monitoring (PM)"
-    echo -e "     -m <MODULE>:    install OSM but only rebuild the specified docker images (RO, LCM, NBI, LW-UI, MON, KAFKA, MONGO, NONE)"
+    echo -e "     -m <MODULE>:    install OSM but only rebuild the specified docker images (RO, LCM, NBI, LW-UI, MON, POL, KAFKA, MONGO, PROMETHEUS, KEYSTONE-DB, NONE)"
     echo -e "     -o <ADDON>:     ONLY (un)installs one of the addons (vimemu, elk_stack, pm_stack)"
     echo -e "     -D <devops path> use local devops installation path"
     echo -e "     -w <work dir>   Location to store runtime installation"
@@ -667,8 +667,12 @@ function generate_docker_images() {
         sg docker -c "docker pull prom/prometheus:${PROMETHEUS_TAG}" || FATAL "cannot get prometheus docker image"
     fi
 
-    if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q KEYSTONE-DB ; then
+    if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q NBI || echo $TO_REBUILD | grep -q KEYSTONE-DB ; then
         sg docker -c "docker pull mariadb:${KEYSTONEDB_TAG}" || FATAL "cannot get keystone-db docker image"
+    fi
+
+    if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q RO ; then
+        sg docker -c "docker pull mysql:5" || FATAL "cannot get mysql docker image"
     fi
 
     if [ -n "$PULL_IMAGES" ]; then
@@ -681,10 +685,10 @@ function generate_docker_images() {
 
     if [ -n "$PULL_IMAGES" ]; then
         sg docker -c "docker pull ${DOCKER_USER}/pol:${OSM_DOCKER_TAG}" || FATAL "cannot pull POL docker image"
-    elif [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q MON ; then
+    elif [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q POL ; then
         git -C ${LWTEMPDIR} clone https://osm.etsi.org/gerrit/osm/POL
         git -C ${LWTEMPDIR}/POL checkout ${COMMIT_ID}
-        sg docker -c "docker build ${LWTEMPDIR}/POL -f ${LWTEMPDIR}/POL/docker/Dockerfile -t ${DOCKER_USER}/pol --no-cache" || FATAL "cannot build PM docker image"
+        sg docker -c "docker build ${LWTEMPDIR}/POL -f ${LWTEMPDIR}/POL/docker/Dockerfile -t ${DOCKER_USER}/pol --no-cache" || FATAL "cannot build POL docker image"
     fi
 
     if [ -n "$PULL_IMAGES" ]; then
@@ -700,7 +704,6 @@ function generate_docker_images() {
     if [ -n "$PULL_IMAGES" ]; then
         sg docker -c "docker pull ${DOCKER_USER}/ro:${OSM_DOCKER_TAG}" || FATAL "cannot pull RO docker image"
     elif [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q RO ; then
-        sg docker -c "docker pull mysql:5" || FATAL "cannot get mysql docker image"
         git -C ${LWTEMPDIR} clone https://osm.etsi.org/gerrit/osm/RO
         git -C ${LWTEMPDIR}/RO checkout ${COMMIT_ID}
         sg docker -c "docker build ${LWTEMPDIR}/RO -f ${LWTEMPDIR}/RO/docker/Dockerfile-local -t ${DOCKER_USER}/ro --no-cache" || FATAL "cannot build RO docker image"
