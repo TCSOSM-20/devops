@@ -542,8 +542,8 @@ function install_osmclient(){
     sudo add-apt-repository -y "deb [arch=amd64] $CLIENT_REPOSITORY_BASE/$CLIENT_RELEASE $CLIENT_REPOSITORY osmclient"
     sudo apt-get update
     sudo apt-get install -y python-pip
-    sudo -H pip install pip==9.0.3
-    sudo -H pip install python-magic
+    sudo -H LC_ALL=C pip install pip==9.0.3
+    sudo -H LC_ALL=C pip install python-magic
     sudo apt-get install -y python-osmclient
     #sed 's,OSM_SOL005=[^$]*,OSM_SOL005=True,' -i ${HOME}/.bashrc
     #echo 'export OSM_HOSTNAME=localhost' >> ${HOME}/.bashrc
