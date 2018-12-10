@@ -1,14 +1,15 @@
 #!/bin/bash
-if [ $# -ne 4 ]; then
-    echo "Usage $0 <repo> <tag> <user> <release_name>"
-    echo "Example: $0 all v4.0.2 garciadeblas FOUR"
-    echo "Example: $0 devops v4.0.3 marchettim FIVE"
+if [ $# -ne 5 ]; then
+    echo "Usage $0 <repo> <branch> <tag> <user> <release_name>"
+    echo "Example: $0 all master v4.0.2 garciadeblas FOUR"
+    echo "Example: $0 devops v5.0 v5.0.3 marchettim FIVE"
     exit 1
 fi
 
-TAG="$2"
-USER="$3"
-RELEASE_NAME="$4"
+BRANCH="$2"
+TAG="$3"
+USER="$4"
+RELEASE_NAME="$5"
 tag_header="OSM Release $RELEASE_NAME:"
 tag_message="$tag_header version $TAG"
 
@@ -33,7 +34,7 @@ for i in $list; do
     if [ ! -d $i ]; then
         git clone ssh://$USER@osm.etsi.org:29418/osm/$i
     fi
-    git -C $i checkout master
+    git -C $i checkout $BRANCH
     git -C $i pull --rebase
     git -C $i tag -a $TAG -m"$tag_message"
     git -C $i push origin $TAG --follow-tags
