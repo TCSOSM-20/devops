@@ -962,7 +962,9 @@ function install_lightweight() {
     [ "${OSM_STACK_NAME}" == "osm" ] || OSM_DOCKER_WORK_DIR="$OSM_WORK_DIR/stack/$OSM_STACK_NAME"
     [ ! -d "$OSM_DOCKER_WORK_DIR" ] && $WORKDIR_SUDO mkdir -p $OSM_DOCKER_WORK_DIR
 
+    track checkingroot
     [ "$USER" == "root" ] && FATAL "You are running the installer as root. The installer is prepared to be executed as a normal user with sudo privileges."
+    track noroot
     [ -z "$ASSUME_YES" ] && ! ask_user "The installation will configure LXD, install juju, install docker CE and init a docker swarm, as pre-requirements. Do you want to proceed (Y/n)? " y && echo "Cancelled!" && exit 1
     track proceed
     echo "Installing lightweight build of OSM"
@@ -990,11 +992,13 @@ function install_lightweight() {
     track prereqok
     [ -z "$INSTALL_NOJUJU" ] && install_juju
 
+    track juju_install
     if [ -z "$OSM_VCA_HOST" ]; then
         juju_createcontroller
         OSM_VCA_HOST=`sg lxd -c "juju show-controller $OSM_STACK_NAME"|grep api-endpoints|awk -F\' '{print $2}'|awk -F\: '{print $1}'`
         [ -z "$OSM_VCA_HOST" ] && FATAL "Cannot obtain juju controller IP address"
     fi
+    track juju_controller
     if [ -z "$OSM_VCA_SECRET" ]; then
         OSM_VCA_SECRET=$(parse_juju_password $OSM_STACK_NAME)
         [ -z "$OSM_VCA_SECRET" ] && FATAL "Cannot obtain juju secret"
@@ -1010,6 +1014,7 @@ function install_lightweight() {
     track docker_ce
     #install_docker_compose
     [ -n "$INSTALL_NODOCKER" ] || init_docker_swarm
+    track docker_swarm
     [ -z "$DOCKER_NOBUILD" ] && generate_docker_images
     track docker_build
     generate_docker_env_files
