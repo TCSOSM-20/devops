@@ -2,11 +2,11 @@ vnfd-catalog:
     vnfd:
     -   connection-point:
         -   name: mgmt0
-            type: VPORT
+
         -   name: west
-            type: VPORT
+
         -   name: east
-            type: VPORT
+
         description: A simple VNF descriptor w/ two VDU
         id: Ref_Vnf_12
         name: Ref_Vnf_12
@@ -43,7 +43,7 @@ vnfd-catalog:
             internal-connection-point:
             -   id: iface31
                 name: iface31
-                type: VPORT
+
             name: Ref_VM3
             vm-flavor:
                 memory-mb: '2048'
@@ -71,7 +71,7 @@ vnfd-catalog:
             internal-connection-point:
             -   id: iface41
                 name: iface41
-                type: VPORT
+
             name: Ref_VM4
         vendor: ETSI
         version: '1.0'

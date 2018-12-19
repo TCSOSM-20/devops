@@ -2,9 +2,9 @@ vnfd-catalog:
     vnfd:
     -   connection-point:
         -   name: mgmt0
-            type: VPORT
+
         -   name: west
-            type: VPORT
+
         description: A simple VNF descriptor w/ VM1 and VM2
         id: Ref_Vnf_11
         name: Ref_VNF_11
@@ -35,7 +35,7 @@ vnfd-catalog:
             internal-connection-point:
             -   name: iface11
                 id: iface11
-                type: VPORT
+
             id: Ref_VM1
             image: ref_vm1.qcow2
             name: Ref_VM1
@@ -57,7 +57,7 @@ vnfd-catalog:
             internal-connection-point:
             -   name: iface21
                 id: iface21
-                type: VPORT
+
             id: Ref_VM2
             image: ref_vm2.qcow2
             name: Ref_VM2

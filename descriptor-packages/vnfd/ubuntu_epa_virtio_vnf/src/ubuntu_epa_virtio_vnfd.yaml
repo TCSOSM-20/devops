@@ -66,4 +66,4 @@ vnfd-catalog:
 
         connection-point:
             -   name: eth0
-                type: VPORT
+

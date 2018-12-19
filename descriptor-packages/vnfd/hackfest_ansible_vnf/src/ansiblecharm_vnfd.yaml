@@ -9,7 +9,7 @@ vnfd:vnfd-catalog:
         version: '1.0'
         connection-point:
         -   name: vnf-cp0
-            type: VPORT
+
         mgmt-interface:
             cp: vnf-cp0
         vdu:

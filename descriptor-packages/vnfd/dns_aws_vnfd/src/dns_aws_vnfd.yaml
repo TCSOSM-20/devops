@@ -2,7 +2,7 @@ vnfd-catalog:
     vnfd:
     -   connection-point:
         -   name: eth0
-            type: VPORT
+
         description: Simple VNF example with a DNS forwarder
         id: dns_forwarder
         logo: dns.jpg
