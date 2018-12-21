@@ -60,7 +60,7 @@ services:
     networks:
       - netOSM
   keystone:
-    image: ${DOCKER_USER:-opensourcemano}/keystone:${TAG:-latest}
+    image: ${DOCKER_USER:-opensourcemano}/keystone:${TAG:-5}
     networks:
       - netOSM
     environment:
@@ -70,7 +70,7 @@ services:
     ports:
       - "${OSM_KEYSTONE_PORTS:-5000:5000}"
   nbi:
-    image: ${DOCKER_USER:-opensourcemano}/nbi:${TAG:-latest}
+    image: ${DOCKER_USER:-opensourcemano}/nbi:${TAG:-5}
     networks:
       - netOSM
     volumes:
@@ -86,7 +86,7 @@ services:
     #  - kafka
     #  - mongo
   lcm:
-    image: ${DOCKER_USER:-opensourcemano}/lcm:${TAG:-latest}
+    image: ${DOCKER_USER:-opensourcemano}/lcm:${TAG:-5}
     networks:
       - netOSM
     volumes:
@@ -114,7 +114,7 @@ services:
 #    ports:
 #      - "3306:3306"
   ro:
-    image: ${DOCKER_USER:-opensourcemano}/ro:${TAG:-latest}
+    image: ${DOCKER_USER:-opensourcemano}/ro:${TAG:-5}
     networks:
       - netOSM
     environment:
@@ -128,7 +128,7 @@ services:
     ports:
       - "${OSM_RO_PORTS:-9090:9090}"
   mon:
-    image: ${DOCKER_USER:-opensourcemano}/mon:${TAG:-latest}
+    image: ${DOCKER_USER:-opensourcemano}/mon:${TAG:-5}
     networks:
       - netOSM
     volumes:
@@ -148,7 +148,7 @@ services:
             max-file: 5
             max-size: 10m
   pol:
-    image: ${DOCKER_USER:-opensourcemano}/pol:${TAG:-latest}
+    image: ${DOCKER_USER:-opensourcemano}/pol:${TAG:-5}
     networks:
       - netOSM
     volumes:
@@ -167,7 +167,7 @@ services:
         max-file: 5
         max-size: 10m
   light-ui:
-    image: ${DOCKER_USER:-opensourcemano}/light-ui:${TAG:-latest}
+    image: ${DOCKER_USER:-opensourcemano}/light-ui:${TAG:-5}
     networks:
       - netOSM
     environment:
