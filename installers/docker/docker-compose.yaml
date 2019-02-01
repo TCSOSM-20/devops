@@ -1,5 +1,6 @@
 version: '3'
 volumes:
+  ro:
   ro_db:
   mongo_db:
   mon_db:
@@ -130,6 +131,8 @@ services:
       - ./ro.env
     #depends_on:
     #  - ro-db
+    volumes:
+      - ro:/var/log/osm
     ports:
       - "${OSM_RO_PORTS:-9090:9090}"
   mon:

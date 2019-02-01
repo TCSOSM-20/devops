@@ -24,7 +24,7 @@ RUN mkdir -p /bin/RO
 
 COPY scripts/ /bin/RO
 
-VOLUME /opt/openmano/logs
+VOLUME /var/log/osm
 
 EXPOSE 9090
 

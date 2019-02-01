@@ -26,9 +26,9 @@ vnfd-catalog:
         description: This is an example RIFT.ware VNF
         connection-point:
         -   name: pong_vnfd/cp0
-            type: VPORT
+
         -   name: pong_vnfd/cp1
-            type: VPORT
+
         http-endpoint:
         -   path: api/v1/pong/stats
             port: '18889'

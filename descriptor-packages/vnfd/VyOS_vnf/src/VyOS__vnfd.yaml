@@ -40,15 +40,15 @@ vnfd-catalog:
                 charm: vyos-proxy
         connection-point:
         -   name: eth0
-            type: VPORT
+
         -   name: eth1
-            type: VPORT
+
         -   name: eth2
-            type: VPORT
+
         -   name: eth3
-            type: VPORT
+
         -   name: eth4
-            type: VPORT
+
         vdu:
         -   id: VyOS-VM
             name: VyOS-VM

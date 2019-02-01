@@ -42,9 +42,9 @@ vnfd-catalog:
                 charm: clearwater-aio-proxy
         connection-point:
         -   name: eth0
-            type: VPORT
+
         -   name: eth1
-            type: VPORT
+
         vdu:
         -   id: IMS-ALLIN1_2p-VM
             name: IMS-ALLIN1_2p-VM

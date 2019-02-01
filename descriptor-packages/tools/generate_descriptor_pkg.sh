@@ -256,7 +256,6 @@ EOF
         eth=$(($i))
         cat >>$desc_file <<EOF
         -   name: vnf-cp${eth}
-            type: ${CP_TYPE}
 EOF
     done
 

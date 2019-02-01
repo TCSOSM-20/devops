@@ -8,7 +8,7 @@ vnfd:vnfd-catalog:
         logo: osm.png
         connection-point:
         -   name: vnf-cp0
-            type: VPORT
+
         vdu:
         -   id: hackfest_basic-VM
             name: hackfest_basic-VM

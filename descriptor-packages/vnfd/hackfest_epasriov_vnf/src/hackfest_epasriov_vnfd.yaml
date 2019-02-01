@@ -10,11 +10,11 @@ vnfd:vnfd-catalog:
         -   id: vnf-mgmt
             name: vnf-mgmt
             short-name: vnf-mgmt
-            type: VPORT
+
         -   id: vnf-data
             name: vnf-data
             short-name: vnf-data
-            type: VPORT
+
         mgmt-interface:
             cp: vnf-mgmt
         internal-vld:
@@ -60,7 +60,7 @@ vnfd:vnfd-catalog:
             -   id: mgmtVM-internal
                 name: mgmtVM-internal
                 short-name: mgmtVM-internal
-                type: VPORT
+
             cloud-init-file: cloud-config.txt
         -   id: dataVM
             name: dataVM
@@ -96,5 +96,5 @@ vnfd:vnfd-catalog:
             -   id: dataVM-internal
                 name: dataVM-internal
                 short-name: dataVM-internal
-                type: VPORT
+
 

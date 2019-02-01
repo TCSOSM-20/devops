@@ -2,9 +2,9 @@ vnfd-catalog:
     vnfd:
     -   connection-point:
         -   name: mgmt
-            type: VPORT
+
         -   name: data
-            type: VPORT
+
         description: A simple VNF descriptor w/ one VDU
         id: Ref_Vnf_21
         name: Ref_Vnf_21
