@@ -97,7 +97,7 @@ ENV OSMLCM_MESSAGE_DRIVER  kafka
 ENV OSMLCM_MESSAGE_HOST    kafka
 ENV OSMLCM_MESSAGE_PORT    9092
 
-HEALTHCHECK --interval=30s --timeout=140s --retries=1 \
+HEALTHCHECK --interval=120s --timeout=15s --retries=1 \
   CMD python3 /usr/lib/python3/dist-packages/osm_lcm/lcm.py --health-check || exit 1
 
 
