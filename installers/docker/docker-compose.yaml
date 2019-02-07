@@ -142,8 +142,9 @@ services:
     volumes:
       - mon_db:/app/database
     environment:
-      BROKER_URI: kafka:9092
-      DATABASE: sqlite:///app/database/mon_sqlite.db
+      OSMMON_MESSAGE_HOST: kafka
+      OSMMON_MESSAGE_PORT: 9092
+      OSMMON_SQL_DATABASE_URI: sqlite:///app/database/mon_sqlite.db
     env_file:
       - ./mon.env
     ports:
@@ -158,7 +159,8 @@ services:
       - pol_db:/app/database
     environment:
       OSMPOL_SQL_DATABASE_URI: sqlite:///app/database/policy_module.db
-      BROKER_URI: kafka:9092
+      OSMPOL_MESSAGE_HOST: kafka
+      OSMPOL_MESSAGE_PORT: 9092
     #depends_on:
     #  - kafka
     #  - mon
