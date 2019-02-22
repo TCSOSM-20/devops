@@ -42,7 +42,7 @@ echo "which osmclient:"
 which osm
 #dockers deb packages
 echo "dockers deb packages"
-for i in kafka keystone keystone-db lcm light-ui mon mongo nbi pol prometheus ro ro-db zookeeper; do
+for i in kafka keystone lcm light-ui mon mongo nbi pol prometheus ro mysql zookeeper; do
     echo "docker osm_$i"
     docker exec $(docker ps -q -f name=osm_$i -l) dpkg -l |grep osm
 done

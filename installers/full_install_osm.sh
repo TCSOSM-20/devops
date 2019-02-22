@@ -781,7 +781,6 @@ function generate_docker_env_files() {
     fi
 
     # Keystone
-    MYSQL_ROOT_PASSWORD=$(generate_secret)
     KEYSTONE_DB_PASSWORD=$(generate_secret)
     NBI_PASSWORD=$(generate_secret)
     if [ ! -f $OSM_DOCKER_WORK_DIR/keystone-db.env ]; then

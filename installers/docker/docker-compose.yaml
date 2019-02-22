@@ -6,7 +6,6 @@ volumes:
   mon_db:
   pol_db:
   osm_packages:
-  keystone_db:
   prom_db:
 networks:
   netOSM:
@@ -59,22 +58,12 @@ services:
       - prom_db:/prometheus
     networks:
       - netOSM
-  keystone-db:
-    image: mariadb:10
-    networks:
-      - netOSM
-    volumes:
-      - keystone_db:/var/lib/mysql
-    env_file:
-      - ./keystone-db.env
-#    ports:
-#      - "3306:3306"
   keystone:
     image: ${DOCKER_USER:-opensourcemano}/keystone:${TAG:-latest}
     networks:
       - netOSM
     environment:
-      DB_HOST: keystone-db
+      DB_HOST: mysql
     env_file:
       - ./keystone.env
     ports:
@@ -111,10 +100,12 @@ services:
     #  - kafka
     #  - mongo
     #  - ro
-  ro-db:
+  mysql:
     image: mysql:5
     networks:
-      - netOSM
+      netOSM:
+        aliases:
+          - ro-db
     volumes:
       - ro_db:/var/lib/mysql
     env_file:
@@ -126,11 +117,11 @@ services:
     networks:
       - netOSM
     environment:
-      RO_DB_HOST: ro-db
+      RO_DB_HOST: mysql
     env_file:
       - ./ro.env
     #depends_on:
-    #  - ro-db
+    #  - mysql
     volumes:
       - ro:/var/log/osm
     ports:
