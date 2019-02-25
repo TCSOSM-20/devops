@@ -135,7 +135,6 @@ services:
     environment:
       OSMMON_MESSAGE_HOST: kafka
       OSMMON_MESSAGE_PORT: 9092
-      OSMMON_SQL_DATABASE_URI: sqlite:///app/database/mon_sqlite.db
     env_file:
       - ./mon.env
     ports:

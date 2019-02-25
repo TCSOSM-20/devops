@@ -801,6 +801,7 @@ function generate_docker_env_files() {
     # MON
     if [ ! -f $OSM_DOCKER_WORK_DIR/mon.env ]; then
         echo "OSMMON_DATABASE_COMMONKEY=${OSM_DATABASE_COMMONKEY}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/mon.env
+        echo "OSMMON_SQL_DATABASE_URI=mysql://root:${MYSQL_ROOT_PASSWORD}@mysql:3306/mon" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/mon.env
     fi
 
     if ! grep -Fq "OS_NOTIFIER_URI" $OSM_DOCKER_WORK_DIR/mon.env; then

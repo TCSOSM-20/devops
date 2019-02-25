@@ -24,11 +24,21 @@ FROM ubuntu:16.04
 
 LABEL authors="Guillermo Calvino"
 
-RUN apt-get update && apt-get -y install curl software-properties-common
-
-RUN apt-get --yes update \
- && apt-get --yes install git python python-pip python3 python3-pip libmysqlclient-dev libssl-dev libffi-dev \
- && pip3 install pip==9.0.3
+RUN apt-get update \
+    && apt-get -y install curl \
+                          software-properties-common \
+                          git \
+                          python \
+                          python-pip \
+                          python3 \
+                          python3-pip \
+                          libmysqlclient-dev \
+                          libssl-dev \
+                          libffi-dev \
+                          mysql-client \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip3 install pip==9.0.3
 
 RUN pip3 install  'macaroonbakery>=1.1,<2.0' 'pyRFC3339>=1.0,<2.0' \
       'pyyaml>=3.0,<4.0' 'theblues>=0.3.8,<1.0' 'websockets>=4.0,<5.0' \
@@ -39,15 +49,16 @@ ARG RELEASE=ReleaseFOUR-daily
 ARG REPOSITORY_KEY=OSM%20ETSI%20Release%20Key.gpg
 ARG REPOSITORY=testing
 
-RUN curl ${REPOSITORY_BASE}/${RELEASE}/${REPOSITORY_KEY} | apt-key add -
-RUN add-apt-repository -y "deb ${REPOSITORY_BASE}/${RELEASE} ${REPOSITORY} MON N2VC common" && apt update
-
 ARG MON_VERSION
 ARG COMMON_VERSION
 ARG N2VC_VERSION
 
-RUN apt-get --yes update  && apt-get -y install python3-osm-common${COMMON_VERSION} python3-osm-mon${MON_VERSION} python3-n2vc${N2VC_VERSION}
-
+RUN curl ${REPOSITORY_BASE}/${RELEASE}/${REPOSITORY_KEY} | apt-key add - \
+    && add-apt-repository -y "deb ${REPOSITORY_BASE}/${RELEASE} ${REPOSITORY} MON N2VC common" \
+    && apt update \
+    && apt-get -y install python3-osm-common${COMMON_VERSION} \
+                          python3-osm-mon${MON_VERSION} \
+                          python3-n2vc${N2VC_VERSION}
 COPY scripts/ scripts/
 
 ENV OSMMON_MESSAGE_DRIVER kafka
@@ -74,4 +85,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=5s --timeout=2s --retries=12 \
   CMD osm-mon-healthcheck || exit 1
 
-CMD /bin/bash scripts/runInstall.sh
+CMD /bin/bash scripts/start.sh
