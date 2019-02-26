@@ -148,9 +148,10 @@ services:
     volumes:
       - pol_db:/app/database
     environment:
-      OSMPOL_SQL_DATABASE_URI: sqlite:///app/database/policy_module.db
       OSMPOL_MESSAGE_HOST: kafka
       OSMPOL_MESSAGE_PORT: 9092
+    env_file:
+      - ./pol.env
     #depends_on:
     #  - kafka
     #  - mon
