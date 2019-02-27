@@ -141,6 +141,11 @@ services:
       - "${OSM_MON_PORTS:-8662:8662}"
     #depends_on:
     #  - kafka
+    logging:
+        driver: "json-file"
+        options:
+            max-file: 5
+            max-size: 10m
   pol:
     image: ${DOCKER_USER:-opensourcemano}/pol:${TAG:-latest}
     networks:
@@ -155,6 +160,11 @@ services:
     #depends_on:
     #  - kafka
     #  - mon
+    logging:
+      driver: "json-file"
+      options:
+        max-file: 5
+        max-size: 10m
   light-ui:
     image: ${DOCKER_USER:-opensourcemano}/light-ui:${TAG:-latest}
     networks:
