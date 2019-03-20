@@ -23,13 +23,13 @@ import sys
 
 from jinja2 import Environment, PackageLoader
 
-from generators.actions_generator import ActionsGenerator
-from generators.metadata_generator import MetadataGenerator
+from generator.generators.actions_generator import ActionsGenerator
+from generator.generators.metadata_generator import MetadataGenerator
 
 
 class AnsibleGenerator:
     LOGGER = logging.getLogger()
-    ENV = Environment(loader=PackageLoader('ansible-charm', 'templates'))
+    ENV = Environment(loader=PackageLoader('generator.ansible-charm', 'templates'))
 
     def __init__(self, metadata, license=None, options=None):
         """

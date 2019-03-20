@@ -26,7 +26,7 @@ from jinja2 import Environment, PackageLoader
 
 class ActionsGenerator:
     LOGGER = logging.getLogger()
-    ENV = Environment(loader=PackageLoader('actions', 'templates'))
+    ENV = Environment(loader=PackageLoader('generator.actions', 'templates'))
 
     def __init__(self, metadata, actions, license=None, options=None):
         """

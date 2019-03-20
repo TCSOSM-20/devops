@@ -28,7 +28,7 @@ from jinja2 import Environment, PackageLoader
 
 class MetadataGenerator:
     LOGGER = logging.getLogger()
-    ENV = Environment(loader=PackageLoader('metadata', 'templates'))
+    ENV = Environment(loader=PackageLoader('generator.metadata', 'templates'))
 
     def __init__(self, metadata, license=None, options=None):
         """

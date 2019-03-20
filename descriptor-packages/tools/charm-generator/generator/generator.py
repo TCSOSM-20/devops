@@ -16,13 +16,15 @@
 # contact: esousa@whitestack.com or glavado@whitestack.com
 ##
 
+__version__ = '1.0.0'
+
 import argparse
 import logging
 import sys
 
 from datetime import datetime
 
-from generators.ansible_generator import AnsibleGenerator
+from .generators.ansible_generator import AnsibleGenerator
 
 
 def configure_logger(args):
@@ -165,7 +167,3 @@ def main():
     generator.generate()
 
     logger.info('Generation process complete.')
-
-
-if __name__ == "__main__":
-    main()
