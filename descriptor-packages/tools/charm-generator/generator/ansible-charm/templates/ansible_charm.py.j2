@@ -70,7 +70,14 @@ def config_changed():
 @when('actions.{{ pb.action_name }}')
 def {{ pb.function_name }}():
     try:
-        result = charms.libansible.execute_playbook('{{ pb.file }}')
+        dict_vars = {}
+
+        # edit the following snippet to add your parameters
+        # Note: don't forget to edit actions.yaml to add the parameters
+        # param_variable = action_get('param-name')
+        # dict_vars['param-name'] = param_variable}
+
+        result = charms.libansible.execute_playbook('{{ pb.file }}', dict_vars)
     except:
         exc_type, exc_value, exc_traceback = sys.exc_info()
         err = traceback.format_exception(exc_type, exc_value, exc_traceback)

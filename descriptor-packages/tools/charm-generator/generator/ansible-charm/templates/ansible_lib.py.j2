@@ -72,7 +72,7 @@ def find(pattern, path):
     return result
 
 
-def execute_playbook(playbook_file, vars=None):
+def execute_playbook(playbook_file, vars_dict=None):
     playbook_path = find(playbook_file, '/var/lib/juju/agents/')
 
     cfg = config()
@@ -87,7 +87,19 @@ def execute_playbook(playbook_file, vars=None):
     create_ansible_cfg()
     create_hosts(cfg, hosts)
 
-    call = ['ansible-playbook', playbook_path]
-    result = subprocess.check_output(call)
+    call = 'ansible-playbook %s ' % playbook_path
+
+    if vars_dict and isinstance(vars_dict, dict) and len(vars_dict) > 0:
+        call += '--extra-vars '
+
+        string_var = ''
+        for v in vars_dict.items():
+            string_var += '%s=%s ' % v
+
+        string_var = string_var.strip()
+        call += '"%s"' % string_var
+
+    call = call.strip()
+    result = subprocess.check_output(call, shell=True)
 
     return result

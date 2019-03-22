@@ -19,6 +19,8 @@
 import re
 import setuptools
 
+print(setuptools.find_packages())
+
 version = re.search(
     r'^__version__\s*=\s*["\'](.*)["\']',
     open('generator/generator.py').read(),
@@ -43,6 +45,12 @@ setuptools.setup(
     install_requires=[
         'Jinja2>=2.10'
     ],
+    package_data={
+        'generator.actions': ['templates/*.j2'],
+        'generator.ansible-charm': ['templates/*.j2'],
+        'generator.metadata': ['templates/*.j2'],
+    },
+    include_package_data=True,
     classifiers=[
         'Programming Language :: Python :: 3 :: Only',
         'License :: OSI Approved :: Apache Software License',
