@@ -15,7 +15,7 @@ RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get autoremove -y && \
     apt-get install -y software-properties-common && \
-    add-apt-repository -y cloud-archive:queens && \
+    add-apt-repository -y cloud-archive:pike && \
     apt-get update && apt dist-upgrade -y && \
     apt-get install -y python-openstackclient keystone apache2 libapache2-mod-wsgi net-tools mysql-client && \
     rm -rf /var/lib/apt/lists/* && \
