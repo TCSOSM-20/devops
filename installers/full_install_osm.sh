@@ -29,6 +29,7 @@ function usage(){
     echo -e "     -s <stack name> user defined stack name, default is osm"
     echo -e "     -H <VCA host>   use specific juju host controller IP"
     echo -e "     -S <VCA secret> use VCA/juju secret key"
+    echo -e "     -P <VCA pubkey> use VCA/juju public key file"
     echo -e "     --vimemu:       additionally deploy the VIM emulator as a docker container"
     echo -e "     --elk_stack:    additionally deploy an ELK docker stack for event logging"
     echo -e "     --pm_stack:     additionally deploy a Prometheus+Grafana stack for performance monitoring (PM)"
@@ -771,6 +772,12 @@ function generate_docker_env_files() {
         $WORKDIR_SUDO sed -i "s|OSMLCM_VCA_SECRET.*|OSMLCM_VCA_SECRET=$OSM_VCA_SECRET|g" $OSM_DOCKER_WORK_DIR/lcm.env
     fi
 
+    if ! grep -Fq "OSMLCM_VCA_PUBKEY" $OSM_DOCKER_WORK_DIR/lcm.env; then
+        echo "OSMLCM_VCA_PUBKEY=${OSM_VCA_PUBKEY}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lcm.env
+    else
+        $WORKDIR_SUDO sed -i "s|OSMLCM_VCA_PUBKEY.*|OSMLCM_VCA_PUBKEY=$OSM_VCA_PUBKEY|g" $OSM_DOCKER_WORK_DIR/lcm.env
+    fi
+
     # RO
     MYSQL_ROOT_PASSWORD=$(generate_secret)
     if [ ! -f $OSM_DOCKER_WORK_DIR/ro-db.env ]; then
@@ -1008,7 +1015,10 @@ function install_lightweight() {
         OSM_VCA_SECRET=$(parse_juju_password $OSM_STACK_NAME)
         [ -z "$OSM_VCA_SECRET" ] && FATAL "Cannot obtain juju secret"
     fi
-
+    if [ -z "$OSM_VCA_PUBKEY" ]; then
+        OSM_VCA_PUBKEY=$(cat $HOME/.local/share/juju/ssh/juju_id_rsa.pub)
+        [ -z "$OSM_VCA_PUBKEY" ] && FATAL "Cannot obtain juju public key"
+    fi
     if [ -z "$OSM_DATABASE_COMMONKEY" ]; then
         OSM_DATABASE_COMMONKEY=$(generate_secret)
         [ -z "OSM_DATABASE_COMMONKEY" ] && FATAL "Cannot generate common db secret"
@@ -1101,6 +1111,7 @@ function dump_vars(){
     echo "OSM_DEVOPS=$OSM_DEVOPS"
     echo "OSM_VCA_HOST=$OSM_VCA_HOST"
     echo "OSM_VCA_SECRET=$OSM_VCA_SECRET"
+    echo "OSM_VCA_PUBKEY=$OSM_VCA_PUBKEY"
     echo "NO_HOST_PORTS=$NO_HOST_PORTS"
     echo "DOCKER_NOBUILD=$DOCKER_NOBUILD"
     echo "WORKDIR_SUDO=$WORKDIR_SUDO"
@@ -1159,6 +1170,7 @@ SESSION_ID=`date +%s`
 OSM_DEVOPS=
 OSM_VCA_HOST=
 OSM_VCA_SECRET=
+OSM_VCA_PUBKEY=
 OSM_STACK_NAME=osm
 NO_HOST_PORTS=""
 DOCKER_NOBUILD=""
@@ -1177,7 +1189,7 @@ OSM_DATABASE_COMMONKEY=
 ELASTIC_VERSION=6.4.2
 ELASTIC_CURATOR_VERSION=5.5.4
 
-while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:H:S:s:w:t:U:" o; do
+while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:" o; do
     case "${o}" in
         h)
             usage && exit 0
@@ -1222,6 +1234,9 @@ while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:H:S:s:w:t:U:" o; do
             ;;
         S)
             OSM_VCA_SECRET="${OPTARG}"
+            ;;
+        P)
+            OSM_VCA_PUBKEY=$(cat ${OPTARG})
             ;;
         w)
             # when specifying workdir, do not use sudo for access
