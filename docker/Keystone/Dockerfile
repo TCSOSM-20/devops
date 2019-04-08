@@ -26,9 +26,17 @@ ENV DB_HOST                 keystone-db
 ENV DB_PORT                 3306
 ENV ROOT_DB_USER            root
 ENV ROOT_DB_PASSWORD        admin
-# keystone
 ENV KEYSTONE_DB_PASSWORD    admin
+# keystone
+ENV REGION_ID               RegionOne
+ENV KEYSTONE_HOST           keystone
+# admin user
+ENV ADMIN_USERNAME          admin
 ENV ADMIN_PASSWORD          admin
-ENV NBI_PASSWORD            nbi
+ENV ADMIN_PROJECT           admin
+# nbi service user
+ENV SERVICE_USERNAME        nbi
+ENV SERVICE_PASSWORD        nbi
+ENV SERVICE_PROJECT         service
 
 ENTRYPOINT ./start.sh

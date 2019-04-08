@@ -782,19 +782,19 @@ function generate_docker_env_files() {
 
     # Keystone
     KEYSTONE_DB_PASSWORD=$(generate_secret)
-    NBI_PASSWORD=$(generate_secret)
+    SERVICE_PASSWORD=$(generate_secret)
     if [ ! -f $OSM_DOCKER_WORK_DIR/keystone-db.env ]; then
         echo "MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/keystone-db.env
     fi
     if [ ! -f $OSM_DOCKER_WORK_DIR/keystone.env ]; then
         echo "ROOT_DB_PASSWORD=${MYSQL_ROOT_PASSWORD}" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/keystone.env
         echo "KEYSTONE_DB_PASSWORD=${KEYSTONE_DB_PASSWORD}" |$WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/keystone.env
-        echo "NBI_PASSWORD=${NBI_PASSWORD}" |$WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/keystone.env
+        echo "SERVICE_PASSWORD=${SERVICE_PASSWORD}" |$WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/keystone.env
     fi
 
     # NBI
     if [ ! -f $OSM_DOCKER_WORK_DIR/nbi.env ]; then
-        echo "OSMNBI_AUTHENTICATION_SERVICE_PASSWORD=${NBI_PASSWORD}" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/nbi.env
+        echo "OSMNBI_AUTHENTICATION_SERVICE_PASSWORD=${SERVICE_PASSWORD}" |$WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/nbi.env
         echo "OSMNBI_DATABASE_COMMONKEY=${OSM_DATABASE_COMMONKEY}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/nbi.env
     fi
 

@@ -1,6 +1,7 @@
 #!/bin/bash
 
 DB_EXISTS=""
+DB_NOT_EMPTY=""
 
 max_attempts=120
 function wait_db(){
@@ -46,6 +47,11 @@ if [ -z $DB_EXISTS ]; then
     mysql -h"$DB_HOST" -P"$DB_PORT" -u"$ROOT_DB_USER" -p"$ROOT_DB_PASSWORD" --default_character_set utf8 -e "CREATE DATABASE keystone"
     mysql -h"$DB_HOST" -P"$DB_PORT" -u"$ROOT_DB_USER" -p"$ROOT_DB_PASSWORD" --default_character_set utf8 -e "GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'localhost' IDENTIFIED BY '$KEYSTONE_DB_PASSWORD'"
     mysql -h"$DB_HOST" -P"$DB_PORT" -u"$ROOT_DB_USER" -p"$ROOT_DB_PASSWORD" --default_character_set utf8 -e "GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'%' IDENTIFIED BY '$KEYSTONE_DB_PASSWORD'"
+else
+    if [ $(mysql -h"$DB_HOST" -P"$DB_PORT" -u"$ROOT_DB_USER" -p"$ROOT_DB_PASSWORD" --default_character_set utf8 -sse "SELECT COUNT(*) FROM keystone;") -gt 0 ]; then
+        echo "DB keystone is empty"
+        DB_NOT_EMPTY="y"
+    fi
 fi
 
 # Setting Keystone database connection
@@ -55,7 +61,7 @@ sed -i "721s%.*%connection = mysql+pymysql://keystone:$KEYSTONE_DB_PASSWORD@$DB_
 sed -i "2934s%.*%provider = fernet%" /etc/keystone/keystone.conf
 
 # Populate Keystone database
-if [ -z $DB_EXISTS ]; then
+if [ -z $DB_EXISTS ] || [ -z $DB_NOT_EMPTY ]; then
     su -s /bin/sh -c "keystone-manage db_sync" keystone
 fi
 
@@ -64,12 +70,15 @@ keystone-manage fernet_setup --keystone-user keystone --keystone-group keystone
 keystone-manage credential_setup --keystone-user keystone --keystone-group keystone
 
 # Bootstrap Keystone service
-if [ -z $DB_EXISTS ]; then
-    keystone-manage bootstrap --bootstrap-password "$ADMIN_PASSWORD" \
-        --bootstrap-admin-url http://keystone:5000/v3/ \
-        --bootstrap-internal-url http://keystone:5000/v3/ \
-        --bootstrap-public-url http://keystone:5000/v3/ \
-        --bootstrap-region-id RegionOne
+if [ -z $DB_EXISTS ] || [ -z $DB_NOT_EMPTY ]; then
+    keystone-manage bootstrap \
+        --bootstrap-username "$ADMIN_USERNAME" \
+        --bootstrap-password "$ADMIN_PASSWORD" \
+        --bootstrap-project "$ADMIN_PROJECT" \
+        --bootstrap-admin-url "http://$KEYSTONE_HOST:5000/v3/" \
+        --bootstrap-internal-url "http://$KEYSTONE_HOST:5000/v3/" \
+        --bootstrap-public-url "http://$KEYSTONE_HOST:5000/v3/" \
+        --bootstrap-region-id "$REGION_ID"
 fi
 
 # Restart Apache Service
@@ -78,10 +87,10 @@ service apache2 restart
 cat << EOF >> setup_env
 export OS_PROJECT_DOMAIN_NAME=default
 export OS_USER_DOMAIN_NAME=default
-export OS_PROJECT_NAME=admin
-export OS_USERNAME=admin
+export OS_PROJECT_NAME=$ADMIN_PROJECT
+export OS_USERNAME=$ADMIN_USERNAME
 export OS_PASSWORD=$ADMIN_PASSWORD
-export OS_AUTH_URL=http://keystone:5000/v3
+export OS_AUTH_URL=http://$KEYSTONE_HOST:5000/v3
 export OS_IDENTITY_API_VERSION=3
 export OS_IMAGE_API_VERSION=2
 EOF
@@ -89,10 +98,11 @@ EOF
 source setup_env
 
 # Create NBI User
-if [ -z $DB_EXISTS ]; then
-    openstack user create --domain default --password "$NBI_PASSWORD" nbi
-    openstack project create --domain default --description "Service Project" service
-    openstack role add --project service --user nbi admin
+if [ -z $DB_EXISTS ] || [ -z $DB_NOT_EMPTY ]; then
+    openstack user create --domain default --password "$SERVICE_PASSWORD" "$SERVICE_USERNAME"
+    openstack project create --domain default --description "Service Project" "$SERVICE_PROJECT"
+    openstack role add --project "$SERVICE_PROJECT" --user "$SERVICE_USER" admin
+    openstack role delete _member_
 fi
 
 while ps -ef | grep -v grep | grep -q apache2
