@@ -43,7 +43,7 @@ VNFD_FOLDERS=(images scripts icons charms cloud_init)
 # Supported folders for NSD
 # OSM document specifies (ns|vnf)-config folder, while Rel 4.3
 # is using (ns|vnf)_config.
-NSD_FOLDERS=(scripts icons ns_config vnf_config)
+NSD_FOLDERS=(scripts charms icons ns_config vnf_config)
 
 # Other files allowed in the descriptor base directory
 ALLOWED_FILES=(README)
