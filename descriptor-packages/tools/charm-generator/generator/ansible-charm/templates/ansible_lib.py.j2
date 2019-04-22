@@ -60,7 +60,8 @@ def create_ansible_cfg():
     with open(ansible_config_path, 'w') as f:
         f.write('[defaults]\n')
         f.write('host_key_checking = False\n')
-
+        # logs playbook execution attempts to the specified path
+        f.write('log_path = /var/log/ansible.log\n')
 
 # Function to find the playbook path
 def find(pattern, path):
