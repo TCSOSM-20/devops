@@ -33,6 +33,8 @@ from command_progress import CommandProgressbar
 MODULE_DIR = os.path.dirname(__file__)
 OVF_TEMPLATE_PATH = os.path.join(os.path.dirname(MODULE_DIR),
                                 "ovf_template/template.xml")
+IDE_CDROM_XML_PATH = os.path.join(os.path.dirname(MODULE_DIR),
+                                "ovf_template/ide_cdrom.xml")
 OS_INFO_FILE_PATH = os.path.join(os.path.dirname(MODULE_DIR), 
                                 "config/os_type.yaml")
 DISK_CONTROLLER_INFO_FILE_PATH = os.path.join(os.path.dirname(MODULE_DIR),
@@ -62,7 +64,7 @@ class OVFConverter(object):
 
     def __init__(self, source_img_path, output_location=None, output_ovf_name=None,
                     memory=None, cpu=None, disk=None, os_type=None,
-                    disk_controller=None,
+                    disk_controller=None, cdrom=None, 
                     options={'subformat':'streamOptimized'}):
         """
             Constructor to initialize object of class OVFConverter
@@ -126,6 +128,7 @@ class OVFConverter(object):
         self.memory = str(memory) if memory is not None else None
         self.cpu = str(cpu) if cpu is not None else None
         self.os_type=str(os_type).strip() if os_type else None
+        self.cdrom = cdrom
 
         if self.os_type:
             self.osID , self.osType = self.__get_osType()
@@ -363,8 +366,14 @@ class OVFConverter(object):
                                         resource_subtype.getparent().remove(resource_subtype)
                                     if "resourceSubType" in  self.disk_controller_info:
                                         resource_subtype.text = self.disk_controller_info["resourceSubType"]
+                if self.cdrom:
+                    last_item = list(virtualHardwareSection.iterfind('xmlns:Item',nsmap))[-1]
+                    ide_cdrom_items_etree = ET.parse(IDE_CDROM_XML_PATH)
+                    ide_cdrom_items = list(ide_cdrom_items_etree.iterfind('Item'))
+                    for item in ide_cdrom_items:
+                        last_item.addnext(item)
 
-                #Save output OVF
+            # Save output OVF
             OVF_tree.write(self.output_path, xml_declaration=True,encoding='utf-8',
                method="xml" )
 

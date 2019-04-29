@@ -119,7 +119,7 @@ o	See all command line options of tool as:
 				root@ubuntu:/home/vmware/OVF_converter# ovf_converter -h
 				Usage: ovf_converter_cli.py [-h] [-v] [-o OUTPUT_LOCATION] [-n OVF_NAME]
                             [-m MEMORY] [-c CPU] [-d DISK] [-s OSTYPE]
-                            [-dc DISK_CONTROLLER]
+                            [-dc DISK_CONTROLLER] [--cdrom]
                             path
 
 				OVF converter to convert .qcow2 or raw image into OVF
@@ -151,6 +151,7 @@ o	See all command line options of tool as:
 				                        required disk controller type (default controller SCSI
 				                        with lsilogicsas) (SATA, IDE, Paravirtual, Buslogic,
 				                        lsilogic, lsilogicsas) (optional)
+				  --cdrom               whether to include a cd/dvd device (optional) 
 
 				  
 o	Create OVF file from qcow2 or raw disk image as:

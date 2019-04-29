@@ -68,6 +68,9 @@ def execute_cli():
                             " (default controller SCSI with lsilogicsas) "\
                             "(SATA, IDE, Paravirtual, Buslogic, Lsilogic, Lsilogicsas) (optional)")
 
+    parser.add_argument("--cdrom", action="store_true",
+                            help="whether to include a cd/dvd device (optional)")
+
     args = parser.parse_args()
 
     if args.path:
@@ -79,6 +82,7 @@ def execute_cli():
                            disk=args.disk,
                            os_type=args.osType,
                            disk_controller=args.disk_Controller,
+                           cdrom=args.cdrom,
                            )
 
         print("#### Start OVF conversion  ####")
