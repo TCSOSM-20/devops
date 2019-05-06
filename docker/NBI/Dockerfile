@@ -7,7 +7,7 @@ RUN apt-get update && apt-get -y install curl software-properties-common
 RUN apt-get update && apt-get install -y git python3 python3-jsonschema \
     python3-pymongo python3-yaml python3-pip python3-keystoneclient \
     && pip3 install pip==9.0.3 \
-    && pip3 install aiokafka cherrypy==18.0.0 pyangbind keystoneauth1 \
+    && pip3 install aiokafka aiohttp cherrypy==18.0.0 pyangbind keystoneauth1 \
     && mkdir -p /app/storage/kafka && mkdir -p /app/log
 
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
@@ -77,6 +77,9 @@ ENV OSMNBI_AUTHENTICATION_BACKEND               internal
 #ENV OSMNBI_AUTHENTICATION_SERVICE_USERNAME      nbi
 #ENV OSMNBI_AUTHENTICATION_SERVICE_PASSWORD      nbi
 #ENV OSMNBI_AUTHENTICATION_SERVICE_PROJECT       service
+#prometheus
+ENV OSMNBI_PROMETHEUS_HOST                      prometheus
+ENV OSMNBI_PROMETHEUS_PORT                      9090
 
 HEALTHCHECK --interval=5s --timeout=2s --retries=12 \
   CMD curl -k https://localhost:9999/osm/ | grep Welcome || exit 1
