@@ -174,5 +174,7 @@ services:
       OSM_SERVER: nbi
     #depends_on:
     #  - nbi
+    env_file:
+      - ./lwui.env
     ports:
       - "${OSM_UI_PORTS:-80:80}"
