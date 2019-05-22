@@ -119,7 +119,7 @@ source setup_env
 if [ -z $DB_EXISTS ] || [ -z $DB_NOT_EMPTY ]; then
     openstack user create --domain default --password "$SERVICE_PASSWORD" "$SERVICE_USERNAME"
     openstack project create --domain default --description "Service Project" "$SERVICE_PROJECT"
-    openstack role add --project "$SERVICE_PROJECT" --user "$SERVICE_USER" admin
+    openstack role add --project "$SERVICE_PROJECT" --user "$SERVICE_USERNAME" admin
     openstack role delete _member_
 fi
 
