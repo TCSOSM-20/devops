@@ -1,6 +1,6 @@
 FROM ubuntu:16.04
 
-RUN apt-get update && apt-get install -y npm git python-pip nginx supervisor curl software-properties-common
+RUN apt-get update && apt-get install -y npm git python-pip nginx supervisor curl software-properties-common libmysqlclient-dev mysql-client
 RUN npm install -g bower
 RUN ln -s /usr/bin/nodejs /usr/bin/node
 RUN echo "daemon off;" >> /etc/nginx/nginx.conf

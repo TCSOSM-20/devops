@@ -834,6 +834,11 @@ function generate_docker_env_files() {
         echo "OSMPOL_SQL_DATABASE_URI=mysql://root:${MYSQL_ROOT_PASSWORD}@mysql:3306/pol" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/pol.env
     fi
 
+    # LW-UI
+    if [ ! -f $OSM_DOCKER_WORK_DIR/lwui.env ]; then
+        echo "OSMUI_SQL_DATABASE_URI=mysql://root:${MYSQL_ROOT_PASSWORD}@mysql:3306/lwui" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lwui.env
+    fi
+
     echo "Finished generation of docker env files"
 }
 
