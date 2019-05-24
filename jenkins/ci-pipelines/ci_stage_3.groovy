@@ -31,7 +31,7 @@ properties([
         string(defaultValue: 'dpkg1', description: '', name: 'GPG_KEY_NAME'),
         string(defaultValue: 'artifactory-osm', description: '', name: 'ARTIFACTORY_SERVER'),
         string(defaultValue: 'osm-stage_4', description: '', name: 'DOWNSTREAM_STAGE_NAME'),
-        string(defaultValue: 'releasefive-daily', description: '', name: 'DOCKER_TAG'),
+        string(defaultValue: 'releasesix-daily', description: '', name: 'DOCKER_TAG'),
         booleanParam(defaultValue: false, description: '', name: 'SAVE_CONTAINER_ON_FAIL'),
         booleanParam(defaultValue: false, description: '', name: 'SAVE_CONTAINER_ON_PASS'),
         booleanParam(defaultValue: true, description: '', name: 'SAVE_ARTIFACTS_ON_SMOKE_SUCCESS'),
