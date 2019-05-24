@@ -1,0 +1,19 @@
+<Items>
+        <Item xmlns:rasd="http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_ResourceAllocationSettingData">
+            <rasd:AddressOnParent>0</rasd:AddressOnParent>
+            <rasd:AutomaticAllocation>false</rasd:AutomaticAllocation>
+            <rasd:Description>CD/DVD Drive</rasd:Description>
+            <rasd:ElementName>CD/DVD Drive 1</rasd:ElementName>
+            <rasd:HostResource/>
+            <rasd:InstanceID>3002</rasd:InstanceID>
+            <rasd:Parent>50</rasd:Parent>
+            <rasd:ResourceType>15</rasd:ResourceType>
+        </Item>
+        <Item xmlns:rasd="http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_ResourceAllocationSettingData">
+            <rasd:Address>1</rasd:Address>
+            <rasd:Description>IDE Controller</rasd:Description>
+            <rasd:ElementName>IDE Controller 1</rasd:ElementName>
+            <rasd:InstanceID>50</rasd:InstanceID>
+            <rasd:ResourceType>5</rasd:ResourceType>
+        </Item>
+</Items>
