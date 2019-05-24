@@ -119,7 +119,7 @@ class TestClass(object):
 
             #wait for the ns to delete
             try:
-                utils.wait_for_value( lambda: osm.get_api().ns.get(nsd_desc['name']), result=False, wait_time=60)
+                utils.wait_for_value( lambda: osm.get_api().ns.get(nsd_desc['name']), result=False, wait_time=180)
             except:
                 pass
 
