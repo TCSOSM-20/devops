@@ -28,14 +28,12 @@ RUN cp /usr/share/osm-lightui/supervisor-app.conf /etc/supervisor/conf.d/
 RUN rm -f db.sqlite3
 
 ENV DJANGO_ENV=prod
-RUN python manage.py makemigrations authosm
-RUN python manage.py migrate
 RUN python manage.py collectstatic --noinput
-
+RUN chmod +x /usr/share/osm-lightui/entrypoint.sh
 
 EXPOSE 80
 
 HEALTHCHECK --start-period=130s --interval=10s --timeout=5s --retries=12 \
   CMD curl --silent --fail localhost:80 || exit 1
 
-CMD ["supervisord", "-n"]
+CMD ["/usr/share/osm-lightui/entrypoint.sh"]
