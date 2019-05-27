@@ -35,4 +35,7 @@ RUN python manage.py collectstatic --noinput
 
 EXPOSE 80
 
+HEALTHCHECK --start-period=130s --interval=10s --timeout=5s --retries=12 \
+  CMD curl --silent --fail localhost:80 || exit 1
+
 CMD ["supervisord", "-n"]
