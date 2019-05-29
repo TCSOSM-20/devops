@@ -30,6 +30,7 @@ function usage(){
     echo -e "     -H <VCA host>   use specific juju host controller IP"
     echo -e "     -S <VCA secret> use VCA/juju secret key"
     echo -e "     -P <VCA pubkey> use VCA/juju public key file"
+    echo -e "     -C <VCA cacert> use VCA/juju CA certificate file"
     echo -e "     --vimemu:       additionally deploy the VIM emulator as a docker container"
     echo -e "     --elk_stack:    additionally deploy an ELK docker stack for event logging"
     echo -e "     --pm_stack:     additionally deploy a Prometheus+Grafana stack for performance monitoring (PM)"
@@ -778,6 +779,12 @@ function generate_docker_env_files() {
         $WORKDIR_SUDO sed -i "s|OSMLCM_VCA_PUBKEY.*|OSMLCM_VCA_PUBKEY=\"${OSM_VCA_PUBKEY}\"|g" $OSM_DOCKER_WORK_DIR/lcm.env
     fi
 
+    if ! grep -Fq "OSMLCM_VCA_CACERT" $OSM_DOCKER_WORK_DIR/lcm.env; then
+        echo "OSMLCM_VCA_CACERT=\"${OSM_VCA_CACERT}\"" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lcm.env
+    else
+        $WORKDIR_SUDO sed -i "s|OSMLCM_VCA_CACERT.*|OSMLCM_VCA_CACERT=\"${OSM_VCA_CACERT}\"|g" $OSM_DOCKER_WORK_DIR/lcm.env
+    fi
+
     # RO
     MYSQL_ROOT_PASSWORD=$(generate_secret)
     if [ ! -f $OSM_DOCKER_WORK_DIR/ro-db.env ]; then
@@ -1023,6 +1030,10 @@ function install_lightweight() {
     if [ -z "$OSM_VCA_PUBKEY" ]; then
         OSM_VCA_PUBKEY=$(cat $HOME/.local/share/juju/ssh/juju_id_rsa.pub)
         [ -z "$OSM_VCA_PUBKEY" ] && FATAL "Cannot obtain juju public key"
+    fi
+    if [ -z "$OSM_VCA_CACERT" ]; then
+	OSM_VCA_CACERT=$(juju controllers --format json | jq -r '.controllers["osm"]["ca-cert"]' | grep -v "\-\-\-\-\-.*CERTIFICATE\-\-\-\-\-")
+        [ -z "$OSM_VCA_CACERT" ] && FATAL "Cannot obtain juju CA certificate"
     fi
     if [ -z "$OSM_DATABASE_COMMONKEY" ]; then
         OSM_DATABASE_COMMONKEY=$(generate_secret)
