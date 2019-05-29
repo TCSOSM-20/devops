@@ -4,7 +4,7 @@ MKBUILD=$(TOPDIR)/docker/build
 
 all: build
 
-TAG ?= 5
+TAG ?= 6
 
 REPOSITORY_BASE ?= http://osm-download.etsi.org/repository/osm/debian
 RELEASE         ?= ReleaseFOUR-daily
