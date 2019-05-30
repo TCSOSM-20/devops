@@ -905,7 +905,7 @@ function deploy_lightweight() {
     echo "export KEYSTONEDB_TAG=${KEYSTONEDB_TAG}" | $WORKDIR_SUDO tee --append $OSM_DOCKER_WORK_DIR/osm_ports.sh
 
     pushd $OSM_DOCKER_WORK_DIR
-    sg docker -c "source ./osm_ports.sh; docker stack deploy -c $OSM_DOCKER_WORK_DIR/docker-compose.yaml $OSM_STACK_NAME"
+    sg docker -c ". ./osm_ports.sh; docker stack deploy -c $OSM_DOCKER_WORK_DIR/docker-compose.yaml $OSM_STACK_NAME"
     popd
 
     echo "Finished deployment of lightweight build"
