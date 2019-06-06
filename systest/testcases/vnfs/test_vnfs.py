@@ -90,7 +90,7 @@ class TestClass(object):
 
             assert osm.get_api().ns.create(nsd_desc['name'],ns_name,vim.vim_name)
 
-            if not utils.wait_for_value(lambda: osm.get_api().ns.get_field(ns_name,'operational-status'),result='init', wait_time=10):
+            if not utils.wait_for_value(lambda: osm.get_api().ns.get_field(ns_name,'operational-status'),result='init', wait_time=30):
                 nsr=osm.get_api().ns.get(ns_name)
                 pprint.pprint(nsr)
                 assert Fail, "operational-status != init"
@@ -119,7 +119,7 @@ class TestClass(object):
 
             #wait for the ns to delete
             try:
-                utils.wait_for_value( lambda: osm.get_api().ns.get(nsd_desc['name']), result=False, wait_time=180)
+                utils.wait_for_value( lambda: osm.get_api().ns.get(ns_name), result=False, wait_time=180)
             except:
                 pass
 
