@@ -773,9 +773,9 @@ function generate_docker_env_files() {
     fi
 
     if ! grep -Fq "OSMLCM_VCA_PUBKEY" $OSM_DOCKER_WORK_DIR/lcm.env; then
-        echo "OSMLCM_VCA_PUBKEY=${OSM_VCA_PUBKEY}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lcm.env
+        echo "OSMLCM_VCA_PUBKEY=\"${OSM_VCA_PUBKEY}\"" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lcm.env
     else
-        $WORKDIR_SUDO sed -i "s|OSMLCM_VCA_PUBKEY.*|OSMLCM_VCA_PUBKEY=$OSM_VCA_PUBKEY|g" $OSM_DOCKER_WORK_DIR/lcm.env
+        $WORKDIR_SUDO sed -i "s|OSMLCM_VCA_PUBKEY.*|OSMLCM_VCA_PUBKEY=\"${OSM_VCA_PUBKEY}\"|g" $OSM_DOCKER_WORK_DIR/lcm.env
     fi
 
     # RO
