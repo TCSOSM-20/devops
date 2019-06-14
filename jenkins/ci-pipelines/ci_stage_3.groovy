@@ -41,7 +41,7 @@ properties([
         booleanParam(defaultValue: true, description: '', name: 'DO_SMOKE'),
         booleanParam(defaultValue: true, description: '', name: 'DO_DOCKERPUSH'),
         booleanParam(defaultValue: false, description: '', name: 'SAVE_ARTIFACTS_OVERRIDE'),
-        string(defaultValue: '/home/jenkins/hive/openstack-whitestack.rc', description: '', name: 'HIVE_VIM_1'),
+        string(defaultValue: '/home/jenkins/hive/openstack-etsi.rc', description: '', name: 'HIVE_VIM_1'),
     ])
 ])
 
