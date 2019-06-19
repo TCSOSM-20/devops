@@ -20,9 +20,6 @@ ARG IM_VERSION
 
 RUN apt-get update && apt-get install -y python-osm-ro${RO_VERSION} python-osm-im${IM_VERSION}
 
-RUN mkdir -p /bin/RO
-
-COPY scripts/ /bin/RO
 
 VOLUME /var/log/osm
 
@@ -51,4 +48,5 @@ ENV RO_DB_OVIM_NAME=mano_vim_db
 
 HEALTHCHECK --start-period=130s --interval=10s --timeout=5s --retries=12 \
   CMD curl --silent --fail localhost:9090/openmano/tenants || exit 1
-CMD /bin/RO/start.sh
+CMD /usr/bin/RO-start.sh
+
