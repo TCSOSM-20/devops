@@ -15,6 +15,7 @@
  *   under the License.
  */
 
+stage_3_merge_result = ''
 def Get_MDG(project) {
     // split the project.
     def values = project.split('/')
@@ -87,12 +88,20 @@ node("${params.NODE}") {
         downstream_job_name = "${mdg}-${stage_name}/${GERRIT_BRANCH}"
 
         println("TEST_INSTALL = ${params.TEST_INSTALL}, downstream job: ${downstream_job_name}")
-
-        stage_2_result = build job: "${downstream_job_name}", parameters: downstream_params, propagate: true
-        if (stage_2_result.getResult() != 'SUCCESS') {
-            project = stage_2_result.getProjectName()
-            build = stage_2_result.getNumber()
+        
+		// Jayant : once email is successful, enable the email only on failure
+        stage_3_merge_result = build job: "${downstream_job_name}", parameters: downstream_params, propagate: true
+        if (stage_3_merge_result.getResult() != 'SUCCESS') {
+            project = stage_3_merge_result.getProjectName()
+            build = stage_3_merge_result.getNumber()
             error("${project} build ${build} failed")
         }
+    }
+	stage('Send Email') {
+      emailext (
+           subject: "[OSM-Jenkins] ${stage_3_merge_result.getResult()} Job '${env.JOB_NAME} ${env.BUILD_NUMBER}'",
+           body: """<p>Check console output at <a href="${env.BUILD_URL}">${env.JOB_NAME}</a></p>""",
+           to: 'JM00553988@techmahindra.com'
+      )
     }
 }
