@@ -32,7 +32,7 @@ properties([
         string(defaultValue: 'artifactory-osm', description: '', name: 'ARTIFACTORY_SERVER'),
         string(defaultValue: 'osm-stage_4', description: '', name: 'DOWNSTREAM_STAGE_NAME'),
         string(defaultValue: 'releasesix-daily', description: '', name: 'DOCKER_TAG'),
-        booleanParam(defaultValue: false, description: '', name: 'SAVE_CONTAINER_ON_FAIL'),
+        booleanParam(defaultValue: true, description: '', name: 'SAVE_CONTAINER_ON_FAIL'),
         booleanParam(defaultValue: false, description: '', name: 'SAVE_CONTAINER_ON_PASS'),
         booleanParam(defaultValue: true, description: '', name: 'SAVE_ARTIFACTS_ON_SMOKE_SUCCESS'),
         booleanParam(defaultValue: true, description: '', name: 'DO_STAGE_4'),
@@ -229,7 +229,7 @@ node("${params.NODE}") {
                     {
                         repo_base_url = "-u ${params.REPOSITORY_BASE}"
                     }
-             
+                    sh "docker stack list |  awk '{ print \$1 }'| xargs docker stack rm"
                     sh """
                         export PATH=$PATH:/snap/bin
                         installers/full_install_osm.sh -y -s ${container_name} --test --nolxd --nodocker --nojuju --nohostports --nohostclient \
