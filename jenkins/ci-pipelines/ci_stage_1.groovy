@@ -15,7 +15,7 @@
  *   under the License.
  */
 
-stage_merge_result = ''
+stage_3_merge_result = ''
 def Get_MDG(project) {
     // split the project.
     def values = project.split('/')
@@ -89,23 +89,19 @@ node("${params.NODE}") {
 
         println("TEST_INSTALL = ${params.TEST_INSTALL}, downstream job: ${downstream_job_name}")
         
-
-        stage_merge_result = build job: "${downstream_job_name}", parameters: downstream_params, propagate: true
-        if (stage_merge_result.getResult() != 'SUCCESS') {
-            project = stage_merge_result.getProjectName()
-            build = stage_merge_result.getNumber()
+		// Jayant : once email is successful, enable the email only on failure
+        stage_3_merge_result = build job: "${downstream_job_name}", parameters: downstream_params, propagate: true
+        if (stage_3_merge_result.getResult() != 'SUCCESS') {
+            project = stage_3_merge_result.getProjectName()
+            build = stage_3_merge_result.getNumber()
             error("${project} build ${build} failed")
         }
     }
-	// Mrityunjay: TODO check if the message can be put as html, what more variables can be used.
 	stage('Send Email') {
-	  if ((${env.JOB_NAME} == 'daily-stage_4')&& (stage_merge_result.getResult() != 'SUCCESS') {
-        emailext (
-           subject: "[OSM-Jenkins] Job: ${env.JOB_NAME} Build: ${env.BUILD_NUMBER} Result: ${stage_merge_result.getResult()}",
-           body: """ Check console output at "${env.BUILD_URL}"  """,
-           to: 'OSM_MDL@list.etsi.org',
-		   recipientProviders: [culprits()]
-        )
-	  }
+      emailext (
+           subject: "[OSM-Jenkins] ${stage_3_merge_result.getResult()} Job '${env.JOB_NAME} ${env.BUILD_NUMBER}'",
+           body: """<p>Check console output at <a href="${env.BUILD_URL}">${env.JOB_NAME}</a></p>""",
+           to: 'JM00553988@techmahindra.com'
+      )
     }
 }
