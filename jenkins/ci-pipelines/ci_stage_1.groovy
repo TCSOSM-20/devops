@@ -88,8 +88,7 @@ node("${params.NODE}") {
         downstream_job_name = "${mdg}-${stage_name}/${GERRIT_BRANCH}"
 
         println("TEST_INSTALL = ${params.TEST_INSTALL}, downstream job: ${downstream_job_name}")
-        
-		// Jayant : once email is successful, enable the email only on failure
+
         stage_3_merge_result = build job: "${downstream_job_name}", parameters: downstream_params, propagate: true
         if (stage_3_merge_result.getResult() != 'SUCCESS') {
             project = stage_3_merge_result.getProjectName()
@@ -98,10 +97,13 @@ node("${params.NODE}") {
         }
     }
 	stage('Send Email') {
-      emailext (
-           subject: "[OSM-Jenkins] ${stage_3_merge_result.getResult()} Job '${env.JOB_NAME} ${env.BUILD_NUMBER}'",
-           body: """<p>Check console output at <a href="${env.BUILD_URL}">${env.JOB_NAME}</a></p>""",
-           to: 'JM00553988@techmahindra.com'
-      )
+        if((stage_3_merge_result.getResult() != 'SUCCESS') && (${env.JOB_NAME} == 'daily-stage_4')){
+            emailext (
+                subject: "[OSM-Jenkins] Job: ${env.JOB_NAME} Build: ${env.BUILD_NUMBER} Result: ${stage_3_merge_result.getResult()}",
+                body: """ Check console output at "${env.BUILD_URL}"  """,
+                to: 'OSM_MDL@list.etsi.org',
+                recipientProviders: [culprits()]
+            )
+        }
     }
 }
