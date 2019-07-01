@@ -93,7 +93,8 @@ node("${params.NODE}") {
         if (stage_3_merge_result.getResult() != 'SUCCESS') {
             project = stage_3_merge_result.getProjectName()
             build = stage_3_merge_result.getNumber()
-            error("${project} build ${build} failed")
+            // Jayant if the build fails the below error will cause the pipeline to terminate. 
+			// error("${project} build ${build} failed")
         }
     }
 	stage('Send Email') {

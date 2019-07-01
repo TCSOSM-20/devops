@@ -7,7 +7,7 @@ RUN apt-get update && apt-get -y install curl software-properties-common
 RUN apt-get update && apt-get -y install python \
     libcurl4-gnutls-dev libgnutls-dev iputils-ping python-pip \
     python-openstackclient wget
-RUN pip install python-magic pytest
+RUN pip install python-magic pytest==4.6.3
 
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
 ARG RELEASE=ReleaseFOUR-daily

@@ -296,19 +296,22 @@ node("${params.NODE}") {
             currentBuild.result = 'FAILURE'
         }
         finally {
-            sh "docker stop ${http_server_name}"
-            sh "docker rm ${http_server_name}"
+
 
             if ( params.DO_INSTALL ) {
                 if (error) {
                     if ( !params.SAVE_CONTAINER_ON_FAIL ) {
                         uninstall_osm container_name
+                        sh "docker stop ${http_server_name}"
+                        sh "docker rm ${http_server_name}"
                     }
                     throw error 
                 }
                 else {
                     if ( !params.SAVE_CONTAINER_ON_PASS ) {
                         uninstall_osm container_name
+                        sh "docker stop ${http_server_name}"
+                        sh "docker rm ${http_server_name}"
                     }
                 }
             }
