@@ -229,7 +229,9 @@ node("${params.NODE}") {
                     {
                         repo_base_url = "-u ${params.REPOSITORY_BASE}"
                     }
-                    sh "docker stack list |  awk '{ print \$1 }'| xargs docker stack rm"
+					if ( params.DO_STAGE_4 ) {
+                        sh "docker stack list |  awk '{ print \$1 }'| xargs docker stack rm"
+					}
                     sh """
                         export PATH=$PATH:/snap/bin
                         installers/full_install_osm.sh -y -s ${container_name} --test --nolxd --nodocker --nojuju --nohostports --nohostclient \
