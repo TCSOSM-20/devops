@@ -230,7 +230,12 @@ node("${params.NODE}") {
                         repo_base_url = "-u ${params.REPOSITORY_BASE}"
                     }
 					if ( params.DO_STAGE_4 ) {
-                        sh "docker stack list | grep v60 | awk '{ print \$1 }'| xargs docker stack rm"
+					try {
+                        sh "docker stack list | grep v60 | awk '{ print \$1 }'| xargs docker stack rm "
+						}
+						catch (caughtError) {
+						 println("FAILURE:: Docker remove gave exception, pls check & remove old dockers manually, if required !!!")
+						}
 					}
                     sh """
                         export PATH=$PATH:/snap/bin
