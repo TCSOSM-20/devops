@@ -15,6 +15,7 @@
  *   under the License.
  */
 
+stage_3_merge_result = ''
 def Get_MDG(project) {
     // split the project.
     def values = project.split('/')
@@ -88,11 +89,22 @@ node("${params.NODE}") {
 
         println("TEST_INSTALL = ${params.TEST_INSTALL}, downstream job: ${downstream_job_name}")
 
-        stage_2_result = build job: "${downstream_job_name}", parameters: downstream_params, propagate: true
-        if (stage_2_result.getResult() != 'SUCCESS') {
-            project = stage_2_result.getProjectName()
-            build = stage_2_result.getNumber()
-            error("${project} build ${build} failed")
+        stage_3_merge_result = build job: "${downstream_job_name}", parameters: downstream_params, propagate: true
+        if (stage_3_merge_result.getResult() != 'SUCCESS') {
+            project = stage_3_merge_result.getProjectName()
+            build = stage_3_merge_result.getNumber()
+            // Jayant if the build fails the below error will cause the pipeline to terminate. 
+			// error("${project} build ${build} failed")
+        }
+    }
+	stage('Send Email') {
+        if((stage_3_merge_result.getResult() != 'SUCCESS') && (${env.JOB_NAME} == 'daily-stage_4-dot-releasesix')){
+            emailext (
+                subject: "[OSM-Jenkins] Job: ${env.JOB_NAME} Build: ${env.BUILD_NUMBER} Result: ${stage_3_merge_result.getResult()}",
+                body: """ Check console output at "${env.BUILD_URL}"  """,
+                to: 'OSM_MDL@list.etsi.org',
+                recipientProviders: [culprits()]
+            )
         }
     }
 }
