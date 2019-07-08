@@ -22,6 +22,7 @@ import json
 import yaml
 import sys
 import getopt
+import os
 
 """
 Tests the format of OSM VNFD and NSD descriptors
@@ -46,6 +47,7 @@ def usage():
     print("      -i|--input FILE: (same as param FILE) descriptor file to be upgraded")
     return
 
+
 def remove_prefix(desc, prefix):
     """
     Recursively removes prefix from keys
@@ -68,7 +70,33 @@ def remove_prefix(desc, prefix):
             if isinstance(desc, (list, tuple, dict)):
                 remove_prefix(i, prefix)
 
-if __name__=="__main__":
+
+# Mrityunjay Yadav: Function to verify charm included in VNF Package
+def validate_charm(charm, desc_file):
+    """
+    Verify charm included in VNF Package and raised error if invalid
+    :param charm: vnf-configuration/vdu-configuration
+    :param desc_file: descriptor file
+    :return: None
+    """
+    check_list = ['layer.yaml', 'metadata.yaml', 'actions.yaml', 'actions', 'hooks']
+    charm_name = charm['juju']['charm']
+    charm_dir = os.path.join(os.path.abspath(os.path.dirname(desc_file)), 'charms', charm_name)
+
+    config_primitive = charm.get('config-primitive', [])
+    initial_config_primitive = charm.get('initial-config-primitive', [])
+
+    if charm.get('metrics'):
+        check_list.append('metrics.yaml')
+
+    if os.path.exists(charm_dir):
+        if not all(item in os.listdir(charm_dir) for item in check_list):
+            raise KeyError("Invalid charm {}".format(charm_name))
+    else:
+        raise KeyError("Provided charm:{} does not exist in descriptor.".format(charm_name))
+
+
+if __name__ == "__main__":
     error_position = []
     format_output_yaml = True
     input_file_name = None
@@ -133,10 +161,17 @@ if __name__=="__main__":
                         if interface.get("virtual-interface", {}).get("type") == "OM-MGMT":
                             raise KeyError(
                                 "Wrong 'Virtual-interface type': Deprecated 'OM-MGMT' value. Please, use 'PARAVIRT' instead")
+                    # Mrityunjay yadav: Verify charm if included in vdu
+                    if vdu.get("vdu-configuration", False):
+                        validate_charm(vdu["vdu-configuration"], input_file_name)
                 if vnfd.get("mgmt-interface"):
                     mgmt_iface = True
                     if vnfd["mgmt-interface"].get("vdu-id"):
                         raise KeyError("'mgmt-iface': Deprecated 'vdu-id' field. Please, use 'cp' field instead")
+                # Mrityunjay yadav: Verify charm if included in vnf
+                if vnfd.get("vnf-configuration", False):
+                    validate_charm(vnfd["vnf-configuration"], input_file_name)
+
             if not mgmt_iface:
                 raise KeyError("'mgmt-iface' is a mandatory field and it is not defined")
             myvnfd = vnfd_catalog.vnfd()

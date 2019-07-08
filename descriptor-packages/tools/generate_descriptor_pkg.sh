@@ -790,6 +790,13 @@ if [ $CREATE == false ]; then
     fi
 
     cd $BASE_DIR
+    # Mrityunjay Yadav: Validate descriptor
+    python /usr/share/osm-devops/descriptor-packages/tools/validate_descriptor.py $DEST_DIR/$PKG/$descriptor
+    if [ $? -ne 0 ]; then
+        rc=$?
+        echo "ERROR: validating descriptor for $PKG ($rc)" >&2
+        exit $rc
+    fi
     if [ $DRY_RUN == false ]; then
         if [ $VERBOSE == true ]; then
             tar zcvf "$DEST_DIR/$PKG.tar.gz" "${PKG}" ${RM}

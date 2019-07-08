@@ -19,8 +19,9 @@ RUN add-apt-repository -y "deb ${REPOSITORY_BASE}/${RELEASE} ${REPOSITORY} devop
 
 ARG OSMCLIENT_VERSION
 ARG DEVOPS_VERSION
+ARG IM_VERSION
 
-RUN apt-get update && apt-get -y install osm-devops${DEVOPS_VERSION} python-osmclient${OSMCLIENT_VERSION}
+RUN apt-get update && apt-get -y install osm-devops${DEVOPS_VERSION} python-osmclient${OSMCLIENT_VERSION} python-osm-im${IM_VERSION}
 
 ENV OSM_SOL005=True
 ENV OSM_HOSTNAME=nbi:9999
