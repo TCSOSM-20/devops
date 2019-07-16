@@ -1,7 +1,7 @@
 FROM ubuntu:16.04
 
 RUN apt-get update && apt-get install -y npm git python-pip nginx supervisor curl software-properties-common libmysqlclient-dev mysql-client
-RUN npm install -g bower
+#RUN npm install -g bower
 RUN ln -s /usr/bin/nodejs /usr/bin/node
 RUN echo "daemon off;" >> /etc/nginx/nginx.conf
 
@@ -18,7 +18,8 @@ RUN apt-get install -y osm-lightui${LWUI_VERSION} && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/share/osm-lightui
-RUN bower install --allow-root
+#RUN bower install --allow-root
+RUN npm install
 RUN pip install -r requirements.txt
 RUN pip install uwsgi
 RUN cp /usr/share/osm-lightui/nginx-app.conf /etc/nginx/sites-available/default
