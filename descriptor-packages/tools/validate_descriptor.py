@@ -173,7 +173,7 @@ if __name__ == "__main__":
                     validate_charm(vnfd["vnf-configuration"], input_file_name)
 
             if not mgmt_iface:
-                raise KeyError("'mgmt-iface' is a mandatory field and it is not defined")
+                raise KeyError("'mgmt-interface' is a mandatory field and it is not defined")
             myvnfd = vnfd_catalog.vnfd()
             pybindJSONDecoder.load_ietf_json(data, None, None, obj=myvnfd)
         elif "nsd:nsd-catalog" in data or "nsd-catalog" in data:

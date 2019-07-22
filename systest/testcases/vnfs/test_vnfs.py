@@ -93,13 +93,13 @@ class TestClass(object):
             if not utils.wait_for_value(lambda: osm.get_api().ns.get_field(ns_name,'operational-status'),result='init', wait_time=30):
                 nsr=osm.get_api().ns.get(ns_name)
                 pprint.pprint(nsr)
-                assert Fail, "operational-status != init"
+                assert True, "operational-status != init"
 
             # make sure ns is running
             if not utils.wait_for_value(lambda: osm.get_api().ns.get_field(ns_name,'operational-status'),result='running',wait_time=240):
                 nsr=osm.get_api().ns.get(ns_name)
                 pprint.pprint(nsr)
-                assert Fail, "operational-status != running"
+                assert True, "operational-status != running"
 
             if ns_scale:
                 # for each descriptor, scale it
