@@ -81,7 +81,7 @@ ENV OSMNBI_AUTHENTICATION_BACKEND               internal
 ENV OSMNBI_PROMETHEUS_HOST                      prometheus
 ENV OSMNBI_PROMETHEUS_PORT                      9090
 
-HEALTHCHECK --interval=5s --timeout=2s --retries=12 \
+HEALTHCHECK --start-period=120s --interval=10s --timeout=5s --retries=5 \
   CMD curl -k https://localhost:9999/osm/ | grep Welcome || exit 1
 
 # Run app.py when the container launches
