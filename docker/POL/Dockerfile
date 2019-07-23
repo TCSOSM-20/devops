@@ -55,7 +55,7 @@ ENV OSMPOL_SQL_DATABASE_URI sqlite:///mon_sqlite.db
 
 ENV OSMPOL_GLOBAL_LOG_LEVEL INFO
 
-HEALTHCHECK --interval=5s --timeout=2s --retries=12 \
+HEALTHCHECK --start-period=120s --interval=10s --timeout=5s --retries=5 \
   CMD osm-pol-healthcheck || exit 1
 
 CMD /bin/bash scripts/start.sh
