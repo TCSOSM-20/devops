@@ -14,7 +14,13 @@
  *   License for the specific language governing permissions and limitations
  *   under the License.
  */
-
+ 
+/* Change log:
+ * 1. Bug 745 : Jayant Madavi : JM00553988@techmahindra.com : 23-july-2019 : Improvement to the code, typically we have 2 or  
+ *    more branches whose build gets triggered, ex master & release branch, the previous code was removing any/all docker. 
+ *	  Now removing previous docker of the same branch, so that the other branch failed docker should not be removed. It also 
+ *    acts as clean-up for previous docker remove failure.
+ */
 properties([
     parameters([
         string(defaultValue: env.GERRIT_BRANCH, description: '', name: 'GERRIT_BRANCH'),
@@ -230,7 +236,7 @@ node("${params.NODE}") {
                         repo_base_url = "-u ${params.REPOSITORY_BASE}"
                     }
 					if ( params.DO_STAGE_4 ) {
-                        sh "docker stack list |  awk '{ print \$1 }'| xargs docker stack rm"
+                        sh "docker stack list |grep "${container_name_prefix}"|  awk '{ print \$1 }'| xargs docker stack rm"
 					}
                     sh """
                         export PATH=$PATH:/snap/bin
@@ -258,7 +264,10 @@ node("${params.NODE}") {
 
                     if ( ! currentBuild.result.equals('UNSTABLE') ) {
                         stage_archive = keep_artifacts
-                    }
+                    } else {
+					   error = new Exception("Smoke test failed")
+					   currentBuild.result = 'FAILURE'
+					}
                 }
             }
 
@@ -270,7 +279,10 @@ node("${params.NODE}") {
 
                     if ( ! currentBuild.result.equals('UNSTABLE') ) {
                         stage_archive = keep_artifacts
-                    }
+                    } else {
+					   error = new Exception("Systest test failed")
+					   currentBuild.result = 'FAILURE'
+					}
                 }
             }
 
