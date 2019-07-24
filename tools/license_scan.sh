@@ -17,7 +17,8 @@
 
 # Change log:
 # 1. Bug 722 : Jayant Madavi : JM00553988@techmahindra.com : Enhancement to use new fossology server. Had to change the variable name at #    couple of places, while scanning the variable name was adding curl as a license.
-# 2.
+# 2. Bug 542 : Jayant Madavi : JM00553988@techmahindra.com : 24-jul-2019 : Enhancement to raise exit in case files modified or added does #    not contain license.
+# 3. 
  
 echo GERRIT BRANCH is $GERRIT_BRANCH
 dpkg -l wget &>/dev/null ||sudo apt-get install -y wget
@@ -74,7 +75,8 @@ if [ $other -gt 0 ]; then
 fi
 
 if [ $nolicense -gt 0 ]; then
-    echo "WARNING: Unlicensed files found"
+    echo "FATAL: Unlicensed files found"
+	exit 2
 fi
 
 exit 0
