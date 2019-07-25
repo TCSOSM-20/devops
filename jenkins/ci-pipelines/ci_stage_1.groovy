@@ -14,7 +14,11 @@
  *   License for the specific language governing permissions and limitations
  *   under the License.
  */
-
+/* Change log:
+ * 1. Bug 699 : Jayant Madavi, Mrityunjay Yadav : JM00553988@techmahindra.com : 23-july-2019 : Improvement to the code, now using post syntax
+ * 2.
+ */
+ 
 stage_3_merge_result = ''
 def Get_MDG(project) {
     // split the project.
@@ -88,23 +92,31 @@ node("${params.NODE}") {
         downstream_job_name = "${mdg}-${stage_name}/${GERRIT_BRANCH}"
 
         println("TEST_INSTALL = ${params.TEST_INSTALL}, downstream job: ${downstream_job_name}")
+        try {
+           stage_3_merge_result = build job: "${downstream_job_name}", parameters: downstream_params, propagate: true
+            if (stage_3_merge_result.getResult() != 'SUCCESS') {
+                project = stage_3_merge_result.getProjectName()
+                build = stage_3_merge_result.getNumber()
+                // Jayant if the build fails the below error will cause the pipeline to terminate. 
+			    // error("${project} build ${build} failed")
+            }
+		} 
+		catch (caughtError) {
+		 echo 'Exception in stage_1'
+		 currentBuild.result = 'FAILURE'
+		}
+		finally {
+			 if((${currentBuild.result} != 'SUCCESS') && (${env.JOB_NAME} == 'daily-stage_4')){
+               emailext (
+                   subject: "[OSM-Jenkins] Job: ${env.JOB_NAME} Build: ${env.BUILD_NUMBER} Result: ${currentBuild.result}",
+                   body: """ Check console output at "${env.BUILD_URL}"  """,
+                   to: 'OSM_MDL@list.etsi.org',
+                   recipientProviders: [culprits()]
+                )
+            }
 
-        stage_3_merge_result = build job: "${downstream_job_name}", parameters: downstream_params, propagate: true
-        if (stage_3_merge_result.getResult() != 'SUCCESS') {
-            project = stage_3_merge_result.getProjectName()
-            build = stage_3_merge_result.getNumber()
-            // Jayant if the build fails the below error will cause the pipeline to terminate. 
-			// error("${project} build ${build} failed")
-        }
-    }
-	stage('Send Email') {
-        if((stage_3_merge_result.getResult() != 'SUCCESS') && (${env.JOB_NAME} == 'daily-stage_4')){
-            emailext (
-                subject: "[OSM-Jenkins] Job: ${env.JOB_NAME} Build: ${env.BUILD_NUMBER} Result: ${stage_3_merge_result.getResult()}",
-                body: """ Check console output at "${env.BUILD_URL}"  """,
-                to: 'OSM_MDL@list.etsi.org',
-                recipientProviders: [culprits()]
-            )
-        }
-    }
-}
+		}
+    } 
+
+	
+ }
