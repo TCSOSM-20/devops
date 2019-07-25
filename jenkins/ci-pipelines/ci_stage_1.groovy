@@ -101,12 +101,13 @@ node("${params.NODE}") {
 			    // error("${project} build ${build} failed")
             }
 		} 
-		catch (caughtError) {
+		catch(caughtError) {
 		 echo 'Exception in stage_1'
 		 currentBuild.result = 'FAILURE'
 		}
 		finally {
-			 if((${currentBuild.result} != 'SUCCESS') && (${env.JOB_NAME} == 'daily-stage_4')){
+		    try {
+			 if((currentBuild.result != 'SUCCESS') && (env.JOB_NAME == 'daily-stage_4')){
                emailext (
                    subject: "[OSM-Jenkins] Job: ${env.JOB_NAME} Build: ${env.BUILD_NUMBER} Result: ${currentBuild.result}",
                    body: """ Check console output at "${env.BUILD_URL}"  """,
@@ -114,6 +115,10 @@ node("${params.NODE}") {
                    recipientProviders: [culprits()]
                 )
             }
+		  }
+		  catch(caughtError) {
+		    echo "Failure in executing email"
+		  }
 
 		}
     } 

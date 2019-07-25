@@ -235,7 +235,12 @@ node("${params.NODE}") {
                         repo_base_url = "-u ${params.REPOSITORY_BASE}"
                     }
 					if ( params.DO_STAGE_4 ) {
+					    try {
                         sh "docker stack list |grep \"${container_name_prefix}\"|  awk '{ print \$1 }'| xargs docker stack rm"
+						}
+						catch (caughtError) {
+						  println("Caught error: docker stack rm failed!")
+						}
 					}
                     sh """
                         export PATH=$PATH:/snap/bin
