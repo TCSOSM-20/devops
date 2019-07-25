@@ -16,7 +16,7 @@
  */
 /* Change log:
  * 1. Bug 699 : Jayant Madavi, Mrityunjay Yadav : JM00553988@techmahindra.com : 23-july-2019 : Improvement to the code, now using post syntax
- * 2.
+ * 2. Jayant Madavi : 26-july-2019 : optimization to the previous check-in added currentBuild.result = 'SUCCESS'. TODO: code would be better *    if we use pipeline declarative 
  */
  
 stage_3_merge_result = ''
@@ -92,6 +92,7 @@ node("${params.NODE}") {
         downstream_job_name = "${mdg}-${stage_name}/${GERRIT_BRANCH}"
 
         println("TEST_INSTALL = ${params.TEST_INSTALL}, downstream job: ${downstream_job_name}")
+		currentBuild.result = 'SUCCESS'
         try {
            stage_3_merge_result = build job: "${downstream_job_name}", parameters: downstream_params, propagate: true
             if (stage_3_merge_result.getResult() != 'SUCCESS') {
@@ -99,8 +100,9 @@ node("${params.NODE}") {
                 build = stage_3_merge_result.getNumber()
                 // Jayant if the build fails the below error will cause the pipeline to terminate. 
 			    // error("${project} build ${build} failed")
+				currentBuild.result = stage_3_merge_result.getResult()
             }
-		} 
+		}
 		catch(caughtError) {
 		 echo 'Exception in stage_1'
 		 currentBuild.result = 'FAILURE'
