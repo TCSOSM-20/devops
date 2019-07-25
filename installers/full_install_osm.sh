@@ -26,7 +26,8 @@ function usage(){
     echo -e "                     -b v2.0            (v2.0 branch)"
     echo -e "                     -b tags/v1.1.0     (a specific tag)"
     echo -e "                     ..."
-    echo -e "     -s <stack name> user defined stack name, default is osm"
+    echo -e "     -c <orchestrator> deploy osm services using container <orchestrator>. Valid values are <k8s> or <swarm>.  If -c is not used then osm will be deployed using default orchestrator. When used with --uninstall, osm services deployed by the orchestrator will be uninstalled"
+    echo -e "     -s <stack name> or <namespace>  user defined stack name when installed using swarm or namespace when installed using k8s, default is osm"
     echo -e "     -H <VCA host>   use specific juju host controller IP"
     echo -e "     -S <VCA secret> use VCA/juju secret key"
     echo -e "     -P <VCA pubkey> use VCA/juju public key file"
@@ -113,11 +114,17 @@ function generate_secret() {
 }
 
 function remove_volumes() {
-    stack=$1
-    volumes="mongo_db mon_db osm_packages ro_db"
-    for volume in $volumes; do
-        sg docker -c "docker volume rm ${stack}_${volume}"
-    done
+    if [ -n "$KUBERNETES" ]; then
+        k8_volume=$1
+        echo "Removing ${k8_volume}"
+        $WORKDIR_SUDO rm -rf ${k8_volume}
+    else
+        stack=$1
+        volumes="mongo_db mon_db osm_packages ro_db"
+        for volume in $volumes; do
+            sg docker -c "docker volume rm ${stack}_${volume}"
+        done
+    fi
 }
 
 function remove_network() {
@@ -149,6 +156,11 @@ function remove_stack() {
     fi
 }
 
+#removes osm deployments and services
+function remove_k8s_namespace() {
+    kubectl delete ns $1
+}
+
 #Uninstall lightweight OSM: remove dockers
 function uninstall_lightweight() {
     if [ -n "$INSTALL_ONLY" ]; then
@@ -164,9 +176,13 @@ function uninstall_lightweight() {
         fi
     else
         echo -e "\nUninstalling OSM"
-        remove_stack $OSM_STACK_NAME
-        remove_stack osm_elk
-        remove_stack osm_metrics
+        if [ -n "$KUBERNETES" ]; then
+            remove_k8s_namespace $OSM_STACK_NAME
+        else
+            remove_stack $OSM_STACK_NAME
+            remove_stack osm_elk
+            remove_stack osm_metrics
+        fi
         echo "Now osm docker images and volumes will be deleted"
         newgrp docker << EONG
         docker image rm ${DOCKER_USER}/ro:${OSM_DOCKER_TAG}
@@ -178,8 +194,14 @@ function uninstall_lightweight() {
         docker image rm ${DOCKER_USER}/pol:${OSM_DOCKER_TAG}
         docker image rm ${DOCKER_USER}/osmclient:${OSM_DOCKER_TAG}
 EONG
-        remove_volumes $OSM_STACK_NAME
-        remove_network $OSM_STACK_NAME
+
+        if [ -n "$KUBERNETES" ]; then
+            OSM_NAMESPACE_VOL="${OSM_HOST_VOL}/${OSM_STACK_NAME}"
+            remove_volumes $OSM_NAMESPACE_VOL
+        else
+            remove_volumes $OSM_STACK_NAME
+            remove_network $OSM_STACK_NAME
+        fi
         echo "Removing $OSM_DOCKER_WORK_DIR"
         $WORKDIR_SUDO rm -rf $OSM_DOCKER_WORK_DIR
         sg lxd -c "juju destroy-controller --destroy-all-models --yes $OSM_STACK_NAME"
@@ -759,7 +781,6 @@ function cmp_overwrite() {
     fi
 }
 
-
 function generate_docker_env_files() {
     echo "Doing a backup of existing env files"
     $WORKDIR_SUDO cp $OSM_DOCKER_WORK_DIR/keystone-db.env{,~}
@@ -773,11 +794,16 @@ function generate_docker_env_files() {
     $WORKDIR_SUDO cp $OSM_DOCKER_WORK_DIR/ro.env{,~}
 
     echo "Generating docker env files"
-    # Docker-compose
-    $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/docker-compose.yaml $OSM_DOCKER_WORK_DIR/docker-compose.yaml
+    if [ -n "$KUBERNETES" ]; then
+        #Kubernetes resources
+        $WORKDIR_SUDO cp -bR ${OSM_DEVOPS}/installers/docker/osm_pods $OSM_DOCKER_WORK_DIR
+    else
+        # Docker-compose
+        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/docker-compose.yaml $OSM_DOCKER_WORK_DIR/docker-compose.yaml
 
-    # Prometheus
-    $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/prometheus.yml $OSM_DOCKER_WORK_DIR/prometheus.yml
+        # Prometheus
+        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/prometheus.yml $OSM_DOCKER_WORK_DIR/prometheus.yml
+    fi
 
     # LCM
     if [ ! -f $OSM_DOCKER_WORK_DIR/lcm.env ]; then
@@ -882,6 +908,75 @@ function generate_osmclient_script () {
     echo "docker run -ti --network net${OSM_STACK_NAME} ${DOCKER_USER}/osmclient:${OSM_DOCKER_TAG}" | $WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/osm
     $WORKDIR_SUDO chmod +x "$OSM_DOCKER_WORK_DIR/osm"
     echo "osmclient sidecar container can be found at: $OSM_DOCKER_WORK_DIR/osm"
+}
+
+#installs kubernetes packages
+function install_kube() {
+    sudo apt-get update && sudo apt-get install -y apt-transport-https
+    curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+    sudo add-apt-repository "deb https://apt.kubernetes.io/ kubernetes-xenial main"
+    sudo apt-get update
+    echo "Installing Kubernetes Packages ..."
+    sudo apt-get install -y kubelet=1.15.0-00 kubeadm=1.15.0-00 kubectl=1.15.0-00
+}
+
+#initializes kubernetes control plane
+function init_kubeadm() {
+    sudo swapoff -a
+    sudo kubeadm init --config $1
+    sleep 5
+}
+
+function kube_config_dir() {
+    [ ! -d $K8S_MANIFEST_DIR ] && FATAL "Cannot Install Kubernetes"
+    mkdir -p $HOME/.kube
+    sudo cp /etc/kubernetes/admin.conf $HOME/.kube/config
+    sudo chown $(id -u):$(id -g) $HOME/.kube/config
+}
+
+#deploys flannel as daemonsets
+function deploy_cni_provider() {
+    CNI_DIR="$(mktemp -d -q --tmpdir "flannel.XXXXXX")"
+    trap 'rm -rf "${CNI_DIR}"' EXIT
+    wget -q https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml -P $CNI_DIR
+    kubectl apply -f $CNI_DIR
+    [ $? -ne 0 ] && FATAL "Cannot Install Flannel"
+}
+
+#creates secrets from env files which will be used by containers
+function kube_secrets(){
+    kubectl create ns $OSM_STACK_NAME
+    kubectl create secret generic lcm-secret -n $OSM_STACK_NAME --from-env-file=$OSM_DOCKER_WORK_DIR/lcm.env
+    kubectl create secret generic mon-secret -n $OSM_STACK_NAME --from-env-file=$OSM_DOCKER_WORK_DIR/mon.env
+    kubectl create secret generic nbi-secret -n $OSM_STACK_NAME --from-env-file=$OSM_DOCKER_WORK_DIR/nbi.env
+    kubectl create secret generic ro-db-secret -n $OSM_STACK_NAME --from-env-file=$OSM_DOCKER_WORK_DIR/ro-db.env
+    kubectl create secret generic ro-secret -n $OSM_STACK_NAME --from-env-file=$OSM_DOCKER_WORK_DIR/ro.env
+    kubectl create secret generic keystone-secret -n $OSM_STACK_NAME --from-env-file=$OSM_DOCKER_WORK_DIR/keystone.env
+    kubectl create secret generic lwui-secret -n $OSM_STACK_NAME --from-env-file=$OSM_DOCKER_WORK_DIR/lwui.env
+    kubectl create secret generic pol-secret -n $OSM_STACK_NAME --from-env-file=$OSM_DOCKER_WORK_DIR/pol.env
+}
+
+#deploys osm pods and services
+function deploy_osm_services() {
+    K8S_MASTER=$(kubectl get nodes | awk '$3~/master/'| awk '{print $1}')
+    kubectl taint node $K8S_MASTER node-role.kubernetes.io/master:NoSchedule-
+    sleep 5
+    kubectl apply -n $OSM_STACK_NAME -f $OSM_K8S_WORK_DIR
+}
+
+function parse_yaml() {
+    osm_services="nbi lcm ro pol mon light-ui keystone"
+    TAG=$1
+    for osm in $osm_services; do
+        $WORKDIR_SUDO sed -i "s/opensourcemano\/$osm:.*/opensourcemano\/$osm:$TAG/g" $OSM_K8S_WORK_DIR/$osm.yaml
+    done
+}
+
+function namespace_vol() {
+    osm_services="nbi lcm ro pol mon kafka mongo mysql"
+    for osm in $osm_services; do
+          $WORKDIR_SUDO  sed -i "s#path: /var/lib/osm#path: $OSM_NAMESPACE_VOL#g" $OSM_K8S_WORK_DIR/$osm.yaml
+    done
 }
 
 function init_docker_swarm() {
@@ -1013,13 +1108,29 @@ function deploy_perfmon() {
 
 function install_lightweight() {
     [ "${OSM_STACK_NAME}" == "osm" ] || OSM_DOCKER_WORK_DIR="$OSM_WORK_DIR/stack/$OSM_STACK_NAME"
+    [ -n "$KUBERNETES" ] && OSM_K8S_WORK_DIR="$OSM_DOCKER_WORK_DIR/osm_pods" && OSM_NAMESPACE_VOL="${OSM_HOST_VOL}/${OSM_STACK_NAME}"
     [ ! -d "$OSM_DOCKER_WORK_DIR" ] && $WORKDIR_SUDO mkdir -p $OSM_DOCKER_WORK_DIR
+    [ -n "$KUBERNETES" ] && $WORKDIR_SUDO cp -b $OSM_DEVOPS/installers/docker/cluster-config.yaml $OSM_DOCKER_WORK_DIR/cluster-config.yaml
 
     track checkingroot
     [ "$USER" == "root" ] && FATAL "You are running the installer as root. The installer is prepared to be executed as a normal user with sudo privileges."
     track noroot
-    [ -z "$ASSUME_YES" ] && ! ask_user "The installation will configure LXD, install juju, install docker CE and init a docker swarm, as pre-requirements. Do you want to proceed (Y/n)? " y && echo "Cancelled!" && exit 1
+
+    if [ -n "$KUBERNETES" ]; then
+        [ -z "$ASSUME_YES" ] && ! ask_user "The installation will do the following
+        1. Install and configure LXD
+        2. Install juju
+        3. Install docker CE
+        4. Disable swap space
+        5. Install and initialize Kubernetes
+        as pre-requirements.
+        Do you want to proceed (Y/n)? " y && echo "Cancelled!" && exit 1
+
+    else
+        [ -z "$ASSUME_YES" ] && ! ask_user "The installation will configure LXD, install juju, install docker CE and init a docker swarm, as pre-requirements. Do you want to proceed (Y/n)? " y && echo "Cancelled!" && exit 1
+    fi
     track proceed
+
     echo "Installing lightweight build of OSM"
     LWTEMPDIR="$(mktemp -d -q --tmpdir "installosmlight.XXXXXX")"
     trap 'rm -rf "${LWTEMPDIR}"' EXIT
@@ -1043,15 +1154,17 @@ function install_lightweight() {
           || FATAL "failed to install $need_packages_lw"
     fi
     track prereqok
-    [ -z "$INSTALL_NOJUJU" ] && install_juju
 
+    [ -z "$INSTALL_NOJUJU" ] && install_juju
     track juju_install
+
     if [ -z "$OSM_VCA_HOST" ]; then
         juju_createcontroller
         OSM_VCA_HOST=`sg lxd -c "juju show-controller $OSM_STACK_NAME"|grep api-endpoints|awk -F\' '{print $2}'|awk -F\: '{print $1}'`
         [ -z "$OSM_VCA_HOST" ] && FATAL "Cannot obtain juju controller IP address"
     fi
     track juju_controller
+
     if [ -z "$OSM_VCA_SECRET" ]; then
         OSM_VCA_SECRET=$(parse_juju_password $OSM_STACK_NAME)
         [ -z "$OSM_VCA_SECRET" ] && FATAL "Cannot obtain juju secret"
@@ -1074,28 +1187,53 @@ function install_lightweight() {
         OSM_DATABASE_COMMONKEY=$(generate_secret)
         [ -z "OSM_DATABASE_COMMONKEY" ] && FATAL "Cannot generate common db secret"
     fi
-
     track juju
+
     [ -n "$INSTALL_NODOCKER" ] || install_docker_ce
     track docker_ce
-    #install_docker_compose
-    [ -n "$INSTALL_NODOCKER" ] || init_docker_swarm
-    track docker_swarm
+
+    #Installs Kubernetes and deploys osm services
+    if [ -n "$KUBERNETES" ]; then
+        install_kube
+        track install_k8s
+        init_kubeadm $OSM_DOCKER_WORK_DIR/cluster-config.yaml
+        kube_config_dir
+        track init_k8s
+    else
+        #install_docker_compose
+        [ -n "$INSTALL_NODOCKER" ] || init_docker_swarm
+        track docker_swarm
+    fi
+
     [ -z "$DOCKER_NOBUILD" ] && generate_docker_images
     track docker_build
+
     generate_docker_env_files
 
-    # remove old stack
-    remove_stack $OSM_STACK_NAME
-    create_docker_network
-    deploy_lightweight
-    generate_osmclient_script
-    track docker_deploy
-    [ -n "$INSTALL_VIMEMU" ] && install_vimemu && track vimemu
-    [ -n "$INSTALL_ELK" ] && deploy_elk && track elk
-    [ -n "$INSTALL_PERFMON" ] && deploy_perfmon && track perfmon
+    if [ -n "$KUBERNETES" ]; then
+        #remove old namespace
+        remove_k8s_namespace $OSM_STACK_NAME
+        deploy_cni_provider
+        kube_secrets
+        [ ! $OSM_DOCKER_TAG == "latest" ] && parse_yaml $OSM_DOCKER_TAG
+        namespace_vol
+        deploy_osm_services
+        track deploy_osm_services_k8s
+    else
+        # remove old stack
+        remove_stack $OSM_STACK_NAME
+        create_docker_network
+        deploy_lightweight
+        generate_osmclient_script
+        track docker_deploy
+        [ -n "$INSTALL_VIMEMU" ] && install_vimemu && track vimemu
+        [ -n "$INSTALL_ELK" ] && deploy_elk && track elk
+        [ -n "$INSTALL_PERFMON" ] && deploy_perfmon && track perfmon
+    fi
+
     [ -z "$INSTALL_NOHOSTCLIENT" ] && install_osmclient
     track osmclient
+
     wget -q -O- https://osm-download.etsi.org/ftp/osm-6.0-six/README2.txt &> /dev/null
     track end
     return 0
@@ -1170,6 +1308,7 @@ function dump_vars(){
     echo "DOCKER_USER=$DOCKER_USER"
     echo "OSM_STACK_NAME=$OSM_STACK_NAME"
     echo "PULL_IMAGES=$PULL_IMAGES"
+    echo "KUBERNETES=$KUBERNETES"
     echo "SHOWOPTS=$SHOWOPTS"
     echo "Install from specific refspec (-b): $COMMIT_ID"
 }
@@ -1213,6 +1352,7 @@ TO_REBUILD=""
 INSTALL_NOLXD=""
 INSTALL_NODOCKER=""
 INSTALL_NOJUJU=""
+KUBERNETES=""
 INSTALL_NOHOSTCLIENT=""
 NOCONFIGURE=""
 RELEASE_DAILY=""
@@ -1229,6 +1369,9 @@ REPOSITORY_BASE="https://osm-download.etsi.org/repository/osm/debian"
 WORKDIR_SUDO=sudo
 OSM_WORK_DIR="/etc/osm"
 OSM_DOCKER_WORK_DIR="/etc/osm/docker"
+OSM_K8S_WORK_DIR="${OSM_DOCKER_WORK_DIR}/osm_pods"
+OSM_HOST_VOL="/var/lib/osm"
+OSM_NAMESPACE_VOL="${OSM_HOST_VOL}/${OSM_STACK_NAME}"
 OSM_DOCKER_TAG=latest
 DOCKER_USER=opensourcemano
 PULL_IMAGES="y"
@@ -1238,8 +1381,11 @@ KEYSTONEDB_TAG=10
 OSM_DATABASE_COMMONKEY=
 ELASTIC_VERSION=6.4.2
 ELASTIC_CURATOR_VERSION=5.5.4
+POD_NETWORK_CIDR=10.244.0.0/16
+K8S_MANIFEST_DIR="/etc/kubernetes/manifests"
+RE_CHECK='^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
 
-while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:" o; do
+while getopts ":hy-:b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:" o; do
     case "${o}" in
         h)
             usage && exit 0
@@ -1251,6 +1397,12 @@ while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:" o; do
         r)
             REPOSITORY="${OPTARG}"
             REPO_ARGS+=(-r "$REPOSITORY")
+            ;;
+        c)
+            [ "${OPTARG}" == "swarm" ] && continue
+            [ "${OPTARG}" == "k8s" ] && KUBERNETES="y" && continue
+            echo -e "Invalid argument for -i : ' $OPTARG'\n" >&2
+            usage && exit 1
             ;;
         R)
             RELEASE="${OPTARG}"
@@ -1277,7 +1429,7 @@ while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:" o; do
             OSM_DEVOPS="${OPTARG}"
             ;;
         s)
-            OSM_STACK_NAME="${OPTARG}"
+            OSM_STACK_NAME="${OPTARG}" && [ -n "$KUBERNETES" ] && [[ ! "${OPTARG}" =~ $RE_CHECK ]] && echo "Namespace $OPTARG is invalid. Regex used for validation is $RE_CHECK" && exit 0
             ;;
         H)
             OSM_VCA_HOST="${OPTARG}"

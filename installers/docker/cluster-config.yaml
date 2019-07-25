@@ -1,4 +1,4 @@
-# Copyright 2019 ETSI
+# Copyright 2019 TATA ELXSI
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,21 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied.
 # See the License for the specific language governing permissions and
-# limitations under the License.
+# limitations under the License
+# Author: Vijay Nag B S (vijaynag.bs@tataelxsi.co.in)
 
-*.pyc
-.cache
-
-#Debian packaging related files
-debian/osm-devops.install
-pool
-osm-devops-*.post*
-osm-devops_*.post*
-
-#IDEs
-.idea
-
-#local stuff files that end in ".local" or folders called "local"
-*.local
-local
-
+apiVersion: kubeadm.k8s.io/v1beta1
+kind: ClusterConfiguration
+networking:
+  podSubnet: 10.244.0.0/16
+apiServer:
+  extraArgs:
+    service-node-port-range: "80-32767"
