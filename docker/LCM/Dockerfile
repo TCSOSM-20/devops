@@ -1,3 +1,21 @@
+##
+# Copyright 2019 ETSI
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+##
+
+########################################################################
+
 # This creates som/LCM docker from from last stable package
 
 FROM ubuntu:16.04
@@ -26,21 +44,21 @@ RUN apt-get update && apt-get install -y git make python3 \
     python3-all python3-setuptools openssh-client libffi-dev libssl-dev \
     python3-bitarray python3-regex python3-lxml dh-python wget tox \
     python3-cffi \
-    && pip3 install pip==9.0.3 \
-    && pip3 install -U aiokafka pyang lxml six enum34 \
-    && pip3 install websockets==4.0.1 \
-    && pip3 install requests \
+    && pip3 install -U pip \
+    && python3 -m pip install -U aiokafka pyang lxml six enum34 \
+    && python3 -m pip install websockets==4.0.1 \
+    && python3 -m pip install requests \
     && rm -rf /var/lib/apt/lists/*
 
 # packages needed for N2VC because deb dependencies are not fine
-RUN pip3 install  'macaroonbakery>=1.1,<2.0' 'pyRFC3339>=1.0,<2.0' \
+RUN python3 -m pip install  'macaroonbakery>=1.1,<2.0' 'pyRFC3339>=1.0,<2.0' \
       'pyyaml>=3.0,<4.0' 'theblues>=0.3.8,<1.0' 'websockets>=4.0,<5.0' \
       'paramiko'   # PyNaCl
 # 
 # RUN git clone https://osm.etsi.org/gerrit/osm/N2VC.git \
 #     && cd N2VC \
 #     && cd modules/libjuju && python3 setup.py develop && cd ../.. \
-#     && pip3 install -U -r requirements.txt
+#     && python3 -m pip install -U -r requirements.txt
 
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
 ARG RELEASE=ReleaseFOUR-daily
