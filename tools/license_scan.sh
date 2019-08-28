@@ -15,6 +15,11 @@
 #
 #!/bin/sh
 
+# Change log:
+# 1. Bug 722 : Jayant Madavi : JM00553988@techmahindra.com : Enhancement to use new fossology server. Had to change the variable name at #    couple of places, while scanning the variable name was adding curl as a license.
+# 2. Bug 542 : Jayant Madavi, Mrityunjay Yadav : JM00553988@techmahindra.com : 24-jul-2019 : Enhancement to raise exit in case files modified or added does #    not contain license.
+# 3. 
+ 
 echo GERRIT BRANCH is $GERRIT_BRANCH
 dpkg -l wget &>/dev/null ||sudo apt-get install -y wget
 dpkg -l curl &>/dev/null ||sudo apt-get install -y curl
@@ -29,24 +34,24 @@ git fetch
 
 RE="FATAL: your file did not get passed through"
 
-for file in $(git diff --name-only origin/$GERRIT_BRANCH); do
+for file in $(git diff --name-only origin/$GERRIT_BRANCH -- . ':!*.png' ':!*.jp*g' ':!*.gif' ':!*.json'); do
     if [ -f $file ]; then
         if [ -s $file ]; then
-            license=$(wget -qO - --post-file $file https://osm.etsi.org/fossology/?mod=agent_nomos_once |sed "s/^[ \t]*//;s/[ \t]*$//")
-            result=$(echo $license | grep "$RE")
+            licnse=$(curl -s -X POST  -H 'Accept: text' -H 'Cache-Control: no-cache' -H 'Connection: keep-alive'  -H 'Content-Type: multipart/form-data'  -H 'cache-control: no-cache'  -F "file_input=@\"$file\""  -F 'showheader=1' https://fossology-osm.etsi.org/?mod=agent_nomos_once |grep "A one shot license analysis shows the following license(s) in file"|sed -n 's:.*<strong>\(.*\)</strong>.*:\1:p' |xargs)
+            result=$(echo $licnse | grep "$RE")
             if [ -n "$result" ]; then
                 # possibly we have exceeded the post rate
                 sleep 10
-                license=$(wget -qO - --post-file $file https://osm.etsi.org/fossology/?mod=agent_nomos_once |sed "s/^[ \t]*//;s/[ \t]*$//")
+                licnse=$(curl -s -X POST  -H 'Accept: text' -H 'Cache-Control: no-cache' -H 'Connection: keep-alive'  -H 'Content-Type: multipart/form-data'  -H 'cache-control: no-cache'  -F "file_input=@\"$file\""  -F 'showheader=1' https://fossology-osm.etsi.org/?mod=agent_nomos_once |grep "A one shot license analysis shows the following license(s) in file"|sed -n 's:.*<strong>\(.*\)</strong>.*:\1:p' |xargs)
             fi
         else
-            license="No_license_found"
+            licnse="No_license_found"
         fi
     else
-        license="DELETED"
+        licnse="DELETED"
     fi
-    echo "$file $license"
-    case "$license" in
+    echo "$file $licnse"
+    case "$licnse" in
         "Apache-2.0")
             apache=$((apache + 1))
             ;;
@@ -70,7 +75,8 @@ if [ $other -gt 0 ]; then
 fi
 
 if [ $nolicense -gt 0 ]; then
-    echo "WARNING: Unlicensed files found"
+    echo "FATAL: Unlicensed files found"
+	exit 2
 fi
 
 exit 0
