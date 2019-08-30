@@ -14,7 +14,12 @@
  *   License for the specific language governing permissions and limitations
  *   under the License.
  */
-
+ 
+/* Change log:
+ * 1. Bug 745 : Jayant Madavi, Mrityunjay Yadav : JM00553988@techmahindra.com : 23-july-2019 : Improvement to the code, typically we have 2 *    or more branches whose build gets triggered, ex master & release branch, the previous code was removing any/all docker. 
+ *	  Now removing previous docker of the same branch, so that the other branch failed docker should not be removed. It also 
+ *    acts as clean-up for previous docker remove failure.
+ */
 properties([
     parameters([
         string(defaultValue: env.GERRIT_BRANCH, description: '', name: 'GERRIT_BRANCH'),
@@ -31,7 +36,7 @@ properties([
         string(defaultValue: 'dpkg1', description: '', name: 'GPG_KEY_NAME'),
         string(defaultValue: 'artifactory-osm', description: '', name: 'ARTIFACTORY_SERVER'),
         string(defaultValue: 'osm-stage_4', description: '', name: 'DOWNSTREAM_STAGE_NAME'),
-        string(defaultValue: '6.0.1-rc', description: '', name: 'DOCKER_TAG'),
+        string(defaultValue: '6.0.2rc1', description: '', name: 'DOCKER_TAG'),
         booleanParam(defaultValue: true, description: '', name: 'SAVE_CONTAINER_ON_FAIL'),
         booleanParam(defaultValue: false, description: '', name: 'SAVE_CONTAINER_ON_PASS'),
         booleanParam(defaultValue: true, description: '', name: 'SAVE_ARTIFACTS_ON_SMOKE_SUCCESS'),
@@ -230,11 +235,11 @@ node("${params.NODE}") {
                         repo_base_url = "-u ${params.REPOSITORY_BASE}"
                     }
 					if ( params.DO_STAGE_4 ) {
-					try {
-                        sh "docker stack list | grep v60 | awk '{ print \$1 }'| xargs docker stack rm "
+					    try {
+                        sh "docker stack list |grep \"${container_name_prefix}\"|  awk '{ print \$1 }'| xargs docker stack rm"
 						}
 						catch (caughtError) {
-						 println("FAILURE:: Docker remove gave exception, pls check & remove old dockers manually, if required !!!")
+						  println("Caught error: docker stack rm failed!")
 						}
 					}
                     sh """
@@ -263,7 +268,10 @@ node("${params.NODE}") {
 
                     if ( ! currentBuild.result.equals('UNSTABLE') ) {
                         stage_archive = keep_artifacts
-                    }
+                    } else {
+					   error = new Exception("Smoke test failed")
+					   currentBuild.result = 'FAILURE'
+					}
                 }
             }
 
@@ -275,7 +283,10 @@ node("${params.NODE}") {
 
                     if ( ! currentBuild.result.equals('UNSTABLE') ) {
                         stage_archive = keep_artifacts
-                    }
+                    } else {
+					   error = new Exception("Systest test failed")
+					   currentBuild.result = 'FAILURE'
+					}
                 }
             }
 
