@@ -31,6 +31,7 @@ function usage(){
     echo -e "     -S <VCA secret> use VCA/juju secret key"
     echo -e "     -P <VCA pubkey> use VCA/juju public key file"
     echo -e "     -C <VCA cacert> use VCA/juju CA certificate file"
+    echo -e "     -A <VCA apiproxy> use VCA/juju API proxy"
     echo -e "     --vimemu:       additionally deploy the VIM emulator as a docker container"
     echo -e "     --elk_stack:    additionally deploy an ELK docker stack for event logging"
     echo -e "     --pm_stack:     additionally deploy a Prometheus+Grafana stack for performance monitoring (PM)"
@@ -644,6 +645,13 @@ function juju_createcontroller() {
     [ $(juju controllers | awk "/^${OSM_STACK_NAME}[\*| ]/{print $1}"|wc -l) -eq 1 ] || FATAL "Juju installation failed"
 }
 
+function juju_createproxy() {
+    if ! sudo iptables -t nat -C PREROUTING -p tcp -m tcp --dport 17070 -j DNAT --to-destination $OSM_VCA_HOST; then
+        sudo iptables -t nat -A PREROUTING -p tcp -m tcp --dport 17070 -j DNAT --to-destination $OSM_VCA_HOST
+        sudo netfilter-persistent save
+    fi
+}
+
 function generate_docker_images() {
     echo "Pulling and generating docker images"
     _build_from=$COMMIT_ID
@@ -784,6 +792,12 @@ function generate_docker_env_files() {
     #else
     #    $WORKDIR_SUDO sed -i "s|OSMLCM_VCA_CACERT.*|OSMLCM_VCA_CACERT=\"${OSM_VCA_CACERT}\"|g" $OSM_DOCKER_WORK_DIR/lcm.env
     #fi
+
+    if ! grep -Fq "OSMLCM_VCA_APIPROXY" $OSM_DOCKER_WORK_DIR/lcm.env; then
+        echo "OSMLCM_VCA_APIPROXY=${OSM_VCA_APIPROXY}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lcm.env
+    else
+        $WORKDIR_SUDO sed -i "s|OSMLCM_VCA_APIPROXY.*|OSMLCM_VCA_APIPROXY=${OSM_VCA_APIPROXY}|g" $OSM_DOCKER_WORK_DIR/lcm.env
+    fi
 
     # RO
     MYSQL_ROOT_PASSWORD=$(generate_secret)
@@ -1035,6 +1049,12 @@ function install_lightweight() {
 	#OSM_VCA_CACERT=$(juju controllers --format json | jq -r '.controllers["osm"]["ca-cert"]' | grep -v "\-\-\-\-\-.*CERTIFICATE\-\-\-\-\-")
     #    [ -z "$OSM_VCA_CACERT" ] && FATAL "Cannot obtain juju CA certificate"
     #fi
+    if [ -z "$OSM_VCA_APIPROXY" ]; then
+        OSM_VCA_APIPROXY=$DEFAULT_IP
+        [ -z "$OSM_VCA_APIPROXY" ] && FATAL "Cannot obtain juju api proxy"
+    fi
+    juju_createproxy
+
     if [ -z "$OSM_DATABASE_COMMONKEY" ]; then
         OSM_DATABASE_COMMONKEY=$(generate_secret)
         [ -z "OSM_DATABASE_COMMONKEY" ] && FATAL "Cannot generate common db secret"
@@ -1205,7 +1225,7 @@ OSM_DATABASE_COMMONKEY=
 ELASTIC_VERSION=6.4.2
 ELASTIC_CURATOR_VERSION=5.5.4
 
-while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:" o; do
+while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:" o; do
     case "${o}" in
         h)
             usage && exit 0
@@ -1253,6 +1273,9 @@ while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:" o; do
             ;;
         P)
             OSM_VCA_PUBKEY=$(cat ${OPTARG})
+            ;;
+        A)
+            OSM_VCA_APIPROXY="${OPTARG}"
             ;;
         w)
             # when specifying workdir, do not use sudo for access
