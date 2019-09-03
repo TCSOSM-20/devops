@@ -30,6 +30,8 @@ function usage(){
     echo -e "     -H <VCA host>   use specific juju host controller IP"
     echo -e "     -S <VCA secret> use VCA/juju secret key"
     echo -e "     -P <VCA pubkey> use VCA/juju public key file"
+    echo -e "     -C <VCA cacert> use VCA/juju CA certificate file"
+    echo -e "     -A <VCA apiproxy> use VCA/juju API proxy"
     echo -e "     --vimemu:       additionally deploy the VIM emulator as a docker container"
     echo -e "     --elk_stack:    additionally deploy an ELK docker stack for event logging"
     echo -e "     --pm_stack:     additionally deploy a Prometheus+Grafana stack for performance monitoring (PM)"
@@ -801,6 +803,18 @@ function generate_docker_env_files() {
         $WORKDIR_SUDO sed -i "s|OSMLCM_VCA_APIPROXY.*|OSMLCM_VCA_APIPROXY=${OSM_VCA_APIPROXY}|g" $OSM_DOCKER_WORK_DIR/lcm.env
     fi
 
+    #if ! grep -Fq "OSMLCM_VCA_CACERT" $OSM_DOCKER_WORK_DIR/lcm.env; then
+    #    echo "OSMLCM_VCA_CACERT=\"${OSM_VCA_CACERT}\"" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lcm.env
+    #else
+    #    $WORKDIR_SUDO sed -i "s|OSMLCM_VCA_CACERT.*|OSMLCM_VCA_CACERT=\"${OSM_VCA_CACERT}\"|g" $OSM_DOCKER_WORK_DIR/lcm.env
+    #fi
+
+    if ! grep -Fq "OSMLCM_VCA_APIPROXY" $OSM_DOCKER_WORK_DIR/lcm.env; then
+        echo "OSMLCM_VCA_APIPROXY=${OSM_VCA_APIPROXY}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lcm.env
+    else
+        $WORKDIR_SUDO sed -i "s|OSMLCM_VCA_APIPROXY.*|OSMLCM_VCA_APIPROXY=${OSM_VCA_APIPROXY}|g" $OSM_DOCKER_WORK_DIR/lcm.env
+    fi
+
     # RO
     MYSQL_ROOT_PASSWORD=$(generate_secret)
     if [ ! -f $OSM_DOCKER_WORK_DIR/ro-db.env ]; then
@@ -1227,7 +1241,7 @@ OSM_DATABASE_COMMONKEY=
 ELASTIC_VERSION=6.4.2
 ELASTIC_CURATOR_VERSION=5.5.4
 
-while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:" o; do
+while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:" o; do
     case "${o}" in
         h)
             usage && exit 0
@@ -1275,6 +1289,9 @@ while getopts ":hy-:b:r:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:" o; do
             ;;
         P)
             OSM_VCA_PUBKEY=$(cat ${OPTARG})
+            ;;
+        A)
+            OSM_VCA_APIPROXY="${OPTARG}"
             ;;
         w)
             # when specifying workdir, do not use sudo for access
