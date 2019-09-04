@@ -18,7 +18,7 @@
 # Change log:
 # 1. Bug 722 : Jayant Madavi : JM00553988@techmahindra.com : Enhancement to use new fossology server. Had to change the variable name at #    couple of places, while scanning the variable name was adding curl as a license.
 # 2. Bug 542 : Jayant Madavi, Mrityunjay Yadav : JM00553988@techmahindra.com : 24-jul-2019 : Enhancement to raise exit in case files modified or added does #    not contain license.
-# 3. 
+# 3. Bug 542  : Jayant Madavi, Mrityunjay Yadav : JM00553988@techmahindra.com :add exception list. for now as inLine. later need to create a variable for exception_list
  
 echo GERRIT BRANCH is $GERRIT_BRANCH
 dpkg -l wget &>/dev/null ||sudo apt-get install -y wget
@@ -34,7 +34,7 @@ git fetch
 
 RE="FATAL: your file did not get passed through"
 
-for file in $(git diff --name-only origin/$GERRIT_BRANCH); do
+for file in $(git diff --name-only origin/$GERRIT_BRANCH -- . ':!*.pdf' ':!*.png' ':!*.jp[e]?g' ':!*.gif' ':!*.json'); do
     if [ -f $file ]; then
         if [ -s $file ]; then
             licnse=$(curl -s -X POST  -H 'Accept: text' -H 'Cache-Control: no-cache' -H 'Connection: keep-alive'  -H 'Content-Type: multipart/form-data'  -H 'cache-control: no-cache'  -F "file_input=@\"$file\""  -F 'showheader=1' https://fossology-osm.etsi.org/?mod=agent_nomos_once |grep "A one shot license analysis shows the following license(s) in file"|sed -n 's:.*<strong>\(.*\)</strong>.*:\1:p' |xargs)
