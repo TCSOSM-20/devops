@@ -1,7 +1,7 @@
 /* Copyright 2017 Sandvine
  *
  * All Rights Reserved.
- * 
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License"); you may
  *   not use this file except in compliance with the License. You may obtain
  *   a copy of the License at
@@ -55,6 +55,12 @@ def ci_pipeline(mdg,url_prefix,project,branch,refspec,revision,do_stage_3,artifa
     withDockerContainer(image: "${container_name}", args: docker_args) {
         stage('Test') {
             sh 'devops-stages/stage-test.sh'
+            if (fileExists('coverage.xml')) {
+                cobertura coberturaReportFile: 'coverage.xml'
+            }
+            if (fileExists('nosetests.xml')) {
+                junit 'nosetests.xml'
+            }
         }
         stage('Build') {
             sh(returnStdout:true,  script: 'devops-stages/stage-build.sh').trim()
