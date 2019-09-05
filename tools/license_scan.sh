@@ -29,12 +29,12 @@ dpkg -l curl &>/dev/null ||sudo apt-get install -y curl
 apache=0
 nolicense=0
 other=0
-
+exception_list="':(exclude)*.pdf' ':(exclude)*.png' ':(exclude)*.jpeg' ':(exclude)*.jpg' ':(exclude)*.gif' ':(exclude)*.json'"
 git fetch
 
 RE="FATAL: your file did not get passed through"
 
-for file in $(git diff --name-only origin/$GERRIT_BRANCH -- . ':!*.pdf' ':!*.png' ':!*.jp[e]?g' ':!*.gif' ':!*.json'); do
+for file in $(echo ${exception_list} | xargs git diff --name-only origin/$GERRIT_BRANCH -- . ); do
     if [ -f $file ]; then
         if [ -s $file ]; then
             licnse=$(curl -s -X POST  -H 'Accept: text' -H 'Cache-Control: no-cache' -H 'Connection: keep-alive'  -H 'Content-Type: multipart/form-data'  -H 'cache-control: no-cache'  -F "file_input=@\"$file\""  -F 'showheader=1' https://fossology-osm.etsi.org/?mod=agent_nomos_once |grep "A one shot license analysis shows the following license(s) in file"|sed -n 's:.*<strong>\(.*\)</strong>.*:\1:p' |xargs)
