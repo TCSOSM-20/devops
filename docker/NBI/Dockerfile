@@ -1,3 +1,21 @@
+##
+# Copyright 2019 ETSI
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+##
+
+########################################################################
+
 # This creates osm/NBI docker from local NBI source code
 
 FROM ubuntu:16.04
@@ -6,8 +24,8 @@ RUN apt-get update && apt-get -y install curl software-properties-common
 
 RUN apt-get update && apt-get install -y git python3 python3-jsonschema \
     python3-pymongo python3-yaml python3-pip python3-keystoneclient \
-    && pip3 install pip==9.0.3 \
-    && pip3 install aiokafka aiohttp cherrypy==18.0.0 pyangbind keystoneauth1 \
+    && pip3 install -U pip \
+    && python3 -m pip install aiokafka aiohttp cherrypy==18.0.0 pyangbind keystoneauth1 \
     && mkdir -p /app/storage/kafka && mkdir -p /app/log
 
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian

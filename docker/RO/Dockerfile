@@ -1,3 +1,21 @@
+##
+# Copyright 2019 ETSI
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+##
+
+########################################################################
+
 from ubuntu:xenial
 
 MAINTAINER Gennadiy Dubina <gennadiy.dubina@dataat.com>; Alfonso Tierno <alfonso.tiernosepulveda@telefoncia.com>
@@ -5,7 +23,7 @@ MAINTAINER Gennadiy Dubina <gennadiy.dubina@dataat.com>; Alfonso Tierno <alfonso
 RUN apt-get update && apt-get -y install curl software-properties-common git
 RUN DEBIAN_FRONTEND=noninteractive add-apt-repository -y cloud-archive:queens
 RUN apt-get update && apt-get install -y python-setuptools python-wheel mysql-client python-bitarray python-pip
-RUN DEBIAN_FRONTEND=noninteractive pip2 install pip==9.0.3 pyangbind
+RUN DEBIAN_FRONTEND=noninteractive pip2 install -U pip && python -m pip install pyangbind
 
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
 ARG RELEASE=ReleaseFOUR-daily
