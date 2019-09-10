@@ -32,8 +32,8 @@ echo "juju version:"
 juju --version
 echo "osm-devops deb package:"
 dpkg -l |grep osm-devops
-echo "osm-imdocs deb package:"
-dpkg -l |grep osm-imdocs
+echo "osm-imdocs osm-im deb package:"
+dpkg -l |grep osm-im
 echo "python-osmclient deb package:"
 dpkg -l |grep 
 echo "whereis osm:"
@@ -48,6 +48,25 @@ for i in kafka keystone lcm light-ui mon mongo nbi pol prometheus ro mysql zooke
 done
 #dockers source code
 echo "dockers deb packages"
+echo "MON"
+docker exec -it $(docker ps -aqf "name=osm_mon" -n 1) dpkg -l |egrep -i "osm|n2vc"
+echo "POL"
+docker exec -it $(docker ps -aqf "name=osm_pol" -n 1) dpkg -l |egrep -i "osm|n2vc"
+echo "LCM"
+docker exec -it $(docker ps -aqf "name=osm_lcm" -n 1) dpkg -l |egrep -i "osm|n2vc"
+echo "NBI"
+docker exec -it $(docker ps -aqf "name=osm_nbi" -n 1) dpkg -l |egrep -i "osm|n2vc"
+echo "LW-UI"
+docker exec -it $(docker ps -aqf "name=osm_light-ui" -n 1) dpkg -l |egrep -i "osm|n2vc"
+echo "RO"
+docker exec -it $(docker ps -aqf "name=osm_ro.1" -n 1) dpkg -l |egrep -i "osm|n2vc"
+echo "OSMCLIENT"
+dpkg -l |grep osmclient
+echo "OSM-IM"
+dpkg -l |grep osm-im
+echo "OSM-DEVOPS"
+dpkg -l |grep osm-devops
+
 echo "docker osm_ro"
 docker exec $(docker ps -q -f name=osm_ro -l) git -C /root/RO rev-parse HEAD
 docker exec $(docker ps -q -f name=osm_ro -l) git -C /root/RO describe --tags --long --dirty
