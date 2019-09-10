@@ -1062,7 +1062,7 @@ function install_lightweight() {
     [ -n "$INSTALL_PERFMON" ] && deploy_perfmon && track perfmon
     [ -z "$INSTALL_NOHOSTCLIENT" ] && install_osmclient
     track osmclient
-    wget -q -O- https://osm-download.etsi.org/ftp/osm-6.0-six/sixME2.txt &> /dev/null
+    wget -q -O- https://osm-download.etsi.org/ftp/osm-6.0-six/README2.txt &> /dev/null
     track end
     return 0
 }
