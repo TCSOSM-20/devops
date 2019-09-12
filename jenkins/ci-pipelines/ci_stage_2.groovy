@@ -39,7 +39,12 @@ def ci_pipeline(mdg,url_prefix,project,branch,refspec,revision,do_stage_3,artifa
     }
 
     stage('License Scan') {
+      if (!JOB_NAME.contains('merge')) {
         sh "devops/tools/license_scan.sh"
+      } 
+      else {
+        Println("skip the scan for merge")
+      }
     }
 
     container_name = "${project}-${branch}".toLowerCase()
