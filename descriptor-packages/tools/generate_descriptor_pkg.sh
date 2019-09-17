@@ -792,7 +792,7 @@ if [ $CREATE == false ]; then
     cd $BASE_DIR
     # Mrityunjay Yadav: Validate descriptor
     GEN_BASEDIR=$(dirname "$0")
-    python $GEN_BASEDIR/validate_descriptor.py $DEST_DIR/$PKG/$descriptor
+    python $GEN_BASEDIR/validate_descriptor.py $BASE_DIR/$PKG/$descriptor
     if [ $? -ne 0 ]; then
         rc=$?
         echo "ERROR: validating descriptor for $PKG ($rc)" >&2
