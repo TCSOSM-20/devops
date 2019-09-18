@@ -43,7 +43,7 @@ def ci_pipeline(mdg,url_prefix,project,branch,refspec,revision,do_stage_3,artifa
         sh "devops/tools/license_scan.sh"
       } 
       else {
-        Println("skip the scan for merge")
+        println("skip the scan for merge")
       }
     }
 
