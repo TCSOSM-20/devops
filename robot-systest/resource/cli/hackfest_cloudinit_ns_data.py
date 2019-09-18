@@ -1,7 +1,7 @@
-#!/usr/bin/env bash
+# -*- coding: utf-8 -*-
 
 ##
-# Copyright 2019 ETSI
+# Copyright 2019 Tech Mahindra Limited
 #
 # All Rights Reserved.
 #
@@ -18,8 +18,15 @@
 # under the License.
 ##
 
+## Change log:
+# 1. Feature 7829: Jayant Madavi, Mrityunjay Yadav : MY00514913@techmahindra.com : 06-aug-2019 : Improvement to the code, robot framework initial seed code.
+##
 
-# Set the Juju env variables for building a layer
-export JUJU_REPOSITORY=`pwd`
-export INTERFACE_PATH=$JUJU_REPOSITORY/interfaces
-export LAYER_PATH=$JUJU_REPOSITORY/layers
+
+# VNFD Details
+vnfdPckgPath = "/descriptor-packages/vnfd/hackfest_cloudinit_vnf"
+vnfdPckg = '/build/hackfest_cloudinit_vnf.tar.gz'
+
+# NSD Details
+nsdPckgPath = "/descriptor-packages/nsd/hackfest_cloudinit_ns"
+nsdPckg = '/build/hackfest_cloudinit_ns.tar.gz'

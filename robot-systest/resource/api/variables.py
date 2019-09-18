@@ -1,7 +1,7 @@
-#!/usr/bin/env bash
+# -*- coding: utf-8 -*-
 
 ##
-# Copyright 2019 ETSI
+# Copyright 2019 Tech Mahindra Limited
 #
 # All Rights Reserved.
 #
@@ -18,8 +18,16 @@
 # under the License.
 ##
 
+## Change log:
+# 1. Feature 7829: Jayant Madavi, Mrityunjay Yadav : MY00514913@techmahindra.com : 06-sep-2019
+##
 
-# Set the Juju env variables for building a layer
-export JUJU_REPOSITORY=`pwd`
-export INTERFACE_PATH=$JUJU_REPOSITORY/interfaces
-export LAYER_PATH=$JUJU_REPOSITORY/layers
+
+# Create/Delete Vim Account
+vim_name = 'API-TEST-VIM'
+account_type = 'openstack'
+auth_url = 'http://127.0.0.1:5000/v3'
+user = 'admin'
+password = 'admin'
+tenant = 'admin'
+description = 'Test OpenStack Vim Account'
