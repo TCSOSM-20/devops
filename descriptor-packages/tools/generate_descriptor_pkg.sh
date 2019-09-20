@@ -47,6 +47,7 @@ NSD_FOLDERS=(scripts charms icons ns_config vnf_config)
 
 # Other files allowed in the descriptor base directory
 ALLOWED_FILES=(README)
+ALLOWED_FILES_WILDCARDS=(README)
 
 DESC_TYPES=(vnfd nsd)
 DESC_EXTN=(yml yaml json xml)
@@ -756,7 +757,11 @@ if [ $CREATE == false ]; then
 
     for f in ${files[@]}; do
         if [ $(contains "${ALLOWED_FILES[@]}" $f)  == "n" ]; then
-            echo "WARN: Unsupported file $f found"
+            for j in ${ALLOWED_FILES_WILDCARDS[@]}; do
+                if [[ $f != *"$j"* ]]; then
+                    echo "WARN: Unsupported file $f found"
+                fi
+            done
         fi
     done
 
