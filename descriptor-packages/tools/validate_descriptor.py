@@ -45,6 +45,7 @@ def usage():
     print("      -v|--version: prints current version")
     print("      -h|--help: shows this help")
     print("      -i|--input FILE: (same as param FILE) descriptor file to be upgraded")
+    print("      -c|--charms: looks for the charms folder and validates its coherency with the descriptor")
     return
 
 
@@ -102,6 +103,7 @@ if __name__ == "__main__":
     input_file_name = None
     test_file = None
     file_name = None
+    validate_charms = False
     try:
         # load parameters and configuration
         opts, args = getopt.getopt(sys.argv[1:], "hvi:o:", ["input=", "help", "version",])
@@ -115,6 +117,8 @@ if __name__ == "__main__":
                 sys.exit()
             elif o in ("-i", "--input"):
                 input_file_name = a
+            elif o in ("-c", "--charms"):
+                validate_charms = True
             else:
                 assert False, "Unhandled option"
         if not input_file_name:
@@ -162,14 +166,14 @@ if __name__ == "__main__":
                             raise KeyError(
                                 "Wrong 'Virtual-interface type': Deprecated 'OM-MGMT' value. Please, use 'PARAVIRT' instead")
                     # Mrityunjay yadav: Verify charm if included in vdu
-                    if vdu.get("vdu-configuration", False):
+                    if vdu.get("vdu-configuration", False) and validate_charms:
                         validate_charm(vdu["vdu-configuration"], input_file_name)
                 if vnfd.get("mgmt-interface"):
                     mgmt_iface = True
                     if vnfd["mgmt-interface"].get("vdu-id"):
                         raise KeyError("'mgmt-iface': Deprecated 'vdu-id' field. Please, use 'cp' field instead")
                 # Mrityunjay yadav: Verify charm if included in vnf
-                if vnfd.get("vnf-configuration", False):
+                if vnfd.get("vnf-configuration", False) and validate_charms:
                     validate_charm(vnfd["vnf-configuration"], input_file_name)
 
             if not mgmt_iface:
