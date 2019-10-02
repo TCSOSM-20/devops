@@ -798,11 +798,11 @@ function generate_docker_env_files() {
         $WORKDIR_SUDO sed -i "s|OSMLCM_VCA_PUBKEY.*|OSMLCM_VCA_PUBKEY=\"${OSM_VCA_PUBKEY}\"|g" $OSM_DOCKER_WORK_DIR/lcm.env
     fi
 
-    #if ! grep -Fq "OSMLCM_VCA_CACERT" $OSM_DOCKER_WORK_DIR/lcm.env; then
-    #    echo "OSMLCM_VCA_CACERT=\"${OSM_VCA_CACERT}\"" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lcm.env
-    #else
-    #    $WORKDIR_SUDO sed -i "s|OSMLCM_VCA_CACERT.*|OSMLCM_VCA_CACERT=\"${OSM_VCA_CACERT}\"|g" $OSM_DOCKER_WORK_DIR/lcm.env
-    #fi
+    if ! grep -Fq "OSMLCM_VCA_CACERT" $OSM_DOCKER_WORK_DIR/lcm.env; then
+       echo "OSMLCM_VCA_CACERT=${OSM_VCA_CACERT}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lcm.env
+    else
+       $WORKDIR_SUDO sed -i "s|OSMLCM_VCA_CACERT.*|OSMLCM_VCA_CACERT=${OSM_VCA_CACERT}|g" $OSM_DOCKER_WORK_DIR/lcm.env
+    fi
 
     if ! grep -Fq "OSMLCM_VCA_APIPROXY" $OSM_DOCKER_WORK_DIR/lcm.env; then
         echo "OSMLCM_VCA_APIPROXY=${OSM_VCA_APIPROXY}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lcm.env
@@ -1056,16 +1056,16 @@ function install_lightweight() {
         OSM_VCA_PUBKEY=$(cat $HOME/.local/share/juju/ssh/juju_id_rsa.pub)
         [ -z "$OSM_VCA_PUBKEY" ] && FATAL "Cannot obtain juju public key"
     fi
-    #if [ -z "$OSM_VCA_CACERT" ]; then
-	#OSM_VCA_CACERT=$(juju controllers --format json | jq -r '.controllers["osm"]["ca-cert"]' | grep -v "\-\-\-\-\-.*CERTIFICATE\-\-\-\-\-")
-    #    [ -z "$OSM_VCA_CACERT" ] && FATAL "Cannot obtain juju CA certificate"
-    #fi
     if [ -z "$OSM_VCA_APIPROXY" ]; then
         OSM_VCA_APIPROXY=$DEFAULT_IP
         [ -z "$OSM_VCA_APIPROXY" ] && FATAL "Cannot obtain juju api proxy"
     fi
     juju_createproxy
 
+    if [ -z "$OSM_VCA_CACERT" ]; then
+	OSM_VCA_CACERT=$(juju controllers --format json | jq -r '.controllers["osm"]["ca-cert"]' | base64 | tr -d \\n)
+       [ -z "$OSM_VCA_CACERT" ] && FATAL "Cannot obtain juju CA certificate"
+    fi
     if [ -z "$OSM_DATABASE_COMMONKEY" ]; then
         OSM_DATABASE_COMMONKEY=$(generate_secret)
         [ -z "OSM_DATABASE_COMMONKEY" ] && FATAL "Cannot generate common db secret"
