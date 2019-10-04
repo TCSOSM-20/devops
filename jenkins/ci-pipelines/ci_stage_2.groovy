@@ -19,7 +19,8 @@ def project_checkout(url_prefix,project,refspec,revision) {
     // checkout the project
     // this is done automaticaly by the multibranch pipeline plugin
     // git url: "${url_prefix}/${project}"
-
+    
+    sh "git fetch --tags"
     sh "git fetch origin ${refspec}"
     if (GERRIT_PATCHSET_REVISION.size() > 0 ) {
         sh "git checkout -f ${revision}"
