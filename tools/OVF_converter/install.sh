@@ -22,22 +22,23 @@
 ##
 
 echo '
- #################################################################
- #####             Installing Require Packages             #####
- #################################################################'
+ ################################################################
+ #####             Installing Required Packages             #####
+ ################################################################'
 
 # Paths to copy application files
 Install_dir="/usr/local/bin"
 App_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-App_CLI_path="${App_dir}/format_converter/ovf_converter_cli.py"
-Install_CLI_path="${Install_dir}/OVF_converter/format_converter/ovf_converter_cli.py"
+Converter_App_CLI_path="${App_dir}/ovf_converter_cli.py"
+Converter_Install_CLI_path="${Install_dir}/OVF_converter/ovf_converter_cli.py"
+Uploader_App_CLI_path="${App_dir}/ovf_uploader_cli.py"
+Uploader_Install_CLI_path="${Install_dir}/OVF_converter/ovf_uploader_cli.py"
 Logs_Folder="${Install_dir}/OVF_converter/logs"
-Log_Path="${Install_dir}/OVF_converter/logs/ovf_converter.log"
 
 #Function to install packages using apt-get
 function install_packages(){
       [ -x /usr/bin/apt-get ] && apt-get install -y $*
-       
+
        #check properly installed
        for PACKAGE in $*
        do
@@ -50,7 +51,7 @@ function install_packages(){
           fi
        done
    }
-  
+
 apt-get update  # To get the latest package lists
 install_packages "libxml2-dev libxslt-dev python-dev python-pip python-lxml python-yaml"
 install_packages "qemu-utils"
@@ -62,18 +63,21 @@ cp -R "${App_dir}"   "${Install_dir}"
 
 #Create logs folder and file
 mkdir "${Logs_Folder}"
-touch "${Log_Path}"
 
 #Change permission
-chmod -R 777 $Install_CLI_path
-chmod -R 777 $Log_Path
+chmod -R 777 ${Converter_Install_CLI_path}
+chmod -R 777 ${Uploader_Install_CLI_path}
+chmod -R 777 ${Logs_Folder}
 
 touch "${Install_dir}/ovf_converter"
 echo  "#!/bin/sh" > "${Install_dir}/ovf_converter"
-echo  "python ${Install_CLI_path} \"\$@\"" >> "${Install_dir}/ovf_converter"
+echo  "python3 ${Converter_Install_CLI_path} \"\$@\"" >> "${Install_dir}/ovf_converter"
 chmod a+x "${Install_dir}/ovf_converter"
 
-echo '	
- #################################################################
- #####             Done                                #####
- #################################################################'
+touch "${Install_dir}/ovf_uploader"
+echo  "#!/bin/sh" > "${Install_dir}/ovf_uploader"
+echo  "python3 ${Uploader_Install_CLI_path} \"\$@\"" >> "${Install_dir}/ovf_uploader"
+chmod a+x "${Install_dir}/ovf_uploader"
+
+echo "Installation complete.  More information can be found at:"
+echo "  ${Install_dir}/OVF_converter/Usage.txt"
