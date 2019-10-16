@@ -747,15 +747,26 @@ function cmp_overwrite() {
     fi
 }
 
-function generate_config_log_folders() {
-    echo "Generating config and log folders"
-    $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/docker-compose.yaml $OSM_DOCKER_WORK_DIR/docker-compose.yaml
-    $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/prometheus.yml $OSM_DOCKER_WORK_DIR/prometheus.yml
-    echo "Finished generation of config and log folders"
-}
 
 function generate_docker_env_files() {
+    echo "Doing a backup of existing env files"
+    $WORKDIR_SUDO cp $OSM_DOCKER_WORK_DIR/keystone-db.env{,~}
+    $WORKDIR_SUDO cp $OSM_DOCKER_WORK_DIR/keystone.env{,~}
+    $WORKDIR_SUDO cp $OSM_DOCKER_WORK_DIR/lcm.env{,~}
+    $WORKDIR_SUDO cp $OSM_DOCKER_WORK_DIR/lwui.env{,~}
+    $WORKDIR_SUDO cp $OSM_DOCKER_WORK_DIR/mon.env{,~}
+    $WORKDIR_SUDO cp $OSM_DOCKER_WORK_DIR/nbi.env{,~}
+    $WORKDIR_SUDO cp $OSM_DOCKER_WORK_DIR/pol.env{,~}
+    $WORKDIR_SUDO cp $OSM_DOCKER_WORK_DIR/ro-db.env{,~}
+    $WORKDIR_SUDO cp $OSM_DOCKER_WORK_DIR/ro.env{,~}
+
     echo "Generating docker env files"
+    # Docker-compose
+    $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/docker-compose.yaml $OSM_DOCKER_WORK_DIR/docker-compose.yaml
+
+    # Prometheus
+    $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/prometheus.yml $OSM_DOCKER_WORK_DIR/prometheus.yml
+
     # LCM
     if [ ! -f $OSM_DOCKER_WORK_DIR/lcm.env ]; then
         echo "OSMLCM_DATABASE_COMMONKEY=${OSM_DATABASE_COMMONKEY}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lcm.env
@@ -1049,7 +1060,6 @@ function install_lightweight() {
     [ -z "$DOCKER_NOBUILD" ] && generate_docker_images
     track docker_build
     generate_docker_env_files
-    generate_config_log_folders
 
     # remove old stack
     remove_stack $OSM_STACK_NAME
