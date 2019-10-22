@@ -1,3 +1,23 @@
+<!--
+ Copyright 2016-2019 VMware Inc.
+ This file is part of ETSI OSM
+ All Rights Reserved.
+
+ Licensed under the Apache License, Version 2.0 (the "License"); you may
+ not use this file except in compliance with the License. You may obtain
+ a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ License for the specific language governing permissions and limitations
+ under the License.
+
+ For those usages not covered by the Apache License, Version 2.0 please
+ contact:  osslegalrouting@vmware.com
+-->
 <?xml version="1.0" encoding="UTF-8"?>
 <Envelope xmlns="http://schemas.dmtf.org/ovf/envelope/1" xmlns:cim="http://schemas.dmtf.org/wbem/wscim/1/common" xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1" xmlns:rasd="http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_ResourceAllocationSettingData" xmlns:vmw="http://www.vmware.com/schema/ovf" xmlns:vssd="http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_VirtualSystemSettingData" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <References>
@@ -7,15 +27,15 @@
     <Info>Virtual disk information</Info>
     <Disk ovf:capacity="1" ovf:capacityAllocationUnits="byte" ovf:diskId="vmdisk1" ovf:fileRef="file1" ovf:format="http://www.vmware.com/interfaces/specifications/vmdk.html#streamOptimized" ovf:populatedSize="0"/>
   </DiskSection>
-  
+
   <NetworkSection>
-	<Info>List of logical networks used in the package</Info> 
+    <Info>List of logical networks used in the package</Info>
  </NetworkSection>
- 	
+
  <VirtualSystem ovf:id="vm">
     <Info>A virtual machine</Info>
     <Name>Virtual machine name</Name>
-    
+
     <OperatingSystemSection ovf:id="1">
       <Info>The kind of installed guest operating system</Info>
       <Description>Other (32-bit)</Description>
@@ -24,12 +44,12 @@
     <VirtualHardwareSection>
       <Info>Virtual hardware requirements</Info>
       <System>
-		<vssd:ElementName>Virtual Hardware Family</vssd:ElementName>
-		<vssd:InstanceID>0</vssd:InstanceID>
-		<vssd:VirtualSystemIdentifier>Test1</vssd:VirtualSystemIdentifier>
-		<vssd:VirtualSystemType>vmx-7</vssd:VirtualSystemType>
-	  </System>
-           
+        <vssd:ElementName>Virtual Hardware Family</vssd:ElementName>
+        <vssd:InstanceID>0</vssd:InstanceID>
+        <vssd:VirtualSystemIdentifier>Test1</vssd:VirtualSystemIdentifier>
+        <vssd:VirtualSystemType>vmx-14</vssd:VirtualSystemType>
+      </System>
+
       <Item>
         <rasd:AllocationUnits>hertz * 10^6</rasd:AllocationUnits>
         <rasd:Description>Number of Virtual CPUs</rasd:Description>
@@ -82,6 +102,6 @@
       <vmw:Config ovf:required="false" vmw:key="tools.syncTimeWithHost" vmw:value="true"/>
       <vmw:Config ovf:required="false" vmw:key="tools.toolsUpgradePolicy" vmw:value="upgradeAtPowerCycle"/>
     </VirtualHardwareSection>
-		
+
   </VirtualSystem>
 </Envelope>
