@@ -36,6 +36,8 @@ version_date = "Apr 2018"
 class ArgumentParserError(Exception):
     pass
 
+class DescriptorValidationError(Exception):
+    pass
 
 def usage():
     print("Usage: {} [options] FILE".format(sys.argv[0]))
@@ -152,7 +154,9 @@ if __name__ == "__main__":
             vnfd_list = vnfd_descriptor["vnfd"]
             mgmt_iface = False
             for vnfd in vnfd_list:
-                vdu_list = vnfd["vdu"]
+                if "vdu" not in vnfd and "kdu" not in vnfd:
+                    raise DescriptorValidationError("vdu or kdu not present in the descriptor")
+                vdu_list = vnfd.get("vdu",[])
                 for vdu in vdu_list:
                     interface_list = []
                     external_interface_list = vdu.pop("external-interface", ())
@@ -175,6 +179,7 @@ if __name__ == "__main__":
                 # Mrityunjay yadav: Verify charm if included in vnf
                 if vnfd.get("vnf-configuration", False) and validate_charms:
                     validate_charm(vnfd["vnf-configuration"], input_file_name)
+                kdu_list = vnfd.get("kdu",[])
 
             if not mgmt_iface:
                 raise KeyError("'mgmt-interface' is a mandatory field and it is not defined")
@@ -199,10 +204,12 @@ if __name__ == "__main__":
             mark = exc.problem_mark
             error_pos = "at line:%s column:%s" % (mark.line + 1, mark.column + 1)
         print("Error loading file '{}'. yaml format error {}".format(input_file_name, error_pos), file=sys.stderr)
+    except DescriptorValidationError as e:
+        print(str(e), file=sys.stderr)
     except ArgumentParserError as e:
         print(str(e), file=sys.stderr)
     except IOError as e:
-            print("Error loading file '{}': {}".format(file_name, e), file=sys.stderr)
+        print("Error loading file '{}': {}".format(file_name, e), file=sys.stderr)
     except ImportError as e:
         print ("Package python-osm-im not installed: {}".format(e), file=sys.stderr)
     except Exception as e:
