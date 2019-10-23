@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 ##
@@ -110,7 +110,7 @@ if __name__ == "__main__":
 
         for o, a in opts:
             if o in ("-v", "--version"):
-                print ("test descriptor version THREE " + __version__ + ' ' + version_date)
+                print("test descriptor version THREE " + __version__ + ' ' + version_date)
                 sys.exit()
             elif o in ("-h", "--help"):
                 usage()
