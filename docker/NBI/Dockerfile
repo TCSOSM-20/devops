@@ -25,7 +25,7 @@ RUN apt-get update && apt-get -y install curl software-properties-common
 RUN apt-get update && apt-get install -y git python3 python3-jsonschema \
     python3-pymongo python3-yaml python3-pip python3-keystoneclient \
     && pip3 install -U pip \
-    && python3 -m pip install aiokafka aiohttp cherrypy==18.0.0 pyangbind keystoneauth1 \
+    && python3 -m pip install aiokafka aiohttp cherrypy==18.1.2 pyangbind keystoneauth1 \
     && mkdir -p /app/storage/kafka && mkdir -p /app/log
 
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
@@ -65,6 +65,8 @@ VOLUME /app/log
 # server
 ENV OSMNBI_SOCKET_HOST     0.0.0.0
 ENV OSMNBI_SOCKET_PORT     9999
+ENV OSMNBI_SERVER_SSL_CERTIFICATE               /app/osm_nbi/http/cert.pem
+ENV OSMNBI_SERVER_SSL_PRIVATE_KEY               /app/osm_nbi/http/privkey.pem
 # storage
 ENV OSMNBI_STORAGE_PATH    /app/storage
 # database
@@ -75,9 +77,6 @@ ENV OSMNBI_DATABASE_URI   mongodb://mongo:27017
 
 # web
 ENV OSMNBI_STATIC_DIR      /app/osm_nbi/html_public
-# logs
-ENV OSMNBI_LOG_FILE        /app/log
-ENV OSMNBI_LOG_LEVEL       DEBUG
 # message
 ENV OSMNBI_MESSAGE_DRIVER  kafka
 ENV OSMNBI_MESSAGE_HOST    kafka
@@ -103,4 +102,5 @@ HEALTHCHECK --start-period=120s --interval=10s --timeout=5s --retries=5 \
   CMD curl -k https://localhost:9999/osm/ | grep Welcome || exit 1
 
 # Run app.py when the container launches
-CMD ["python3", "/usr/lib/python3/dist-packages/osm_nbi/nbi.py"]
+CMD python3 -m osm_nbi.nbi
+
