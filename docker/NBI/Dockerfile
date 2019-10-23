@@ -18,11 +18,11 @@
 
 # This creates osm/NBI docker from local NBI source code
 
-FROM ubuntu:16.04
+FROM ubuntu:18.04
 
-RUN apt-get update && apt-get -y install curl software-properties-common
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -y install curl software-properties-common
 
-RUN apt-get update && apt-get install -y git python3 python3-jsonschema \
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y git python3 python3-jsonschema \
     python3-pymongo python3-yaml python3-pip python3-keystoneclient \
     && pip3 install -U pip \
     && python3 -m pip install aiokafka aiohttp cherrypy==18.1.2 pyangbind keystoneauth1 \
