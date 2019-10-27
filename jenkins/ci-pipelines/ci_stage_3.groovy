@@ -33,7 +33,7 @@ properties([
         string(defaultValue: '', description: '', name: 'UPSTREAM_JOB_NAME'),
         string(defaultValue: '', description: '', name: 'UPSTREAM_JOB_NUMBER'),
         string(defaultValue: '', description: '', name: 'UPSTREAM_JOB_NUMBER'),
-        string(defaultValue: 'dpkg1', description: '', name: 'GPG_KEY_NAME'),
+        string(defaultValue: 'OSMETSI', description: '', name: 'GPG_KEY_NAME'),
         string(defaultValue: 'artifactory-osm', description: '', name: 'ARTIFACTORY_SERVER'),
         string(defaultValue: 'osm-stage_4', description: '', name: 'DOWNSTREAM_STAGE_NAME'),
         string(defaultValue: '6.0.2rc1', description: '', name: 'DOCKER_TAG'),
