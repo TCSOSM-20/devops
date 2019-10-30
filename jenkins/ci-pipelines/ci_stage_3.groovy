@@ -309,13 +309,9 @@ node("${params.NODE}") {
                 stage_archive = false
                 stage("System Integration Test") {
                     if ( params.DO_ROBOT ) {
-                        steps {
-                            run_robot_systest(container_name,container_name,params.TEST_NAME,params.ROBOT_VIM)
-                        }
+                        run_robot_systest(container_name,container_name,params.TEST_NAME,params.ROBOT_VIM)
                     } else {
-                        steps{
-                            run_systest(container_name,container_name,"openstack_stage_4",params.HIVE_VIM_1)
-                        }
+                        run_systest(container_name,container_name,"openstack_stage_4",params.HIVE_VIM_1)
                     }
 
                     if ( ! currentBuild.result.equals('UNSTABLE') ) {
