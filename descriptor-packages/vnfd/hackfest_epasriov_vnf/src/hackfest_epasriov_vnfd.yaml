@@ -1,3 +1,28 @@
+# -*- coding: utf-8 -*-
+
+##
+# Copyright 2019 ETSI
+#
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+##
+
+## Change log:
+# 1. Feature 7829: Mrityunjay Yadav, Jayant Madavi : MY00514913@techmahindra.com
+# 19-aug-2019 : changed vdu image from hackfest3-mgmt & hackfest-pktgen to ubuntu1604
+##
+
 vnfd:vnfd-catalog:
     vnfd:
     -   id: hackfest_epasriov-vnf
@@ -28,7 +53,7 @@ vnfd:vnfd-catalog:
         vdu:
         -   id: mgmtVM
             name: mgmtVM
-            image: hackfest3-mgmt
+            image: ubuntu1604
             count: '1'
             vm-flavor:
                 vcpu-count: '1'
@@ -64,7 +89,7 @@ vnfd:vnfd-catalog:
             cloud-init-file: cloud-config.txt
         -   id: dataVM
             name: dataVM
-            image: hackfest-pktgen
+            image: ubuntu1604
             count: '1'
             vm-flavor:
                 vcpu-count: '8'

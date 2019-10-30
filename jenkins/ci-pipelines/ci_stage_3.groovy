@@ -19,7 +19,9 @@
  * 1. Bug 745 : Jayant Madavi, Mrityunjay Yadav : JM00553988@techmahindra.com : 23-july-2019 : Improvement to the code, typically we have 2 *    or more branches whose build gets triggered, ex master & release branch, the previous code was removing any/all docker. 
  *	  Now removing previous docker of the same branch, so that the other branch failed docker should not be removed. It also 
  *    acts as clean-up for previous docker remove failure.
+ * 2. Feature 7829 : Mrityunjay Yadav, Jayant Madavi: MY00514913@techmahindra.com : 19-Aug-2019 : Added a parameters & function to invoke Robot test.
  */
+
 properties([
     parameters([
         string(defaultValue: env.GERRIT_BRANCH, description: '', name: 'GERRIT_BRANCH'),
@@ -47,6 +49,9 @@ properties([
         booleanParam(defaultValue: true, description: '', name: 'DO_DOCKERPUSH'),
         booleanParam(defaultValue: false, description: '', name: 'SAVE_ARTIFACTS_OVERRIDE'),
         string(defaultValue: '/home/jenkins/hive/openstack-etsi.rc', description: '', name: 'HIVE_VIM_1'),
+        booleanParam(defaultValue: true, description: '', name: 'DO_ROBOT'),
+        string(defaultValue: 'sanity', description: 'smoke/vim/sanity/comprehensive are the options', name: 'TEST_NAME'),
+        string(defaultValue: '/home/jenkins/hive/robot-systest.cfg', description: '', name: 'ROBOT_VIM'),
     ])
 ])
 
@@ -68,6 +73,30 @@ def run_systest(stackName,tagName,testName,envfile=null) {
     sh "docker run --network net${stackName} --env-file ${envfile} -v ${tempdir}:/usr/share/osm-devops/systest/reports opensourcemano/osmclient:${tagName} make -C /usr/share/osm-devops/systest ${testName}"
     sh "cp ${tempdir}/* ."
     junit  '*.xml'
+}
+
+def run_robot_systest(stackName,tagName,testName,envfile=null) {
+    tempdir = sh(returnStdout: true, script: "mktemp -d").trim()
+    if ( !envfile )
+    {
+        sh(script: "touch ${tempdir}/env")
+        envfile="${tempdir}/env"
+    }
+    sh "docker run --network net${stackName} --env-file ${envfile} -v ${tempdir}:/usr/share/osm-devops/robot-systest/reports opensourcemano/osmclient:${tagName} bash -C /usr/share/osm-devops/robot-systest/run_test.sh --do_install -t ${testName}"
+    sh "cp ${tempdir}/* ."
+    outputDirectory = sh(returnStdout: true, script: "pwd").trim()
+    println ("Present Directory is : ${outputDirectory}")
+    step([
+        $class : 'RobotPublisher',
+        outputPath : "${outputDirectory}",
+        outputFileName : "*.xml",
+        disableArchiveOutput : false,
+        reportFileName : "report.html",
+        logFileName : "log.html",
+        passThreshold : 80,
+        unstableThreshold: 60.0,
+        otherFiles : "*.png",
+    ])
 }
 
 node("${params.NODE}") {
@@ -278,8 +307,16 @@ node("${params.NODE}") {
             if ( params.DO_STAGE_4 ) {
                 // override stage_archive to only archive on stable
                 stage_archive = false
-                stage("stage_4") {
-                    run_systest(container_name,container_name,"openstack_stage_4",params.HIVE_VIM_1)
+                stage("System Integration Test") {
+                    if ( params.DO_ROBOT ) {
+                        steps {
+                            run_robot_systest(container_name,container_name,params.TEST_NAME,params.ROBOT_VIM)
+                        }
+                    } else {
+                        steps{
+                            run_systest(container_name,container_name,"openstack_stage_4",params.HIVE_VIM_1)
+                        }
+                    }
 
                     if ( ! currentBuild.result.equals('UNSTABLE') ) {
                         stage_archive = keep_artifacts
@@ -314,8 +351,6 @@ node("${params.NODE}") {
             currentBuild.result = 'FAILURE'
         }
         finally {
-
-
             if ( params.DO_INSTALL ) {
                 if (error) {
                     if ( !params.SAVE_CONTAINER_ON_FAIL ) {
