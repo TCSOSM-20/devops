@@ -27,14 +27,14 @@ ${password}     "admin"
 ${ip}      "1.1.1.1"
 ${type}     "onos"
 ${port}     "5858"
-${dpid}   ""
+${dpid}   "a7:2f:aa:be:C3:c1:fe:C9"
 
 
 *** Keywords ***
 Create SDNC Account
     [Documentation]  create new sdnc account
 
-     ${rc}    ${stdout}=      Run and Return RC and Output	 osm sdnc-create --name ${name} --type ${type} --ip-address ${ip} --user ${user} --password ${password} --port ${port} --switch_dpid ${dpid}     return_rc=True
+     ${rc}    ${stdout}=      Run and Return RC and Output	 osm sdnc-create --name ${name} --type ${type} --ip_address ${ip} --user ${user} --password ${password} --port ${port} --switch_dpid ${dpid}
     log  ${rc}
     log  ${stdout}
     Should Be Equal As Integers    ${rc}    ${success_return_code}
@@ -50,7 +50,7 @@ Get SDNC List
 Show SDNC Account
     [Documentation]  Get sdnc account details
 
-    ${rc}    ${stdout}=      Run and Return RC and Output	 osm sdnc-show ${name}     return_rc=True
+    ${rc}    ${stdout}=      Run and Return RC and Output	 osm sdnc-show ${name}
     log  ${rc}
     log  ${stdout}
     Should Be Equal As Integers    ${rc}    ${success_return_code}
@@ -59,7 +59,7 @@ Show SDNC Account
 Delete SDNC Account
     [Documentation]  Get sdnc account details
 
-    ${rc}    ${stdout}=      Run and Return RC and Output	 osm sdnc-delete ${name}     return_rc=True
+    ${rc}    ${stdout}=      Run and Return RC and Output	 osm sdnc-delete ${name}
     log  ${rc}
     log  ${stdout}
     Should Be Equal As Integers    ${rc}    ${success_return_code}

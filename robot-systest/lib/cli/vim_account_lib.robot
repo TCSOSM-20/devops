@@ -22,13 +22,19 @@
 # 1. Feature 7829: Jayant Madavi, Mrityunjay Yadav : MY00514913@techmahindra.com : 06-sep-2019
 ##
 
+*** Settings ***
+Library     OperatingSystem
+Library     String
+Library     Collections
+Library     ../custom_lib.py
+
 
 *** Variables ***
 ${success_return_code}    0
 ${name}     "helloworld-os"
 ${user}     "robottest"
 ${password}     "fred"
-${authurl}      "https://169.254.169.245/"
+${authurl}      "https://127.0.0.1/"
 ${type}     "openstack"
 ${desc}     "a test vim"
 ${tenant}   "robottest2"
@@ -63,16 +69,18 @@ Delete Vim Account
 VIM Setup To Launch Network Services
     [Documentation]  Setup a VIM to launch network services
 
+    set global variable    @{vim}
     ${vmware_url}=  Get Environment Variable    VCD_AUTH_URL   ${EMPTY}
     ${openstack_url}=   Get Environment Variable    OS_AUTH_URL   ${EMPTY}
     ${vmware_vim}=    Run Keyword And Return If   '${vmware_url}'!='${EMPTY}'   Setup Vmware Vim   ${vmware_url}   'vmware'      'pytest system test'
     ${openstack_vim}=    Run Keyword And Return If   '${openstack_url}'!='${EMPTY}'   Setup Openstack Vim    ${openstack_url}    'openstack'   'pytest system test'
-
+    Should Not Be Empty    ${vim}    VIM details not provided
     Log Many   @{vim}
 
 
 Setup Openstack Vim
     [Documentation]  Openstack Vim Account Setup
+    [Tags]    vim-setup
     [Arguments]  ${authurl}  ${type}     ${desc}
 
     ${user}=  Get Environment Variable    OS_USERNAME   ''
@@ -84,12 +92,17 @@ Setup Openstack Vim
     ${rc}   ${stdout}=      Run and Return RC and Output	    osm vim-create --name ${vim_name} --user ${user} --password ${password} --auth_url ${authurl} --tenant ${tenant} --account_type ${type} --description ${desc} --config ${vim-config}
     log  ${stdout}
     Should Be Equal As Integers    ${rc}    ${success_return_code}
+    Sleep    30s    Wait for to get vim ready
+    ${rc}   ${vim_detail}=      Run and Return RC and Output    osm vim-show ${vim_name}
+    Should Contain    ${vim_detail}    "operationalState": "ENABLED"    msg=Openstack vim is not available    values=False
     Append To List     ${vim}       ${stdout}
+
     [Return]  ${stdout}
 
 
 Setup Vmware Vim
     [Documentation]  Vmware Vim Account Setup
+    [Tags]    vim-setup
     [Arguments]  ${authurl}  ${type}     ${desc}
 
     ${user}=  Get Environment Variable    VCD_USERNAME   ''
@@ -102,7 +115,11 @@ Setup Vmware Vim
     ${rc}   ${stdout}=      Run and Return RC and Output	    osm vim-create --name ${vim_name} --user ${user} --password ${password} --auth_url ${authurl} --tenant ${tenant} --account_type ${type} --description ${desc} --config ${vim-config}
     log  ${stdout}
     Should Be Equal As Integers    ${rc}    ${success_return_code}
+    Sleep    30s    Wait for to get vim ready
+    ${rc}   ${vim_detail}=      Run and Return RC and Output    osm vim-show ${vim_name}
+    Should Contain    ${vim_detail}    "operationalState": "ENABLED"    msg=VMWare VCD vim is not available    values=False
     Append To List     ${vim}       ${stdout}
+
     [Return]  ${stdout}
 
 

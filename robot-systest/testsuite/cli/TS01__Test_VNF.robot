@@ -42,8 +42,6 @@ Suite Teardown     Run Keyword And Ignore Error    Test Cleanup
 @{vnfd_ids}
 @{nsd_ids}
 @{ns_ids}
-@{vim}
-#${vim_name}     robot_test
 
 
 *** Test Cases ***
@@ -66,10 +64,8 @@ Create NS Descriptor Test
 Network Service Instance Test
     [Documentation]  Launch and terminate network services
     [Tags]    sanity
-    [Setup]  VIM Setup To Launch Network Services
     [Teardown]  Run Keyword And Ignore Error    Network Service Instance Cleanup
 
-    Should Not Be Empty    ${vim}    VIM details not provided
     :FOR    ${vim_name}    IN    @{vim}
     \    Launch Network Services and Return    ${vim_name}
 
@@ -104,6 +100,3 @@ Network Service Instance Cleanup
 
     :FOR    ${ns}  IN   @{ns_ids}
     \   Force Delete NS   ${ns}
-
-    :FOR    ${vim_id}  IN   @{vim}
-    \   Force Delete Vim Account    ${vim_id}

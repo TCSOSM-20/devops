@@ -43,7 +43,6 @@ Suite Teardown     Run Keyword And Ignore Error    Test Cleanup
 ${nsd_id}
 @{nsd_ids}
 @{ns_ids}
-@{vim}
 
 
 *** Test Cases ***
@@ -66,10 +65,8 @@ Create Hackfest Basic NS Descriptor
 Network Service Instance Test
     [Documentation]  Launch and terminate network services
     [Tags]   comprehensive   hackfest_basic_ns
-    [Setup]  VIM Setup To Launch Network Services
     [Teardown]  Run Keyword And Ignore Error    Network Service Instance Cleanup
 
-    Should Not Be Empty    ${vim}    VIM details not provided
     :FOR    ${vim_name}    IN    @{vim}
     \    Launch Network Services and Return    ${vim_name}
 
@@ -104,6 +101,3 @@ Network Service Instance Cleanup
 
     :FOR    ${ns_id}  IN   @{ns_ids}
     \   Force Delete NS   ${ns_id}
-
-    :FOR    ${vim_id}  IN   @{vim}
-    \   Force Delete Vim Account    ${vim_id}

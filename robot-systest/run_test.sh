@@ -32,11 +32,6 @@ robot_prerequisite(){
     echo -e "\nInstalling robot requirements"
     # installing python packages
     pip install haikunator requests robotframework robotframework-seleniumlibrary robotframework-requests
-
-    # installing chrome driver and chrome for UI testing
-    curl -sS -o - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
-    echo "deb [arch=amd64]  http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list
-    apt-get update && apt-get -y install google-chrome-stable chromium-chromedriver
 }
 
 while getopts ":t:-:" o; do
@@ -65,7 +60,7 @@ if [[ "$TEST" == "vim" ]]; then
     exit 0
 elif [[ "$TEST" == "smoke" ]]; then
     echo "Robot Framework SMOKE test"
-    robot -d $BASEDIR/reports -i smoke $BASEDIR/testsuite/
+    robot --removekeywords tag:vim-setup --removekeywords WUKS -d $BASEDIR/reports -i smoke $BASEDIR/testsuite/
     exit 0
 elif [[ "$TEST" == "sanity" ]]; then
     echo "Robot Framework Cirros VNF Test"
@@ -81,10 +76,16 @@ elif [[ "$TEST" == "sanity" ]]; then
         ovf_converter $BASEDIR/images/cache/cirros-0.3.5-x86_64-disk.img -n cirros
         python $TOPDIR/tools/vmware_ovf_upload.py $VCD_AUTH_URL $VCD_USERNAME $VCD_PASSWORD $VCD_ORGANIZATION $BASEDIR/images/cache/cirros.ovf
     fi
-    robot -d $BASEDIR/reports -i sanity $BASEDIR/testsuite/
+    robot --removekeywords tag:vim-setup --removekeywords WUKS -d $BASEDIR/reports -i sanity $BASEDIR/testsuite/
     exit 0
 elif [[ "$TEST" == "comprehensive" ]]; then
     echo "Robot Framework Comprehensive Test"
+    echo "Installing chrome driver and chrome for UI testing"
+    # installing chrome driver and chrome for UI testing
+    curl -sS -o - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
+    echo "deb [arch=amd64]  http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list
+    apt-get update && apt-get -y install google-chrome-stable chromium-chromedriver
+    echo "Checking of image over VIMs"
     mkdir -p $BASEDIR/images/cache
     if [[ ! -z $OS_AUTH_URL ]]; then
         (openstack image show ubuntu1604) || (wget -r -nc https://cloud-images.ubuntu.com/xenial/current/xenial-server-cloudimg-amd64-disk1.img -O $BASEDIR/images/cache/xenial-server-cloudimg-amd64-disk1.img && make $BASEDIR/images/cache/xenial-server-cloudimg-amd64-disk1.img && openstack image create --file $BASEDIR/images/cache/xenial-server-cloudimg-amd64-disk1.img ubuntu1604)
@@ -98,7 +99,7 @@ elif [[ "$TEST" == "comprehensive" ]]; then
         ovf_converter $BASEDIR/images/cache/xenial-server-cloudimg-amd64-disk1.img -n ubuntu1604
         python $TOPDIR/tools/vmware_ovf_upload.py $VCD_AUTH_URL $VCD_USERNAME $VCD_PASSWORD $VCD_ORGANIZATION $BASEDIR/images/cache/ubuntu1604.ovf
     fi
-    robot -d $BASEDIR/reports -i comprehensive $BASEDIR/testsuite/
+    robot --removekeywords tag:vim-setup --removekeywords WUKS -d $BASEDIR/reports -i comprehensive $BASEDIR/testsuite/
     exit 0
 else
     echo "wrong test provided"

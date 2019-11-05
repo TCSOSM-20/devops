@@ -43,7 +43,6 @@ Suite Teardown     Run Keyword And Ignore Error    Test Cleanup
 ${nsd_id}
 @{nsd_ids}
 @{ns_ids}
-@{vim}
 ${vnfdftpPath}    https://osm-download.etsi.org/ftp/osm-6.0-six/7th-hackfest/packages/hackfest_simplecharm_vnf.tar.gz
 ${nsdftpPath}    https://osm-download.etsi.org/ftp/osm-6.0-six/7th-hackfest/packages/hackfest_simplecharm_ns.tar.gz
 
@@ -54,7 +53,7 @@ Create Hackfest Simple Charm VNF Descriptor
 
     #Build VNF Descriptor    ${vnfdPckgPath}
     #Workarround for charm build issue
-    ${rc}   ${stdout}=      Run and Return RC and Output	    wget -P '${CURDIR}${/}../../..${vnfdPckgPath}${/}build/' ${vnfdftpPath}
+    ${rc}   ${stdout}=      Run and Return RC and Output    wget -P '${CURDIR}${/}../../..${vnfdPckgPath}${/}build/' ${vnfdftpPath}
     ${vnfd_id}=    Create VNFD    '${CURDIR}${/}../../..${vnfdPckgPath}${vnfdPckg}'
     Append To List     ${vnfd_ids}       ${vnfd_id}
 
@@ -63,7 +62,7 @@ Create Hackfest Simple Charm NS Descriptor
     [Tags]   hackfest_simplecharm    comprehensive
 
     #Build NS Descriptor    ${nsdPckgPath}
-	${rc}   ${stdout}=      Run and Return RC and Output	    wget -P '${CURDIR}${/}../../..${nsdPckgPath}${/}build/' ${nsdftpPath}
+    ${rc}   ${stdout}=      Run and Return RC and Output    wget -P '${CURDIR}${/}../../..${nsdPckgPath}${/}build/' ${nsdftpPath}
     ${nsd_id}=    Create NSD    '${CURDIR}${/}../../..${nsdPckgPath}${nsdPckg}'
     Append To List     ${nsd_ids}       ${nsd_id}
 
@@ -71,10 +70,8 @@ Create Hackfest Simple Charm NS Descriptor
 Network Service Instance Test
     [Documentation]  Launch and terminate network services
     [Tags]   hackfest_simplecharm    comprehensive
-    [Setup]  VIM Setup To Launch Network Services
     [Teardown]  Run Keyword And Ignore Error    Network Service Instance Cleanup
 
-    Should Not Be Empty    ${vim}    VIM details not provided
     :FOR    ${vim_name}    IN    @{vim}
     \    Launch Network Services and Return    ${vim_name}
 
@@ -109,6 +106,3 @@ Network Service Instance Cleanup
 
     :FOR    ${ns_id}  IN   @{ns_ids}
     \   Force Delete NS   ${ns_id}
-
-    :FOR    ${vim_id}  IN   @{vim}
-    \   Force Delete Vim Account    ${vim_id}

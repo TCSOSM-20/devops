@@ -79,4 +79,4 @@ Delete Vim Account Test
 Setup OSM Client
     evaluate    sys.path.append('${CURDIR}${/}../../lib/client_lib')    modules=sys
     ${host}=    Get Environment Variable    OSM_HOSTNAME    127.0.0.1
-    Import Library    ClientLib    host=${host}    WITH NAME    osmclient
+    Import Library    client_lib.ClientLib    host=${host}    WITH NAME    osmclient
