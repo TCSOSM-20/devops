@@ -646,6 +646,10 @@ function juju_createcontroller() {
 }
 
 function juju_createproxy() {
+    echo -e "\nChecking required packages: iptables-persistent"
+    dpkg -l iptables-persistent &>/dev/null || ! echo -e "    Not installed.\nInstalling iptables-persistent requires root privileges" || \
+    sudo DEBIAN_FRONTEND=noninteractive apt-get -yq install iptables-persistent
+
     if ! sudo iptables -t nat -C PREROUTING -p tcp -m tcp --dport 17070 -j DNAT --to-destination $OSM_VCA_HOST; then
         sudo iptables -t nat -A PREROUTING -p tcp -m tcp --dport 17070 -j DNAT --to-destination $OSM_VCA_HOST
         sudo netfilter-persistent save
