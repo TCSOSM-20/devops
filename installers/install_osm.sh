@@ -1,8 +1,69 @@
 #!/bin/bash
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
 REPOSITORY_BASE=https://osm-download.etsi.org/repository/osm/debian
 RELEASE=ReleaseSIX
 REPOSITORY=stable
 DOCKER_TAG=6
+
+function usage(){
+    echo -e "usage: $0 [OPTIONS]"
+    echo -e "Install OSM from binaries or source code (by default, from binaries)"
+    echo -e "  OPTIONS"
+    echo -e "     -r <repo>:      use specified repository name for osm packages"
+    echo -e "     -R <release>:   use specified release for osm binaries (deb packages, lxd images, ...)"
+    echo -e "     -u <repo base>: use specified repository url for osm packages"
+    echo -e "     -k <repo key>:  use specified repository public key url"
+    echo -e "     -b <refspec>:   install OSM from source code using a specific branch (master, v2.0, ...) or tag"
+    echo -e "                     -b master          (main dev branch)"
+    echo -e "                     -b v2.0            (v2.0 branch)"
+    echo -e "                     -b tags/v1.1.0     (a specific tag)"
+    echo -e "                     ..."
+    echo -e "     -s <stack name> user defined stack name, default is osm"
+    echo -e "     -H <VCA host>   use specific juju host controller IP"
+    echo -e "     -S <VCA secret> use VCA/juju secret key"
+    echo -e "     -P <VCA pubkey> use VCA/juju public key file"
+    echo -e "     -C <VCA cacert> use VCA/juju CA certificate file"
+    echo -e "     -A <VCA apiproxy> use VCA/juju API proxy"
+    echo -e "     --vimemu:       additionally deploy the VIM emulator as a docker container"
+    echo -e "     --elk_stack:    additionally deploy an ELK docker stack for event logging"
+    echo -e "     --pm_stack:     additionally deploy a Prometheus+Grafana stack for performance monitoring (PM)"
+    echo -e "     -m <MODULE>:    install OSM but only rebuild the specified docker images (LW-UI, NBI, LCM, RO, MON, POL, KAFKA, MONGO, PROMETHEUS, KEYSTONE-DB, NONE)"
+    echo -e "     -o <ADDON>:     ONLY (un)installs one of the addons (vimemu, elk_stack, pm_stack)"
+    echo -e "     -D <devops path> use local devops installation path"
+    echo -e "     -w <work dir>   Location to store runtime installation"
+    echo -e "     -t <docker tag> specify osm docker tag (default is latest)"
+    echo -e "     --nolxd:        do not install and configure LXD, allowing unattended installations (assumes LXD is already installed and confifured)"
+    echo -e "     --nodocker:     do not install docker, do not initialize a swarm (assumes docker is already installed and a swarm has been initialized)"
+    echo -e "     --nojuju:       do not juju, assumes already installed"
+    echo -e "     --nodockerbuild:do not build docker images (use existing locally cached images)"
+    echo -e "     --nohostports:  do not expose docker ports to host (useful for creating multiple instances of osm on the same host)"
+    echo -e "     --nohostclient: do not install the osmclient"
+    echo -e "     --uninstall:    uninstall OSM: remove the containers and delete NAT rules"
+    echo -e "     --source:       install OSM from source code using the latest stable tag"
+    echo -e "     --develop:      (deprecated, use '-b master') install OSM from source code using the master branch"
+    echo -e "     --soui:         install classic build of OSM (Rel THREE v3.1, based on LXD containers, with SO and UI)"
+    echo -e "     --lxdimages:    (only for Rel THREE with --soui) download lxd images from OSM repository instead of creating them from scratch"
+    echo -e "     --pullimages:   pull/run osm images from docker.io/opensourcemano"
+    echo -e "     -l <lxd_repo>:  (only for Rel THREE with --soui) use specified repository url for lxd images"
+    echo -e "     -p <path>:      (only for Rel THREE with --soui) use specified repository path for lxd images"
+    echo -e "     --nat:          (only for Rel THREE with --soui) install only NAT rules"
+    echo -e "     --noconfigure:  (only for Rel THREE with --soui) DO NOT install osmclient, DO NOT install NAT rules, DO NOT configure modules"
+    echo -e "     --showopts:     print chosen options and exit (only for debugging)"
+    echo -e "     -y:             do not prompt for confirmation, assumes yes"
+    echo -e "     -h / --help:    print this help"
+}
 
 add_repo() {
   REPO_CHECK="^$1"
@@ -28,6 +89,28 @@ add_repo() {
 
   return 1
 }
+
+while getopts "hr:R:u:t:" o; do
+    case "${o}" in
+        h)
+            usage && exit 0
+            ;;
+        r)
+            REPOSITORY="${OPTARG}"
+            ;;
+        R)
+            RELEASE="${OPTARG}"
+            ;;
+        u)
+            REPOSITORY_BASE="${OPTARG}"
+            ;;
+        t)
+            OSM_DOCKER_TAG="${OPTARG}"
+            ;;
+        *)
+            ;;
+    esac
+done
 
 add_repo "deb [arch=amd64] $REPOSITORY_BASE/$RELEASE $REPOSITORY devops"
 sudo DEBIAN_FRONTEND=noninteractive apt-get -q update
