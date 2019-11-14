@@ -49,7 +49,7 @@ properties([
         booleanParam(defaultValue: true, description: '', name: 'DO_DOCKERPUSH'),
         booleanParam(defaultValue: false, description: '', name: 'SAVE_ARTIFACTS_OVERRIDE'),
         string(defaultValue: '/home/jenkins/hive/openstack-etsi.rc', description: '', name: 'HIVE_VIM_1'),
-        booleanParam(defaultValue: true, description: '', name: 'DO_ROBOT'),
+        booleanParam(defaultValue: false, description: '', name: 'DO_ROBOT'),
         string(defaultValue: 'sanity', description: 'smoke/vim/sanity/comprehensive are the options', name: 'TEST_NAME'),
         string(defaultValue: '/home/jenkins/hive/robot-systest.cfg', description: '', name: 'ROBOT_VIM'),
     ])
@@ -93,8 +93,8 @@ def run_robot_systest(stackName,tagName,testName,envfile=null) {
         disableArchiveOutput : false,
         reportFileName : "report.html",
         logFileName : "log.html",
-        passThreshold : 80,
-        unstableThreshold: 60.0,
+        passThreshold : 0,
+        unstableThreshold: 0,
         otherFiles : "*.png",
     ])
 }
@@ -310,15 +310,17 @@ node("${params.NODE}") {
                 stage("System Integration Test") {
                     if ( params.DO_ROBOT ) {
                         run_robot_systest(container_name,container_name,params.TEST_NAME,params.ROBOT_VIM)
-                    } else {
-                        run_systest(container_name,container_name,"openstack_stage_4",params.HIVE_VIM_1)
-                    }
+                    } //else {
+                    run_systest(container_name,container_name,"openstack_stage_4",params.HIVE_VIM_1)
+                    //}
 
-                    if ( ! currentBuild.result.equals('UNSTABLE') ) {
+                    if ( ! currentBuild.result.equals('UNSTABLE') && ! currentBuild.result.equals('FAILURE')) {
                         stage_archive = keep_artifacts
                     } else {
+                       println ("Systest test failed, throwing error")
 					   error = new Exception("Systest test failed")
 					   currentBuild.result = 'FAILURE'
+					   throw error
 					}
                 }
             }
@@ -341,10 +343,12 @@ node("${params.NODE}") {
                 }
             }
         }
-        catch(caughtError) {
-            println("Caught error!")
-            error = caughtError
+        catch(Exception ex) {
+            error = ex
             currentBuild.result = 'FAILURE'
+            println("Caught error")
+            println(ex.getMessage())
+            println(ex.printStackTrace())
         }
         finally {
             if ( params.DO_INSTALL ) {
@@ -354,7 +358,6 @@ node("${params.NODE}") {
                         sh "docker stop ${http_server_name}"
                         sh "docker rm ${http_server_name}"
                     }
-                    throw error 
                 }
                 else {
                     if ( !params.SAVE_CONTAINER_ON_PASS ) {
