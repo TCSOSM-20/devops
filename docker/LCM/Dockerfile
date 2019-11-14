@@ -42,7 +42,7 @@ RUN apt-get update && apt-get install -y git make python3 \
     && pip3 install -U aiokafka pyang lxml six enum34 \
     && pip3 install websockets==4.0.1 \
     && pip3 install requests \
-    && pip3 install cffi==1.5.2 \
+    && pip3 install cffi==1.13.2 \
     && rm -rf /var/lib/apt/lists/*
 
 # packages needed for N2VC because deb dependencies are not fine
