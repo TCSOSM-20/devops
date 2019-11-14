@@ -93,8 +93,8 @@ def run_robot_systest(stackName,tagName,testName,envfile=null) {
         disableArchiveOutput : false,
         reportFileName : "report.html",
         logFileName : "log.html",
-        passThreshold : 0,
-        unstableThreshold: 0,
+        passThreshold : 80,
+        unstableThreshold: 60.0,
         otherFiles : "*.png",
     ])
 }
@@ -310,18 +310,16 @@ node("${params.NODE}") {
                 stage("System Integration Test") {
                     if ( params.DO_ROBOT ) {
                         run_robot_systest(container_name,container_name,params.TEST_NAME,params.ROBOT_VIM)
-                    } //else {
-                    run_systest(container_name,container_name,"openstack_stage_4",params.HIVE_VIM_1)
-                    //}
+                    } else {
+                        run_systest(container_name,container_name,"openstack_stage_4",params.HIVE_VIM_1)
+                    }
 
-                    if ( ! currentBuild.result.equals('UNSTABLE') && ! currentBuild.result.equals('FAILURE')) {
+                    if ( ! currentBuild.result.equals('UNSTABLE') ) {
                         stage_archive = keep_artifacts
                     } else {
-                        println ("Systest test failed, throwing error")
-                        error = new Exception("Systest test failed")
-                        currentBuild.result = 'FAILURE'
-                        throw error
-                    }
+					   error = new Exception("Systest test failed")
+					   currentBuild.result = 'FAILURE'
+					}
                 }
             }
 
@@ -343,11 +341,10 @@ node("${params.NODE}") {
                 }
             }
         }
-        catch(Exception ex) {
-            error = ex
+        catch(caughtError) {
+            println("Caught error!")
+            error = caughtError
             currentBuild.result = 'FAILURE'
-            println("Caught error")
-            println(ex.getMessage());
         }
         finally {
             if ( params.DO_INSTALL ) {
@@ -357,6 +354,7 @@ node("${params.NODE}") {
                         sh "docker stop ${http_server_name}"
                         sh "docker rm ${http_server_name}"
                     }
+                    throw error 
                 }
                 else {
                     if ( !params.SAVE_CONTAINER_ON_PASS ) {
