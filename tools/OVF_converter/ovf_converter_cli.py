@@ -81,7 +81,7 @@ def execute_cli():
                         "(default controller SCSI with lsilogicsas) "
                         "(SATA, IDE, Paravirtual, Buslogic, Lsilogic, Lsilogicsas) (optional)")
 
-    parser.add_argument("--cdrom", action="store_true", default=True,
+    parser.add_argument("--cdrom", action="store_true", default=False,
                         help="whether to include a cd/dvd device (optional)")
 
     parser.add_argument("-hw", "--hwversion", action="store", default=14,

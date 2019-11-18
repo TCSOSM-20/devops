@@ -22,7 +22,7 @@
 import logging
 from lxml import etree
 import os
-from pyvcloud.vcd.client import BasicLoginCredentials, Client, QueryResultFormat, ResourceType, TaskStatus
+from pyvcloud.vcd.client import BasicLoginCredentials, Client, QueryResultFormat, ResourceType, TaskStatus, ApiVersion
 from pyvcloud.vcd.exceptions import EntityNotFoundException, InternalServerException
 from pyvcloud.vcd.org import Org
 import sys
@@ -71,8 +71,12 @@ class OVFUploader(object):
         self.password = password
         self.orgname = orgname
         try:
-            client = Client(self.vcd_url, verify_ssl_certs=False)
-            client.set_highest_supported_version()
+            client = Client(self.vcd_url, verify_ssl_certs=False, api_version=ApiVersion.VERSION_32.value,
+                            log_requests=True,
+                            log_headers=True,
+                            log_bodies=True,
+                            log_file=LOG_FILE)
+            # sclient.set_highest_supported_version()
             client.set_credentials(BasicLoginCredentials(self.username, self.orgname,
                                                          self.password))
             logger.info("Logged into {} using version {}".format(self.vcd_url, client.get_api_version()))
@@ -112,11 +116,12 @@ class OVFUploader(object):
             raise problem
 
     def make_catalog(self):
+        self.catalog_id = None
         try:
-            try:
-                catalog = self.org.get_catalog(self.image_name)
-                self.catalog_id = catalog.attrib['id'].split(':')[-1]
-            except EntityNotFoundException:
+            for catalog in self.org.list_catalogs():
+                if catalog['name'] == self.image_name:
+                    self.catalog_id = catalog['id']
+            if self.catalog_id is None:
                 logger.info("Creating a new catalog entry {} in vCD".format(self.image_name))
                 result = self.org.create_catalog(self.image_name, self.image_description)
                 if result is None:
@@ -133,11 +138,17 @@ class OVFUploader(object):
 
     def upload_ovf(self):
 
+        ova_tarfilename, _ = os.path.splitext(self.ovf_file)
+        ova_tarfilename += '.ova'
         try:
             # Check if the content already exists:
-            items = self.org.list_catalog_items(self.image_name)
-            for item in items:
-                if item['name'] == self.image_name:
+            resource_type = ResourceType.CATALOG_ITEM.value
+            q = self.client.get_typed_query(
+                resource_type,
+                query_result_format=QueryResultFormat.ID_RECORDS,
+                equality_filter=('catalogName', self.image_name))
+            for item in list(q.execute()):
+                if item.get('name') == self.image_name:
                     logger.info("Removing old version from catalog")
                     try:
                         self.org.delete_catalog_item(self.image_name, self.image_name)
@@ -149,8 +160,6 @@ class OVFUploader(object):
                         raise problem
 
             # Create a single OVA bundle
-            ova_tarfilename, _ = os.path.splitext(self.ovf_file)
-            ova_tarfilename += '.ova'
             ova = tarfile.open(name=ova_tarfilename,
                                mode='w')
             ova.add(self.ovf_file, arcname=os.path.basename(self.ovf_file))
