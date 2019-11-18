@@ -18,11 +18,11 @@
 #
 # 24 June 2016 -- Jeremy Mordkoff -- Genesis
 
-if [ -z "$OSM_JENKINS" ]; then
-	export OSM_JENKINS=$(realpath $(dirname ${BASH_SOURCE[0]} ))
+if [ -z "$OSM_DEVOPS" ]; then
+	export OSM_DEVOPS=$(realpath ${BASH_SOURCE[0]} )
 fi
 
 for file in logging config container git_functions; do
-	. ${OSM_JENKINS}/common/$file
+	. ${OSM_DEVOPS}/common/$file
 	INFO "$file sourced"
 done

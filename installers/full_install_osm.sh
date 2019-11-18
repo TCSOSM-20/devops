@@ -1415,8 +1415,7 @@ if [ -z "$OSM_DEVOPS" ]; then
     fi
 fi
 
-OSM_JENKINS="$OSM_DEVOPS/jenkins"
-. $OSM_JENKINS/common/all_funcs
+. $OSM_DEVOPS/common/all_funcs
 
 [ -n "$INSTALL_LIGHTWEIGHT" ] && [ -n "$UNINSTALL" ] && uninstall_lightweight && echo -e "\nDONE" && exit 0
 [ -n "$UNINSTALL" ] && uninstall && echo -e "\nDONE" && exit 0

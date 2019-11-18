@@ -36,8 +36,7 @@ usage(){
 
 HERE=$(realpath $(dirname $0))
 OSM_DEVOPS=$(dirname $HERE)
-OSM_JENKINS="$OSM_DEVOPS/jenkins"
-. $OSM_JENKINS/common/all_funcs
+. $OSM_DEVOPS/common/all_funcs
 
 #Get default IP address
 . $OSM_DEVOPS/installers/export_ips
