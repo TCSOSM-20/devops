@@ -40,9 +40,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && pip3 install pip==9.0.3
 
-RUN pip3 install  'macaroonbakery>=1.1,<2.0' 'pyRFC3339>=1.0,<2.0' \
-      'pyyaml>=5.1.2' 'theblues>=0.3.8,<1.0' 'websockets>=4.0,<5.0' \
-      'paramiko'   # PyNaCl
+RUN pip3 install juju
 
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
 ARG RELEASE=ReleaseFOUR-daily

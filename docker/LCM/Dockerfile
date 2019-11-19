@@ -40,21 +40,18 @@ APT::AutoRemove::SuggestsImportant "false";\n'\
 RUN apt-get update && apt-get -y install curl software-properties-common
 
 RUN apt-get update && apt-get install -y git make python3 \
-    python3-pip python3-pymongo python3-yaml python3-aiohttp \
+    python3-pip python3-pymongo python3-aiohttp \
     python3-all python3-setuptools openssh-client libffi-dev libssl-dev \
     python3-bitarray python3-regex python3-lxml dh-python wget tox \
     python3-cffi \
     && pip3 install -U pip \
-    && python3 -m pip install -U aiokafka pyang lxml six enum34 \
-    && python3 -m pip install websockets==4.0.1 \
+    && python3 -m pip install -U aiokafka lxml six enum34 \
     && python3 -m pip install requests \
     && rm -rf /var/lib/apt/lists/*
 
 # packages needed for N2VC because deb dependencies are not fine
-RUN python3 -m pip install  'macaroonbakery>=1.1,<2.0' 'pyRFC3339>=1.0,<2.0' \
-      'pyyaml>=3.0,<4.0' 'theblues>=0.3.8,<1.0' 'websockets>=4.0,<5.0' \
-      'paramiko'   # PyNaCl
-# 
+RUN python3 -m pip install -U juju
+
 # RUN git clone https://osm.etsi.org/gerrit/osm/N2VC.git \
 #     && cd N2VC \
 #     && cd modules/libjuju && python3 setup.py develop && cd ../.. \
