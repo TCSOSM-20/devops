@@ -348,7 +348,6 @@ node("${params.NODE}") {
             currentBuild.result = 'FAILURE'
             println("Caught error")
             println(ex.getMessage())
-            println(ex.printStackTrace())
         }
         finally {
             if ( params.DO_INSTALL ) {
