@@ -25,9 +25,10 @@ RUN apt-get update && apt-get -y install curl software-properties-common
 
 RUN apt-get update && apt-get -y install python \
     libcurl4-gnutls-dev libgnutls-dev iputils-ping python-pip \
-    python-openstackclient wget
+    python-openstackclient wget python3-pip
 
 RUN pip install -U pip && python -m pip install python-magic pyangbind pytest==4.6.3
+RUN python3 -m pip install -U pip && python3 -m pip install pyyaml python-magic pyangbind pytest==4.6.3
 
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
 ARG RELEASE=ReleaseFOUR-daily
@@ -41,8 +42,8 @@ ARG OSMCLIENT_VERSION
 ARG DEVOPS_VERSION
 ARG IM_VERSION
 
-RUN apt-get update && apt-get -y install osm-devops${DEVOPS_VERSION} python-osmclient${OSMCLIENT_VERSION} python-osm-im${IM_VERSION}
-
+RUN apt-get update && apt-get -y install osm-devops${DEVOPS_VERSION}  python-osm-im${IM_VERSION}
+RUN apt-get -y install python3-osm-im${IM_VERSION} python3-osmclient${OSMCLIENT_VERSION}
 ENV OSM_SOL005=True
 ENV OSM_HOSTNAME=nbi:9999
 ENV OSM_RO_HOSTNAME=ro:9090
