@@ -53,6 +53,7 @@ function usage(){
     echo -e "     --soui:         install classic build of OSM (Rel THREE v3.1, based on LXD containers, with SO and UI)"
     echo -e "     --lxdimages:    (only for Rel THREE with --soui) download lxd images from OSM repository instead of creating them from scratch"
     echo -e "     --pullimages:   pull/run osm images from docker.io/opensourcemano"
+    echo -e "     --k8s_monitor:  install the OSM kubernetes moitoring with prometheus and grafana"
     echo -e "     -l <lxd_repo>:  (only for Rel THREE with --soui) use specified repository url for lxd images"
     echo -e "     -p <path>:      (only for Rel THREE with --soui) use specified repository path for lxd images"
 #    echo -e "     --reconfigure:  reconfigure the modules (DO NOT change NAT rules)"
@@ -185,6 +186,10 @@ function uninstall_lightweight() {
     else
         echo -e "\nUninstalling OSM"
         if [ -n "$KUBERNETES" ]; then
+            if [ -n "$K8S_MONITOR" ]; then
+                # uninstall OSM MONITORING
+                uninstall_k8s_monitoring
+            fi
             remove_k8s_namespace $OSM_STACK_NAME
         else
             remove_stack $OSM_STACK_NAME
@@ -1237,6 +1242,10 @@ function install_lightweight() {
     generate_docker_env_files
 
     if [ -n "$KUBERNETES" ]; then
+        if [ -n "$K8S_MONITOR" ]; then
+            # uninstall OSM MONITORING
+            uninstall_k8s_monitoring
+        fi
         #remove old namespace
         remove_k8s_namespace $OSM_STACK_NAME
         deploy_cni_provider
@@ -1255,6 +1264,12 @@ function install_lightweight() {
         install_prometheus_nodeexporter
         [ -n "$INSTALL_VIMEMU" ] && install_vimemu && track vimemu
         [ -n "$INSTALL_ELK" ] && deploy_elk && track elk
+    fi
+
+    if [ -n "$KUBERNETES" ] && [ -n "$K8S_MONITOR" ]; then
+        # install OSM MONITORING
+        install_k8s_monitoring
+        track install_k8s_monitoring
     fi
 
     [ -z "$INSTALL_NOHOSTCLIENT" ] && install_osmclient
@@ -1294,6 +1309,18 @@ function install_vimemu() {
     echo "     export VIMEMU_HOSTNAME=${VIMEMU_HOSTNAME}"
     echo -e "To add the emulated VIM to OSM you should do:"
     echo "     osm vim-create --name emu-vim1 --user username --password password --auth_url http://${VIMEMU_HOSTNAME}:6001/v2.0 --tenant tenantName --account_type openstack"
+}
+
+function install_k8s_monitoring() {
+    # install OSM monitoring
+    chmod +x $WORKDIR_SUDO $OSM_DEVOPS/installers/k8s/*.sh
+    $WORKDIR_SUDO $OSM_DEVOPS/installers/k8s/install_osm_k8s_monitoring.sh
+}
+
+function uninstall_k8s_monitoring() {
+    # install OSM monitoring
+    chmod +x $WORKDIR_SUDO $OSM_DEVOPS/installers/k8s/*.sh
+    $WORKDIR_SUDO $OSM_DEVOPS/installers/k8s/uninstall_osm_k8s_monitoring.sh
 }
 
 function dump_vars(){
@@ -1379,6 +1406,7 @@ INSTALL_NOLXD=""
 INSTALL_NODOCKER=""
 INSTALL_NOJUJU=""
 KUBERNETES=""
+K8S_MONITOR=""
 INSTALL_NOHOSTCLIENT=""
 NOCONFIGURE=""
 RELEASE_DAILY=""
@@ -1526,6 +1554,7 @@ while getopts ":hy-:b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:" o; do
             [ "${OPTARG}" == "nodockerbuild" ] && DOCKER_NOBUILD="y" && continue
             [ "${OPTARG}" == "nohostclient" ] && INSTALL_NOHOSTCLIENT="y" && continue
             [ "${OPTARG}" == "pullimages" ] && continue
+            [ "${OPTARG}" == "k8s_monitor" ] && K8S_MONITOR="y" && continue
             echo -e "Invalid option: '--$OPTARG'\n" >&2
             usage && exit 1
             ;;
