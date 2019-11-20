@@ -631,7 +631,7 @@ function install_docker_compose() {
 
 function install_juju() {
     echo "Installing juju"
-    sudo snap install juju --classic --channel=2.5/stable
+    sudo snap install juju --classic
     [ -z "$INSTALL_NOLXD" ] && sudo dpkg-reconfigure -p medium lxd
     echo "Finished installation of juju"
     return 0
