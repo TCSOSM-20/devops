@@ -31,7 +31,6 @@ Library     ../custom_lib.py
 
 *** Variables ***
 ${success_return_code}    0
-${name}     "helloworld-os"
 ${user}     "robottest"
 ${password}     "fred"
 ${authurl}      "https://127.0.0.1/"
@@ -44,7 +43,11 @@ ${tenant}   "robottest2"
 Create Vim Account
     [Documentation]   Create a new vim account
 
-    ${rc}   ${stdout}=      Run and Return RC and Output	    osm vim-create --name ${name} --user ${user} --password ${password} --auth_url ${authurl} --tenant ${tenant} --account_type ${type} --description ${desc}
+    ${vim-name}=     Generate Random String  8  [NUMBERS]
+    ${vim-name}=     Catenate  SEPARATOR=  vim_  ${vim-name}
+    set global variable  ${vim-name}
+
+    ${rc}   ${stdout}=      Run and Return RC and Output	    osm vim-create --name ${vim-name} --user ${user} --password ${password} --auth_url ${authurl} --tenant ${tenant} --account_type ${type} --description ${desc}
     log  ${stdout}
     Should Be Equal As Integers 	${rc}    ${success_return_code}
 
@@ -61,7 +64,7 @@ Get Vim List
 Delete Vim Account
     [Documentation]  delete vim account details
 
-    ${rc}   ${stdout}=      Run and Return RC and Output	    osm vim-delete ${name}
+    ${rc}   ${stdout}=      Run and Return RC and Output	    osm vim-delete ${vim-name}
     log  ${stdout}
     Should Be Equal As Integers 	${rc}    ${success_return_code}
 
