@@ -39,23 +39,32 @@ APT::AutoRemove::SuggestsImportant "false";\n'\
 
 RUN apt-get update && apt-get -y install curl software-properties-common
 
-RUN apt-get update && apt-get install -y git make python3 \
+RUN apt-get install -y git make python3 \
     python3-pip python3-pymongo python3-aiohttp \
     python3-all python3-setuptools openssh-client libffi-dev libssl-dev \
     python3-bitarray python3-regex python3-lxml dh-python wget tox \
     python3-cffi \
-    && pip3 install -U pip \
+    && python3 -m pip install pip --upgrade \
     && python3 -m pip install -U aiokafka lxml six enum34 \
     && python3 -m pip install requests \
+    && python3 -m pip install -U juju \
     && rm -rf /var/lib/apt/lists/*
-
-# packages needed for N2VC because deb dependencies are not fine
-RUN python3 -m pip install -U juju
 
 # RUN git clone https://osm.etsi.org/gerrit/osm/N2VC.git \
 #     && cd N2VC \
 #     && cd modules/libjuju && python3 setup.py develop && cd ../.. \
 #     && python3 -m pip install -U -r requirements.txt
+
+RUN apt-get update && apt-get install -y curl \
+    && apt-get update && apt-get install -y apt-transport-https \
+    && curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
+    && echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | tee -a /etc/apt/sources.list.d/kubernetes.list \
+    && apt-get update && apt-get install -y kubectl
+
+RUN curl https://get.helm.sh/helm-v2.15.2-linux-amd64.tar.gz --output helm-v2.15.2.tar.gz \
+    && tar -zxvf helm-v2.15.2.tar.gz \
+    && mv linux-amd64/helm /usr/local/bin/helm \
+    && rm -r linux-amd64/
 
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
 ARG RELEASE=ReleaseFOUR-daily
@@ -111,6 +120,14 @@ ENV OSMLCM_STORAGE_PATH    /app/storage
 ENV OSMLCM_MESSAGE_DRIVER  kafka
 ENV OSMLCM_MESSAGE_HOST    kafka
 ENV OSMLCM_MESSAGE_PORT    9092
+
+# k8s
+ENV OSMLCM_VCA_HELMPATH    /usr/local/bin/helm
+ENV OSMLCM_VCA_KUBECTLPATH /usr/bin/kubectl
+
+# logs
+# ENV OSMLCM_GLOBAL_LOGFILE  /app/log/lcm.log
+# ENV OSMLCM_GLOBAL_LOGLEVEL DEBUG
 
 HEALTHCHECK --start-period=120s --interval=30s --timeout=30s --retries=1 \
   CMD python3 -m osm_lcm.lcm --health-check || exit 1
