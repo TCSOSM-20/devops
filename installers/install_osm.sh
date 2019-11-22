@@ -90,7 +90,7 @@ add_repo() {
   return 1
 }
 
-while getopts "hr:R:u:t:" o; do
+while getopts ":hr:R:u:t:-:" o; do
     case "${o}" in
         h)
             usage && exit 0
@@ -107,6 +107,10 @@ while getopts "hr:R:u:t:" o; do
         t)
             OSM_DOCKER_TAG="${OPTARG}"
             ;;
+        -)
+            [ "${OPTARG}" == "help" ] && usage && exit 0
+            continue
+	    ;;
         *)
             ;;
     esac
