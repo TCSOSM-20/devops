@@ -16,14 +16,12 @@
 
 ########################################################################
 
-from ubuntu:xenial
+from ubuntu:18.04
 
 MAINTAINER Gennadiy Dubina <gennadiy.dubina@dataat.com>; Alfonso Tierno <alfonso.tiernosepulveda@telefoncia.com>
 
-RUN apt-get update && apt-get -y install curl software-properties-common git
-RUN DEBIAN_FRONTEND=noninteractive add-apt-repository -y cloud-archive:queens
-RUN apt-get update && apt-get install -y python-setuptools python-wheel mysql-client python-bitarray python-pip
-RUN DEBIAN_FRONTEND=noninteractive pip2 install -U pip && python -m pip install pyangbind
+RUN apt-get update && apt-get -y install curl software-properties-common git tox python3-pip \
+    && python3 -m pip install --upgrade pip && python3 -m pip install pyangbind
 
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
 ARG RELEASE=ReleaseFOUR-daily
@@ -31,12 +29,18 @@ ARG REPOSITORY_KEY=OSM%20ETSI%20Release%20Key.gpg
 ARG REPOSITORY=testing
 
 RUN curl ${REPOSITORY_BASE}/${RELEASE}/${REPOSITORY_KEY} | apt-key add -
-RUN add-apt-repository -y "deb ${REPOSITORY_BASE}/${RELEASE} ${REPOSITORY} RO IM common openvim" && apt update
+RUN add-apt-repository -y "deb ${REPOSITORY_BASE}/${RELEASE} ${REPOSITORY} RO IM common openvim" && apt-get update
 
 ARG RO_VERSION
 ARG IM_VERSION
 
-RUN apt-get update && apt-get install -y python-osm-ro${RO_VERSION} python-osm-im${IM_VERSION}
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y python3-osm-ro${RO_VERSION} python3-osm-im${IM_VERSION} \
+    python3-osm-roclient${RO_VERSION} \
+    python3-osm-rosdn-tapi${RO_VERSION} python3-osm-rosdn-dynpac${RO_VERSION} python3-osm-rosdn-onosof${RO_VERSION} \
+    python3-osm-rovim-vmware${RO_VERSION} python3-osm-rovim-openstack${RO_VERSION} \
+    python3-osm-rovim-openvim${RO_VERSION} python3-osm-rovim-azure${RO_VERSION} \
+    python3-osm-rovim-aws${RO_VERSION} python3-osm-rovim-fos${RO_VERSION} python3-osm-rovim-opennebula${RO_VERSION}
+    # python3-osm-rosdn-floodlightof python3-osm-rosdn-odlof 
 
 
 VOLUME /var/log/osm
@@ -63,6 +67,7 @@ ENV RO_DB_PORT=3306
 ENV RO_DB_OVIM_PORT=3306
 ENV RO_DB_NAME=mano_db
 ENV RO_DB_OVIM_NAME=mano_vim_db
+ENV OPENMANO_TENANT=osm
 
 HEALTHCHECK --start-period=130s --interval=10s --timeout=5s --retries=12 \
   CMD curl --silent --fail localhost:9090/openmano/tenants || exit 1
