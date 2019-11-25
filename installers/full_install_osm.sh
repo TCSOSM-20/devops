@@ -720,7 +720,7 @@ function generate_docker_images() {
     elif [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q RO ; then
         git -C ${LWTEMPDIR} clone https://osm.etsi.org/gerrit/osm/RO
         git -C ${LWTEMPDIR}/RO checkout ${COMMIT_ID}
-        sg docker -c "docker build ${LWTEMPDIR}/RO -f ${LWTEMPDIR}/RO/docker/Dockerfile-local -t ${DOCKER_USER}/ro --no-cache" || FATAL "cannot build RO docker image"
+        sg docker -c "docker build ${LWTEMPDIR}/RO -f ${LWTEMPDIR}/RO/Dockerfile-local -t ${DOCKER_USER}/ro --no-cache" || FATAL "cannot build RO docker image"
     fi
 
     if [ -n "$PULL_IMAGES" ]; then
