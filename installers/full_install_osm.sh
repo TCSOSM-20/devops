@@ -564,12 +564,12 @@ function install_osmclient(){
     CLIENT_REPOSITORY_BASE=${REPOSITORY_BASE#"-u "}
     key_location=$CLIENT_REPOSITORY_BASE/$CLIENT_RELEASE/$CLIENT_REPOSITORY_KEY
     curl $key_location | sudo apt-key add -
-    sudo add-apt-repository -y "deb [arch=amd64] $CLIENT_REPOSITORY_BASE/$CLIENT_RELEASE $CLIENT_REPOSITORY osmclient"
+    sudo add-apt-repository -y "deb [arch=amd64] $CLIENT_REPOSITORY_BASE/$CLIENT_RELEASE $CLIENT_REPOSITORY osmclient IM"
     sudo apt-get update
-    sudo apt-get install -y python-pip
-    sudo -H LC_ALL=C pip install -U pip
-    sudo -H LC_ALL=C python -m pip install python-magic
-    sudo apt-get install -y python-osmclient
+    sudo apt-get install -y python3-pip
+    sudo -H LC_ALL=C python3 -m pip install -U pip
+    sudo -H LC_ALL=C python3 -m pip install -U python-magic
+    sudo apt-get install -y python3-osmclient
     #sed 's,OSM_SOL005=[^$]*,OSM_SOL005=True,' -i ${HOME}/.bashrc
     #echo 'export OSM_HOSTNAME=localhost' >> ${HOME}/.bashrc
     #echo 'export OSM_SOL005=True' >> ${HOME}/.bashrc
