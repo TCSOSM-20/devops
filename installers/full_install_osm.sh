@@ -192,6 +192,7 @@ function uninstall_lightweight() {
             fi
             remove_k8s_namespace $OSM_STACK_NAME
         else
+
             remove_stack $OSM_STACK_NAME
             remove_stack osm_elk
             uninstall_prometheus_nodeexporter
@@ -693,6 +694,7 @@ function install_juju() {
     echo "Installing juju"
     sudo snap install juju --classic
     [ -z "$INSTALL_NOLXD" ] && sudo dpkg-reconfigure -p medium lxd
+    [[ ":$PATH": != *":/snap/bin:"* ]] && PATH="/snap/bin:${PATH}"
     echo "Finished installation of juju"
     return 0
 }
