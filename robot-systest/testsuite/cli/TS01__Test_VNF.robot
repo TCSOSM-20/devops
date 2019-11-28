@@ -64,10 +64,16 @@ Create NS Descriptor Test
 Network Service Instance Test
     [Documentation]  Launch and terminate network services
     [Tags]    sanity
-    [Teardown]  Run Keyword And Ignore Error    Network Service Instance Cleanup
 
     :FOR    ${vim_name}    IN    @{vim}
     \    Launch Network Services and Return    ${vim_name}
+
+
+Delete NS Instance Test
+    [Tags]    sanity
+
+    :FOR    ${ns}  IN   @{ns_ids}
+    \   Delete NS   ${ns}
 
 
 Delete NS Descriptor Test
@@ -86,17 +92,16 @@ Delete VNF Descriptor Test
 
 *** Keywords ***
 Test Cleanup
-    [Documentation]  Test Suit Cleanup: Forcefully delete NSD and VNFD
-
-    :FOR    ${nsd}  IN   @{nsd_ids}
-    \   Force Delete NSD      ${nsd}
-
-    :FOR    ${vnfd}  IN   @{vnfd_ids}
-    \   Force Delete VNFD     ${vnfd}
-
-
-Network Service Instance Cleanup
-    [Documentation]  Forcefully delete created network service instances and vim account
+    [Documentation]  Test Suit Cleanup: Deliting Descriptor, instance and vim
 
     :FOR    ${ns}  IN   @{ns_ids}
-    \   Force Delete NS   ${ns}
+    \   Delete NS   ${ns}
+
+    :FOR    ${nsd}  IN   @{nsd_ids}
+    \   Delete NSD      ${nsd}
+
+    :FOR    ${vnfd}  IN   @{vnfd_ids}
+    \   Delete VNFD     ${vnfd}
+
+#    :FOR    ${vim_id}  IN   @{vim}
+#    \   Delete Vim Account    ${vim_id}

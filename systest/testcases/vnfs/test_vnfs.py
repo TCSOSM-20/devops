@@ -18,7 +18,7 @@ import pytest
 import pprint
 import time
 from osmclient.common import utils
-import pprint
+
 
 class TestClass(object):
 

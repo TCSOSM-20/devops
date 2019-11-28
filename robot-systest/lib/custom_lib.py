@@ -22,7 +22,7 @@
 # 1. Feature 7829: Jayant Madavi, Mrityunjay Yadav : MY00514913@techmahindra.com : 06-aug-2019 : Improvement to the code, robot framework initial seed code.
 ##
 
-
+import random
 from haikunator import Haikunator
 
 
@@ -30,3 +30,8 @@ def generate_name():
     haikunator = Haikunator()
     name = haikunator.haikunate(delimiter='_', token_length=2)
     return name
+
+
+def get_random_item_from_list(l):
+    assert isinstance(l, list), "List should be provided"
+    return random.choice(l)

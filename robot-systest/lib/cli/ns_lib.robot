@@ -48,7 +48,6 @@ Launch Network Services and Return
     \    ${ns_name}=    GENERATE NAME
     \    Append To List     ${ns_ids}       ${ns_name}
     \    Create Network Service    ${nsd}   ${vim_name}    ${ns_name}
-    \    Delete NS   ${ns_name}
 
 
 Create Network Service

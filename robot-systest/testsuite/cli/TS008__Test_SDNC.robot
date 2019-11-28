@@ -28,18 +28,18 @@ Resource    ../../lib/cli/sdnc_account_lib.robot
 
 *** Test Cases ***
 Create SDNC Account Test
-    [Tags]  comprehensive    sdnc
+    [Tags]  sdnc
 
     Create SDNC Account
 
 
 Get SDNC Accounts List Test
-    [Tags]  comprehensive    sdnc
+    [Tags]  sdnc
 
     Get SDNC List
 
 
 Delete SDNC Account Test
-    [Tags]  comprehensive    sdnc
+    [Tags]  sdnc
 
     Delete SDNC Account
