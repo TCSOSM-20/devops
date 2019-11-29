@@ -132,6 +132,19 @@ function remove_network() {
     sg docker -c "docker network rm net${stack}"
 }
 
+function remove_iptables() {
+    stack=$1
+    if [ -z "$OSM_VCA_HOST" ]; then
+        OSM_VCA_HOST=`sg lxd -c "juju show-controller ${stack}"|grep api-endpoints|awk -F\' '{print $2}'|awk -F\: '{print $1}'`
+        [ -z "$OSM_VCA_HOST" ] && FATAL "Cannot obtain juju controller IP address"
+    fi
+
+    if sudo iptables -t nat -C PREROUTING -p tcp -m tcp --dport 17070 -j DNAT --to-destination $OSM_VCA_HOST; then
+        sudo iptables -t nat -D PREROUTING -p tcp -m tcp --dport 17070 -j DNAT --to-destination $OSM_VCA_HOST
+        sudo netfilter-persistent save
+    fi
+}
+
 function remove_stack() {
     stack=$1
     if sg docker -c "docker stack ps ${stack}" ; then
@@ -202,6 +215,7 @@ EONG
             remove_volumes $OSM_STACK_NAME
             remove_network $OSM_STACK_NAME
         fi
+        remove_iptables $OSM_STACK_NAME
         echo "Removing $OSM_DOCKER_WORK_DIR"
         $WORKDIR_SUDO rm -rf $OSM_DOCKER_WORK_DIR
         sg lxd -c "juju destroy-controller --destroy-all-models --yes $OSM_STACK_NAME"
