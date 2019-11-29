@@ -40,7 +40,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && pip3 install pip==9.0.3
 
-RUN pip3 install juju 'pyyaml>=5.1.2'
+RUN python3 -m pip install -U juju
 
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
 ARG RELEASE=ReleaseFOUR-daily
