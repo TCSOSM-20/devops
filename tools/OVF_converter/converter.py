@@ -464,7 +464,7 @@ class OVFConverter(object):
         disk_controller_info = self.__read_yaml_file(DISK_CONTROLLER_INFO_FILE_PATH)
         try:
             if self.disk_controller and disk_controller_info:
-                for key, value in disk_controller_info.iteritems():
+                for key, value in disk_controller_info.items():
                     if self.disk_controller.lower() in key.lower():
                         disk_controller['controllerName'] = key
                         disk_controller['resourceType'] = str(value["ResourceType"])

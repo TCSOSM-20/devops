@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
  Copyright 2016-2019 VMware Inc.
  This file is part of ETSI OSM
@@ -18,7 +19,6 @@
  For those usages not covered by the Apache License, Version 2.0 please
  contact:  osslegalrouting@vmware.com
 -->
-<?xml version="1.0" encoding="UTF-8"?>
 <Envelope xmlns="http://schemas.dmtf.org/ovf/envelope/1" xmlns:cim="http://schemas.dmtf.org/wbem/wscim/1/common" xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1" xmlns:rasd="http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_ResourceAllocationSettingData" xmlns:vmw="http://www.vmware.com/schema/ovf" xmlns:vssd="http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_VirtualSystemSettingData" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <References>
      <File ovf:href="disk_img_filename.vmdk" ovf:id="file1" />
@@ -30,9 +30,9 @@
 
   <NetworkSection>
     <Info>List of logical networks used in the package</Info>
- </NetworkSection>
+  </NetworkSection>
 
- <VirtualSystem ovf:id="vm">
+  <VirtualSystem ovf:id="vm">
     <Info>A virtual machine</Info>
     <Name>Virtual machine name</Name>
 
