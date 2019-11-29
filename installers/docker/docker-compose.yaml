@@ -97,6 +97,18 @@ services:
       options:
         max-size: "100m"
         max-file: "2"
+  prometheus-cadvisor:
+    image: google/cadvisor:${PROMETHEUS_CADVISOR_TAG:-latest}
+    ports:
+      - "${OSM_PROM_CADVISOR_PORTS:-8080:8080}"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      - netOSM    
   keystone:
     image: ${DOCKER_USER:-opensourcemano}/keystone:${TAG:-6}
     networks:
@@ -246,3 +258,15 @@ services:
       options:
         max-size: "100m"
         max-file: "2"
+  grafana:
+    image: grafana/grafana
+    volumes:
+      - ./files/dashboards-osm.yml:/etc/grafana/provisioning/dashboards/dashboards-osm.yml
+      - ./files/osm-sample-dashboard.json:/etc/grafana/provisioning/dashboards/osm-sample-dashboard.json
+      - ./files/osm-system-dashboard.json:/etc/grafana/provisioning/dashboards/osm-system-dashboard.json
+      - ./files/datasource-prometheus.yml:/etc/grafana/provisioning/datasources/datasource-prometheus.yml
+    hostname: grafana
+    ports:
+      - "${OSM_GRAFANA_PORTS:-3000:3000}"
+    networks:
+      - netOSM

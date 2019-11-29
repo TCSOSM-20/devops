@@ -182,11 +182,6 @@ function uninstall_lightweight() {
             remove_stack osm_elk
             $WORKDIR_SUDO rm -rf $OSM_DOCKER_WORK_DIR/osm_elk
         fi
-        if [ -n "$INSTALL_PERFMON" ]; then
-            echo -e "\nUninstalling OSM Performance Monitoring stack"
-            remove_stack osm_metrics
-            $WORKDIR_SUDO rm -rf $OSM_DOCKER_WORK_DIR/osm_metrics
-        fi
     else
         echo -e "\nUninstalling OSM"
         if [ -n "$KUBERNETES" ]; then
@@ -194,7 +189,6 @@ function uninstall_lightweight() {
         else
             remove_stack $OSM_STACK_NAME
             remove_stack osm_elk
-            remove_stack osm_metrics
         fi
         echo "Now osm docker images and volumes will be deleted"
         newgrp docker << EONG
@@ -602,6 +596,20 @@ function install_osmclient(){
     return 0
 }
 
+function install_prometheus_nodeexporter(){
+    sudo useradd --no-create-home --shell /bin/false node_exporter
+    sudo wget -q https://github.com/prometheus/node_exporter/releases/download/v$PROMETHEUS_NODE_EXPORTER_TAG/node_exporter-$PROMETHEUS_NODE_EXPORTER_TAG.linux-amd64.tar.gz  -P /tmp/
+    sudo tar -C /tmp -xf /tmp/node_exporter-$PROMETHEUS_NODE_EXPORTER_TAG.linux-amd64.tar.gz
+    sudo cp /tmp/node_exporter-$PROMETHEUS_NODE_EXPORTER_TAG.linux-amd64/node_exporter /usr/local/bin
+    sudo chown node_exporter:node_exporter /usr/local/bin/node_exporter
+    sudo rm -rf node_exporter-$PROMETHEUS_NODE_EXPORTER_TAG.linux-amd64*
+    sudo cp ${OSM_DEVOPS}/installers/docker/files/node_exporter.service /etc/systemd/system/node_exporter.service
+    sudo systemctl daemon-reload
+    sudo systemctl restart node_exporter
+    sudo systemctl enable node_exporter
+    return 0
+}
+
 function install_from_lxdimages(){
     LXD_RELEASE=${RELEASE#"-R "}
     if [ -n "$LXD_REPOSITORY_PATH" ]; then
@@ -717,6 +725,10 @@ function generate_docker_images() {
         sg docker -c "docker pull prom/prometheus:${PROMETHEUS_TAG}" || FATAL "cannot get prometheus docker image"
     fi
 
+    if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q GRAFANA ; then
+        sg docker -c "docker pull grafana/grafana:${GRAFANA_TAG}" || FATAL "cannot get grafana docker image"
+    fi    
+
     if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q NBI || echo $TO_REBUILD | grep -q KEYSTONE-DB ; then
         sg docker -c "docker pull mariadb:${KEYSTONEDB_TAG}" || FATAL "cannot get keystone-db docker image"
     fi
@@ -780,6 +792,11 @@ function generate_docker_images() {
     elif [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q LW-osmclient; then
         sg docker -c "docker build -t ${DOCKER_USER}/osmclient ${BUILD_ARGS[@]} -f $OSM_DEVOPS/docker/osmclient ."
     fi
+
+    if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q PROMETHEUS ; then
+        sg docker -c "docker pull google/cadvisor:${PROMETHEUS_CADVISOR_TAG}" || FATAL "cannot get prometheus cadvisor docker image"
+    fi    
+
     echo "Finished generation of docker images"
 }
 
@@ -816,7 +833,11 @@ function generate_docker_env_files() {
         $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/docker-compose.yaml $OSM_DOCKER_WORK_DIR/docker-compose.yaml
 
         # Prometheus
-        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/prometheus.yml $OSM_DOCKER_WORK_DIR/prometheus.yml
+        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/files/prometheus.yml $OSM_DOCKER_WORK_DIR/prometheus.yml
+
+        # Grafana & Prometheus Exporter files
+        $WORKDIR_SUDO mkdir -p $OSM_DOCKER_WORK_DIR/files
+        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/files/* $OSM_DOCKER_WORK_DIR/files/
     fi
 
     # LCM
@@ -1019,8 +1040,9 @@ function deploy_lightweight() {
     OSM_MON_PORT=8662
     OSM_PROM_PORT=9090
     OSM_PROM_HOSTPORT=9091
+    OSM_GRAFANA_PORT=3000
     [ -n "$INSTALL_ELK" ] && OSM_ELK_PORT=5601
-    [ -n "$INSTALL_PERFMON" ] && OSM_PM_PORT=3000
+    #[ -n "$INSTALL_PERFMON" ] && OSM_PM_PORT=3000
 
     if [ -n "$NO_HOST_PORTS" ]; then
         OSM_PORTS+=(OSM_NBI_PORTS=$OSM_NBI_PORT)
@@ -1029,7 +1051,8 @@ function deploy_lightweight() {
         OSM_PORTS+=(OSM_UI_PORTS=$OSM_UI_PORT)
         OSM_PORTS+=(OSM_MON_PORTS=$OSM_MON_PORT)
         OSM_PORTS+=(OSM_PROM_PORTS=$OSM_PROM_PORT)
-        [ -n "$INSTALL_PERFMON" ] && OSM_PORTS+=(OSM_PM_PORTS=$OSM_PM_PORT)
+        OSM_PORTS+=(OSM_GRAFANA_PORTS=$OSM_GRAFANA_PORT)
+        #[ -n "$INSTALL_PERFMON" ] && OSM_PORTS+=(OSM_PM_PORTS=$OSM_PM_PORT)
         [ -n "$INSTALL_ELK" ] && OSM_PORTS+=(OSM_ELK_PORTS=$OSM_ELK_PORT)
     else
         OSM_PORTS+=(OSM_NBI_PORTS=$OSM_NBI_PORT:$OSM_NBI_PORT)
@@ -1038,7 +1061,8 @@ function deploy_lightweight() {
         OSM_PORTS+=(OSM_UI_PORTS=$OSM_UI_PORT:$OSM_UI_PORT)
         OSM_PORTS+=(OSM_MON_PORTS=$OSM_MON_PORT:$OSM_MON_PORT)
         OSM_PORTS+=(OSM_PROM_PORTS=$OSM_PROM_HOSTPORT:$OSM_PROM_PORT)
-        [ -n "$INSTALL_PERFMON" ] && OSM_PORTS+=(OSM_PM_PORTS=$OSM_PM_PORT:$OSM_PM_PORT)
+        OSM_PORTS+=(OSM_GRAFANA_PORTS=$OSM_GRAFANA_PORT:$OSM_GRAFANA_PORT)
+        #[ -n "$INSTALL_PERFMON" ] && OSM_PORTS+=(OSM_PM_PORTS=$OSM_PM_PORT:$OSM_PM_PORT)
         [ -n "$INSTALL_ELK" ] && OSM_PORTS+=(OSM_ELK_PORTS=$OSM_ELK_PORT:$OSM_ELK_PORT)
     fi
     echo "export ${OSM_PORTS[@]}" | $WORKDIR_SUDO tee $OSM_DOCKER_WORK_DIR/osm_ports.sh
@@ -1048,6 +1072,8 @@ function deploy_lightweight() {
     echo "export KAFKA_TAG=${KAFKA_TAG}" | $WORKDIR_SUDO tee --append $OSM_DOCKER_WORK_DIR/osm_ports.sh
     echo "export PROMETHEUS_TAG=${PROMETHEUS_TAG}" | $WORKDIR_SUDO tee --append $OSM_DOCKER_WORK_DIR/osm_ports.sh
     echo "export KEYSTONEDB_TAG=${KEYSTONEDB_TAG}" | $WORKDIR_SUDO tee --append $OSM_DOCKER_WORK_DIR/osm_ports.sh
+    echo "export PROMETHEUS_CADVISOR_TAG=${PROMETHEUS_CADVISOR_TAG}" | $WORKDIR_SUDO tee --append $OSM_DOCKER_WORK_DIR/osm_ports.sh
+    echo "export GRAFANA_TAG=${GRAFANA_TAG}" | $WORKDIR_SUDO tee --append $OSM_DOCKER_WORK_DIR/osm_ports.sh
 
     pushd $OSM_DOCKER_WORK_DIR
     sg docker -c ". ./osm_ports.sh; docker stack deploy -c $OSM_DOCKER_WORK_DIR/docker-compose.yaml $OSM_STACK_NAME"
@@ -1103,20 +1129,6 @@ function deploy_elk() {
           -d"{\"value\":\"filebeat-*\"}"'
     fi
     echo "Finished deployment of ELK stack"
-    return 0
-}
-
-function deploy_perfmon() {
-    echo "Pulling docker images for PM (Grafana)"
-    sg docker -c "docker pull grafana/grafana" || FATAL "cannot get grafana docker image"
-    echo "Finished pulling PM docker images"
-    $WORKDIR_SUDO mkdir -p $OSM_DOCKER_WORK_DIR/osm_metrics
-    $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/osm_metrics/*.yml $OSM_DOCKER_WORK_DIR/osm_metrics
-    $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/osm_metrics/*.json $OSM_DOCKER_WORK_DIR/osm_metrics
-    remove_stack osm_metrics
-    echo "Deploying PM stack (Grafana)"
-    sg docker -c "OSM_NETWORK=net${OSM_STACK_NAME} docker stack deploy -c $OSM_DOCKER_WORK_DIR/osm_metrics/docker-compose.yml osm_metrics"
-    echo "Finished deployment of PM stack"
     return 0
 }
 
@@ -1240,9 +1252,9 @@ function install_lightweight() {
         deploy_lightweight
         generate_osmclient_script
         track docker_deploy
+        install_prometheus_nodeexporter
         [ -n "$INSTALL_VIMEMU" ] && install_vimemu && track vimemu
         [ -n "$INSTALL_ELK" ] && deploy_elk && track elk
-        [ -n "$INSTALL_PERFMON" ] && deploy_perfmon && track perfmon
     fi
 
     [ -z "$INSTALL_NOHOSTCLIENT" ] && install_osmclient
@@ -1300,7 +1312,7 @@ function dump_vars(){
     echo "INSTALL_LIGHTWEIGHT=$INSTALL_LIGHTWEIGHT"
     echo "INSTALL_ONLY=$INSTALL_ONLY"
     echo "INSTALL_ELK=$INSTALL_ELK"
-    echo "INSTALL_PERFMON=$INSTALL_PERFMON"
+    #echo "INSTALL_PERFMON=$INSTALL_PERFMON"
     echo "TO_REBUILD=$TO_REBUILD"
     echo "INSTALL_NOLXD=$INSTALL_NOLXD"
     echo "INSTALL_NODOCKER=$INSTALL_NODOCKER"
@@ -1361,7 +1373,7 @@ LXD_REPOSITORY_PATH=""
 INSTALL_LIGHTWEIGHT="y"
 INSTALL_ONLY=""
 INSTALL_ELK=""
-INSTALL_PERFMON=""
+#INSTALL_PERFMON=""
 TO_REBUILD=""
 INSTALL_NOLXD=""
 INSTALL_NODOCKER=""
@@ -1391,6 +1403,9 @@ DOCKER_USER=opensourcemano
 PULL_IMAGES="y"
 KAFKA_TAG=2.11-1.0.2
 PROMETHEUS_TAG=v2.4.3
+GRAFANA_TAG=latest
+PROMETHEUS_NODE_EXPORTER_TAG=0.18.1
+PROMETHEUS_CADVISOR_TAG=latest
 KEYSTONEDB_TAG=10
 OSM_DATABASE_COMMONKEY=
 ELASTIC_VERSION=6.4.2
@@ -1469,7 +1484,7 @@ while getopts ":hy-:b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:" o; do
             INSTALL_ONLY="y"
             [ "${OPTARG}" == "vimemu" ] && INSTALL_VIMEMU="y" && continue
             [ "${OPTARG}" == "elk_stack" ] && INSTALL_ELK="y" && continue
-            [ "${OPTARG}" == "pm_stack" ] && INSTALL_PERFMON="y" && continue
+            #[ "${OPTARG}" == "pm_stack" ] && INSTALL_PERFMON="y" && continue
             ;;
         m)
             [ "${OPTARG}" == "LW-UI" ] && TO_REBUILD="$TO_REBUILD LW-UI" && continue
@@ -1482,6 +1497,7 @@ while getopts ":hy-:b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:" o; do
             [ "${OPTARG}" == "MONGO" ] && TO_REBUILD="$TO_REBUILD MONGO" && continue
             [ "${OPTARG}" == "PROMETHEUS" ] && TO_REBUILD="$TO_REBUILD PROMETHEUS" && continue
             [ "${OPTARG}" == "KEYSTONE-DB" ] && TO_REBUILD="$TO_REBUILD KEYSTONE-DB" && continue
+            [ "${OPTARG}" == "GRAFANA" ] && TO_REBUILD="$TO_REBUILD GRAFANA" && continue
             [ "${OPTARG}" == "NONE" ] && TO_REBUILD="$TO_REBUILD NONE" && continue
             ;;
         -)
@@ -1501,7 +1517,7 @@ while getopts ":hy-:b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:" o; do
             [ "${OPTARG}" == "soui" ] && INSTALL_LIGHTWEIGHT="" && RELEASE="-R ReleaseTHREE" && REPOSITORY="-r stable" && continue
             [ "${OPTARG}" == "vimemu" ] && INSTALL_VIMEMU="y" && continue
             [ "${OPTARG}" == "elk_stack" ] && INSTALL_ELK="y" && continue
-            [ "${OPTARG}" == "pm_stack" ] && INSTALL_PERFMON="y" && continue
+            #[ "${OPTARG}" == "pm_stack" ] && INSTALL_PERFMON="y" && continue
             [ "${OPTARG}" == "noconfigure" ] && NOCONFIGURE="y" && continue
             [ "${OPTARG}" == "showopts" ] && SHOWOPTS="y" && continue
             [ "${OPTARG}" == "daily" ] && RELEASE_DAILY="y" && continue
@@ -1589,7 +1605,7 @@ fi
 [ -n "$UPDATE" ] && update && echo -e "\nDONE" && exit 0
 [ -n "$RECONFIGURE" ] && configure && echo -e "\nDONE" && exit 0
 [ -n "$INSTALL_ONLY" ] && [ -n "$INSTALL_ELK" ] && deploy_elk
-[ -n "$INSTALL_ONLY" ] && [ -n "$INSTALL_PERFMON" ] && deploy_perfmon
+#[ -n "$INSTALL_ONLY" ] && [ -n "$INSTALL_PERFMON" ] && deploy_perfmon
 [ -n "$INSTALL_ONLY" ] && [ -n "$INSTALL_VIMEMU" ] && install_vimemu
 [ -n "$INSTALL_ONLY" ] && echo -e "\nDONE" && exit 0
 
