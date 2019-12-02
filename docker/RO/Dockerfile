@@ -16,7 +16,7 @@
 
 ########################################################################
 
-from ubuntu:18.04
+FROM ubuntu:18.04
 
 MAINTAINER Gennadiy Dubina <gennadiy.dubina@dataat.com>; Alfonso Tierno <alfonso.tiernosepulveda@telefoncia.com>
 
@@ -34,7 +34,7 @@ RUN add-apt-repository -y "deb ${REPOSITORY_BASE}/${RELEASE} ${REPOSITORY} RO IM
 ARG RO_VERSION
 ARG IM_VERSION
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y python3-osm-ro${RO_VERSION} python3-osm-im${IM_VERSION} \
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y python3-osm-ro${RO_VERSION} python3-osm-im${IM_VERSION} \
     python3-osm-roclient${RO_VERSION} \
     python3-osm-rosdn-tapi${RO_VERSION} python3-osm-rosdn-dynpac${RO_VERSION} python3-osm-rosdn-onosof${RO_VERSION} \
     python3-osm-rovim-vmware${RO_VERSION} python3-osm-rovim-openstack${RO_VERSION} \

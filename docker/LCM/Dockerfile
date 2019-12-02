@@ -39,7 +39,7 @@ APT::AutoRemove::SuggestsImportant "false";\n'\
 
 RUN apt-get update && apt-get -y install curl software-properties-common
 
-RUN apt-get install -y git make python3 \
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y git make python3 \
     python3-pip python3-pymongo python3-aiohttp \
     python3-all python3-setuptools openssh-client libffi-dev libssl-dev \
     python3-bitarray python3-regex python3-lxml dh-python wget tox \
