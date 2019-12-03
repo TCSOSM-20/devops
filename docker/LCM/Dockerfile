@@ -55,7 +55,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y git make
 #     && cd modules/libjuju && python3 setup.py develop && cd ../.. \
 #     && python3 -m pip install -U -r requirements.txt
 
-RUN apt-get update && apt-get install -y curl \
+RUN apt-get update && apt-get install -y curl xz-utils \
     && apt-get update && apt-get install -y apt-transport-https \
     && curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
     && echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | tee -a /etc/apt/sources.list.d/kubernetes.list \
@@ -65,6 +65,10 @@ RUN curl https://get.helm.sh/helm-v2.15.2-linux-amd64.tar.gz --output helm-v2.15
     && tar -zxvf helm-v2.15.2.tar.gz \
     && mv linux-amd64/helm /usr/local/bin/helm \
     && rm -r linux-amd64/
+
+RUN curl -L https://launchpad.net/juju/2.7/2.7.0/+download/juju-2.7.0-k8s.tar.xz --output juju-2.7.0-k8s.tar.xz \
+    && tar -xvf juju-2.7.0-k8s.tar.xz \
+    && mv juju /usr/local/bin/juju
 
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
 ARG RELEASE=ReleaseFOUR-daily
@@ -124,6 +128,7 @@ ENV OSMLCM_MESSAGE_PORT    9092
 # k8s
 ENV OSMLCM_VCA_HELMPATH    /usr/local/bin/helm
 ENV OSMLCM_VCA_KUBECTLPATH /usr/bin/kubectl
+ENV OSMLCM_VCA_JUJUPATH    /usr/local/bin/juju
 
 # logs
 # ENV OSMLCM_GLOBAL_LOGFILE  /app/log/lcm.log
