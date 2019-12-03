@@ -194,6 +194,7 @@ function uninstall_lightweight() {
         else
             remove_stack $OSM_STACK_NAME
             remove_stack osm_elk
+            uninstall_prometheus_nodeexporter
         fi
         echo "Now osm docker images and volumes will be deleted"
         newgrp docker << EONG
@@ -612,6 +613,16 @@ function install_prometheus_nodeexporter(){
     sudo systemctl daemon-reload
     sudo systemctl restart node_exporter
     sudo systemctl enable node_exporter
+    return 0
+}
+
+function uninstall_prometheus_nodeexporter(){
+    sudo systemctl stop node_exporter
+    sudo systemctl disable node_exporter
+    sudo rm /etc/systemd/system/node_exporter.service
+    sudo systemctl daemon-reload
+    sudo userdel node_exporter
+    sudo rm /usr/local/bin/node_exporter
     return 0
 }
 

@@ -108,7 +108,7 @@ services:
       - /var/lib/docker/:/var/lib/docker:ro
       - /dev/disk/:/dev/disk:ro
     networks:
-      - netOSM    
+      - netOSM
   keystone:
     image: ${DOCKER_USER:-opensourcemano}/keystone:${TAG:-6}
     networks:
