@@ -944,6 +944,13 @@ function generate_docker_env_files() {
         $WORKDIR_SUDO sed -i "s|OSMMON_VCA_SECRET.*|OSMMON_VCA_SECRET=$OSM_VCA_SECRET|g" $OSM_DOCKER_WORK_DIR/mon.env
     fi
 
+    if ! grep -Fq "OSMMON_VCA_CACERT" $OSM_DOCKER_WORK_DIR/mon.env; then
+       echo "OSMMON_VCA_CACERT=${OSM_VCA_CACERT}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/mon.env
+    else
+       $WORKDIR_SUDO sed -i "s|OSMMON_VCA_CACERT.*|OSMMON_VCA_CACERT=${OSM_VCA_CACERT}|g" $OSM_DOCKER_WORK_DIR/mon.env
+    fi
+
+
     # POL
     if [ ! -f $OSM_DOCKER_WORK_DIR/pol.env ]; then
         echo "OSMPOL_SQL_DATABASE_URI=mysql://root:${MYSQL_ROOT_PASSWORD}@mysql:3306/pol" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/pol.env
