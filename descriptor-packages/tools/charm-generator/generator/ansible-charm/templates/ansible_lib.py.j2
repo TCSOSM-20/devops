@@ -50,7 +50,7 @@ def create_hosts(cfg, hosts):
         f.write('[{}]\n'.format(hosts))
         h1 = '{0} ansible_connection=ssh ansible_ssh_user={1} ansible_ssh_pass={2} ' \
              'ansible_ssh_private_key_file=~/.ssh/id_juju_sshproxy ' \
-             'ansible_python_interpreter=/usr/bin/python\n'.format(cfg['ssh-hostname'], cfg['ssh-username'],
+             'ansible_python_interpreter=/usr/bin/python3\n'.format(cfg['ssh-hostname'], cfg['ssh-username'],
                                                                     cfg['ssh-password'])
         f.write(h1)
 
