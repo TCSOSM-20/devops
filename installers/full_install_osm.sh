@@ -195,7 +195,6 @@ function uninstall_lightweight() {
 
             remove_stack $OSM_STACK_NAME
             remove_stack osm_elk
-            uninstall_prometheus_nodeexporter
         fi
         echo "Now osm docker images and volumes will be deleted"
         newgrp docker << EONG
@@ -604,16 +603,28 @@ function install_osmclient(){
 }
 
 function install_prometheus_nodeexporter(){
-    sudo useradd --no-create-home --shell /bin/false node_exporter
-    sudo wget -q https://github.com/prometheus/node_exporter/releases/download/v$PROMETHEUS_NODE_EXPORTER_TAG/node_exporter-$PROMETHEUS_NODE_EXPORTER_TAG.linux-amd64.tar.gz  -P /tmp/
-    sudo tar -C /tmp -xf /tmp/node_exporter-$PROMETHEUS_NODE_EXPORTER_TAG.linux-amd64.tar.gz
-    sudo cp /tmp/node_exporter-$PROMETHEUS_NODE_EXPORTER_TAG.linux-amd64/node_exporter /usr/local/bin
-    sudo chown node_exporter:node_exporter /usr/local/bin/node_exporter
-    sudo rm -rf node_exporter-$PROMETHEUS_NODE_EXPORTER_TAG.linux-amd64*
-    sudo cp ${OSM_DEVOPS}/installers/docker/files/node_exporter.service /etc/systemd/system/node_exporter.service
-    sudo systemctl daemon-reload
-    sudo systemctl restart node_exporter
-    sudo systemctl enable node_exporter
+    if (systemctl -q is-active node_exporter)
+        then
+            echo "Node Exporter is already running."
+        else
+            echo "Node Exporter is not active, installing..."
+            if getent passwd node_exporter > /dev/null 2>&1; then
+                echo "node_exporter user exists"
+            else
+                echo "Creating user node_exporter"
+                sudo useradd --no-create-home --shell /bin/false node_exporter
+            fi
+            sudo wget -q https://github.com/prometheus/node_exporter/releases/download/v$PROMETHEUS_NODE_EXPORTER_TAG/node_exporter-$PROMETHEUS_NODE_EXPORTER_TAG.linux-amd64.tar.gz  -P /tmp/
+            sudo tar -C /tmp -xf /tmp/node_exporter-$PROMETHEUS_NODE_EXPORTER_TAG.linux-amd64.tar.gz
+            sudo cp /tmp/node_exporter-$PROMETHEUS_NODE_EXPORTER_TAG.linux-amd64/node_exporter /usr/local/bin
+            sudo chown node_exporter:node_exporter /usr/local/bin/node_exporter
+            sudo rm -rf node_exporter-$PROMETHEUS_NODE_EXPORTER_TAG.linux-amd64*
+            sudo cp ${OSM_DEVOPS}/installers/docker/files/node_exporter.service /etc/systemd/system/node_exporter.service
+            sudo systemctl daemon-reload
+            sudo systemctl restart node_exporter
+            sudo systemctl enable node_exporter
+            echo "Node Exporter has been activated in this host."
+    fi
     return 0
 }
 
