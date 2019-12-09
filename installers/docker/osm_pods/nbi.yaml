@@ -50,7 +50,7 @@ spec:
         command: ["sh", "-c", "until (nc -zvw1 kafka 9092 && nc -zvw1 mongo 27017); do sleep 3; done; exit 0"]
       containers:
       - name: nbi
-        image: opensourcemano/nbi:latest
+        image: opensourcemano/nbi:7
         ports:
         - containerPort: 9999
           protocol: TCP

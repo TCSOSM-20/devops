@@ -50,7 +50,7 @@ spec:
         command: ["sh", "-c", "until (nc -zvw1 kafka 9092 && nc -zvw1 mongo 27017); do sleep 3; done; exit 0"]
       containers:
       - name: mon
-        image: opensourcemano/mon:latest
+        image: opensourcemano/mon:7
         ports:
         - containerPort: 8662
           protocol: TCP
