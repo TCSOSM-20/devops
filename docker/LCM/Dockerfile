@@ -78,6 +78,8 @@ ARG REPOSITORY=testing
 RUN curl ${REPOSITORY_BASE}/${RELEASE}/${REPOSITORY_KEY} | apt-key add -
 RUN add-apt-repository -y "deb ${REPOSITORY_BASE}/${RELEASE} ${REPOSITORY} LCM N2VC common" && apt update
 
+RUN python3 -m pip install -U "cffi==1.13.2"
+
 ARG LCM_VERSION
 ARG COMMON_VERSION
 ARG N2VC_VERSION
