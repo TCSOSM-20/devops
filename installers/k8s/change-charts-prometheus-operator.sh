@@ -75,4 +75,9 @@ do
     rm $i
 done
 
+# Deleting Grafana dependence to avoid it installation
+sed -i -e '/.*- name: grafana.*/,+3d' $CHARTS_DIR/prometheus-operator/requirements.yaml
+sed -i -e '/.*- name: grafana.*/,+2d' $CHARTS_DIR/prometheus-operator/requirements.lock
+rm -rf $CHARTS_DIR/prometheus-operator/charts/grafana
+
 exit 0

@@ -23,7 +23,7 @@ metadata:
     heritage: Tiller
   name: osm-monitoring-prometheus-mongodb-exporter-grafana
   annotations:
-    k8s-sidecar-target-directory: "/tmp/dashboards/OSM Third Party Modules"
+    k8s-sidecar-target-directory: "/tmp/dashboards/Open Source MANO"
 data:
   mongodb-exporter-dashboard.json: |-
     {
@@ -40,12 +40,12 @@ data:
           }
         ]
       },
-      "description": "MongoDB Prometheus Exporter Dashboard. \r\nWorks well with https://github.com/dcu/mongodb_exporter\r\n\r\nIf you have the node_exporter running on the mongo instance, you will also get some useful alert panels related to disk io and cpu.",
+      "description": "MongoDB Prometheus Exporter Dashboard.",
       "editable": true,
       "gnetId": 2583,
       "graphTooltip": 1,
-      "id": 29,
-      "iteration": 1569257185850,
+      "id": 9,
+      "iteration": 1577555358996,
       "links": [],
       "panels": [
         {
@@ -56,10 +56,192 @@ data:
             "x": 0,
             "y": 0
           },
+          "id": 22,
+          "panels": [],
+          "repeat": "env",
+          "title": "Health",
+          "type": "row"
+        },
+        {
+          "cacheTimeout": null,
+          "colorBackground": false,
+          "colorValue": true,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "datasource": "Prometheus",
+          "decimals": null,
+          "format": "s",
+          "gauge": {
+            "maxValue": 100,
+            "minValue": 0,
+            "show": false,
+            "thresholdLabels": false,
+            "thresholdMarkers": true
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 12,
+            "x": 0,
+            "y": 1
+          },
+          "id": 10,
+          "interval": null,
+          "links": [],
+          "mappingType": 1,
+          "mappingTypes": [
+            {
+              "name": "value to text",
+              "value": 1
+            },
+            {
+              "name": "range to text",
+              "value": 2
+            }
+          ],
+          "maxDataPoints": 100,
+          "nullPointMode": "connected",
+          "nullText": null,
+          "options": {},
+          "postfix": "",
+          "postfixFontSize": "50%",
+          "prefix": "",
+          "prefixFontSize": "50%",
+          "rangeMaps": [
+            {
+              "from": "null",
+              "text": "N/A",
+              "to": "null"
+            }
+          ],
+          "sparkline": {
+            "fillColor": "rgba(31, 118, 189, 0.18)",
+            "full": false,
+            "lineColor": "rgb(31, 120, 193)",
+            "show": false
+          },
+          "tableColumn": "",
+          "targets": [
+            {
+              "expr": "mongodb_instance_uptime_seconds{instance=~\"$instance\"}",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "",
+              "refId": "A",
+              "step": 1800
+            }
+          ],
+          "thresholds": "0,360",
+          "title": "Uptime",
+          "type": "singlestat",
+          "valueFontSize": "80%",
+          "valueMaps": [
+            {
+              "op": "=",
+              "text": "N/A",
+              "value": "null"
+            }
+          ],
+          "valueName": "current"
+        },
+        {
+          "cacheTimeout": null,
+          "colorBackground": false,
+          "colorValue": false,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "datasource": "Prometheus",
+          "format": "none",
+          "gauge": {
+            "maxValue": 100,
+            "minValue": 0,
+            "show": false,
+            "thresholdLabels": false,
+            "thresholdMarkers": true
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 12,
+            "x": 12,
+            "y": 1
+          },
+          "id": 1,
+          "interval": null,
+          "links": [],
+          "mappingType": 1,
+          "mappingTypes": [
+            {
+              "name": "value to text",
+              "value": 1
+            },
+            {
+              "name": "range to text",
+              "value": 2
+            }
+          ],
+          "maxDataPoints": 100,
+          "nullPointMode": "connected",
+          "nullText": null,
+          "options": {},
+          "postfix": "",
+          "postfixFontSize": "50%",
+          "prefix": "",
+          "prefixFontSize": "50%",
+          "rangeMaps": [
+            {
+              "from": "null",
+              "text": "N/A",
+              "to": "null"
+            }
+          ],
+          "sparkline": {
+            "fillColor": "rgba(31, 118, 189, 0.18)",
+            "full": true,
+            "lineColor": "rgb(31, 120, 193)",
+            "show": true
+          },
+          "tableColumn": "",
+          "targets": [
+            {
+              "expr": "mongodb_connections{instance=~\"$instance\",state=\"current\"}",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "",
+              "metric": "mongodb_connections",
+              "refId": "A",
+              "step": 1800
+            }
+          ],
+          "thresholds": "",
+          "title": "Open Connections",
+          "type": "singlestat",
+          "valueFontSize": "80%",
+          "valueMaps": [
+            {
+              "op": "=",
+              "text": "N/A",
+              "value": "null"
+            }
+          ],
+          "valueName": "avg"
+        },
+        {
+          "collapsed": false,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 5
+          },
           "id": 20,
           "panels": [],
           "repeat": "env",
-          "title": "Query Metrics for $env",
+          "title": "Operations",
           "type": "row"
         },
         {
@@ -74,7 +256,7 @@ data:
             "h": 6,
             "w": 10,
             "x": 0,
-            "y": 1
+            "y": 6
           },
           "id": 7,
           "legend": {
@@ -103,7 +285,7 @@ data:
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(mongodb_op_counters_total{instance=~\"$env\"}[$interval])",
+              "expr": "rate(mongodb_op_counters_total{instance=~\"$instance\"}[$interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 2,
@@ -165,7 +347,7 @@ data:
             "h": 6,
             "w": 8,
             "x": 10,
-            "y": 1
+            "y": 6
           },
           "id": 9,
           "legend": {
@@ -199,7 +381,7 @@ data:
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(mongodb_mongod_metrics_document_total{instance=~\"$env\"}[$interval])",
+              "expr": "rate(mongodb_mongod_metrics_document_total{instance=~\"$instance\"}[$interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 2,
@@ -261,7 +443,7 @@ data:
             "h": 6,
             "w": 6,
             "x": 18,
-            "y": 1
+            "y": 6
           },
           "id": 8,
           "legend": {
@@ -290,7 +472,7 @@ data:
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(mongodb_mongod_metrics_query_executor_total{instance=~\"$env\"}[$interval])",
+              "expr": "rate(mongodb_mongod_metrics_query_executor_total{instance=~\"$instance\"}[$interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 2,
@@ -346,279 +528,12 @@ data:
             "h": 1,
             "w": 24,
             "x": 0,
-            "y": 7
-          },
-          "id": 22,
-          "panels": [],
-          "repeat": "env",
-          "title": "Health metrics for $env",
-          "type": "row"
-        },
-        {
-          "cacheTimeout": null,
-          "colorBackground": false,
-          "colorValue": true,
-          "colors": [
-            "rgba(245, 54, 54, 0.9)",
-            "rgba(237, 129, 40, 0.89)",
-            "rgba(50, 172, 45, 0.97)"
-          ],
-          "datasource": "Prometheus",
-          "decimals": null,
-          "format": "s",
-          "gauge": {
-            "maxValue": 100,
-            "minValue": 0,
-            "show": false,
-            "thresholdLabels": false,
-            "thresholdMarkers": true
-          },
-          "gridPos": {
-            "h": 4,
-            "w": 4,
-            "x": 0,
-            "y": 8
-          },
-          "id": 10,
-          "interval": null,
-          "links": [],
-          "mappingType": 1,
-          "mappingTypes": [
-            {
-              "name": "value to text",
-              "value": 1
-            },
-            {
-              "name": "range to text",
-              "value": 2
-            }
-          ],
-          "maxDataPoints": 100,
-          "nullPointMode": "connected",
-          "nullText": null,
-          "options": {},
-          "postfix": "",
-          "postfixFontSize": "50%",
-          "prefix": "",
-          "prefixFontSize": "50%",
-          "rangeMaps": [
-            {
-              "from": "null",
-              "text": "N/A",
-              "to": "null"
-            }
-          ],
-          "sparkline": {
-            "fillColor": "rgba(31, 118, 189, 0.18)",
-            "full": false,
-            "lineColor": "rgb(31, 120, 193)",
-            "show": false
-          },
-          "tableColumn": "",
-          "targets": [
-            {
-              "expr": "mongodb_instance_uptime_seconds{instance=~\"$env\"}",
-              "format": "time_series",
-              "intervalFactor": 2,
-              "legendFormat": "",
-              "refId": "A",
-              "step": 1800
-            }
-          ],
-          "thresholds": "0,360",
-          "title": "Uptime",
-          "type": "singlestat",
-          "valueFontSize": "80%",
-          "valueMaps": [
-            {
-              "op": "=",
-              "text": "N/A",
-              "value": "null"
-            }
-          ],
-          "valueName": "current"
-        },
-        {
-          "cacheTimeout": null,
-          "colorBackground": false,
-          "colorValue": false,
-          "colors": [
-            "rgba(245, 54, 54, 0.9)",
-            "rgba(237, 129, 40, 0.89)",
-            "rgba(50, 172, 45, 0.97)"
-          ],
-          "datasource": "Prometheus",
-          "decimals": null,
-          "format": "none",
-          "gauge": {
-            "maxValue": 100,
-            "minValue": 0,
-            "show": false,
-            "thresholdLabels": false,
-            "thresholdMarkers": true
-          },
-          "gridPos": {
-            "h": 4,
-            "w": 4,
-            "x": 4,
-            "y": 8
-          },
-          "id": 2,
-          "interval": null,
-          "links": [],
-          "mappingType": 1,
-          "mappingTypes": [
-            {
-              "name": "value to text",
-              "value": 1
-            },
-            {
-              "name": "range to text",
-              "value": 2
-            }
-          ],
-          "maxDataPoints": 100,
-          "nullPointMode": "connected",
-          "nullText": null,
-          "options": {},
-          "postfix": "",
-          "postfixFontSize": "50%",
-          "prefix": "",
-          "prefixFontSize": "50%",
-          "rangeMaps": [
-            {
-              "from": "null",
-              "text": "N/A",
-              "to": "null"
-            }
-          ],
-          "sparkline": {
-            "fillColor": "rgba(31, 118, 189, 0.18)",
-            "full": true,
-            "lineColor": "rgb(31, 120, 193)",
-            "show": true
-          },
-          "tableColumn": "",
-          "targets": [
-            {
-              "expr": "mongodb_connections{instance=~\"$env\",state=\"available\"}",
-              "format": "time_series",
-              "intervalFactor": 2,
-              "legendFormat": "",
-              "metric": "mongodb_connections",
-              "refId": "A",
-              "step": 1800
-            }
-          ],
-          "thresholds": "",
-          "title": "Available Connections",
-          "type": "singlestat",
-          "valueFontSize": "80%",
-          "valueMaps": [
-            {
-              "op": "=",
-              "text": "N/A",
-              "value": "null"
-            }
-          ],
-          "valueName": "avg"
-        },
-        {
-          "cacheTimeout": null,
-          "colorBackground": false,
-          "colorValue": false,
-          "colors": [
-            "rgba(245, 54, 54, 0.9)",
-            "rgba(237, 129, 40, 0.89)",
-            "rgba(50, 172, 45, 0.97)"
-          ],
-          "datasource": "Prometheus",
-          "format": "none",
-          "gauge": {
-            "maxValue": 100,
-            "minValue": 0,
-            "show": false,
-            "thresholdLabels": false,
-            "thresholdMarkers": true
-          },
-          "gridPos": {
-            "h": 4,
-            "w": 16,
-            "x": 8,
-            "y": 8
-          },
-          "id": 1,
-          "interval": null,
-          "links": [],
-          "mappingType": 1,
-          "mappingTypes": [
-            {
-              "name": "value to text",
-              "value": 1
-            },
-            {
-              "name": "range to text",
-              "value": 2
-            }
-          ],
-          "maxDataPoints": 100,
-          "nullPointMode": "connected",
-          "nullText": null,
-          "options": {},
-          "postfix": "",
-          "postfixFontSize": "50%",
-          "prefix": "",
-          "prefixFontSize": "50%",
-          "rangeMaps": [
-            {
-              "from": "null",
-              "text": "N/A",
-              "to": "null"
-            }
-          ],
-          "sparkline": {
-            "fillColor": "rgba(31, 118, 189, 0.18)",
-            "full": true,
-            "lineColor": "rgb(31, 120, 193)",
-            "show": true
-          },
-          "tableColumn": "",
-          "targets": [
-            {
-              "expr": "mongodb_connections{instance=~\"$env\",state=\"current\"}",
-              "format": "time_series",
-              "intervalFactor": 2,
-              "legendFormat": "",
-              "metric": "mongodb_connections",
-              "refId": "A",
-              "step": 1800
-            }
-          ],
-          "thresholds": "",
-          "title": "Open Connections",
-          "type": "singlestat",
-          "valueFontSize": "80%",
-          "valueMaps": [
-            {
-              "op": "=",
-              "text": "N/A",
-              "value": "null"
-            }
-          ],
-          "valueName": "avg"
-        },
-        {
-          "collapsed": false,
-          "gridPos": {
-            "h": 1,
-            "w": 24,
-            "x": 0,
             "y": 12
           },
           "id": 23,
           "panels": [],
           "repeat": null,
-          "title": "Resource Metrics",
+          "title": "Resources",
           "type": "row"
         },
         {
@@ -666,7 +581,7 @@ data:
           "steppedLine": false,
           "targets": [
             {
-              "expr": "mongodb_memory{instance=~\"$env\",type=~\"resident|virtual\"}",
+              "expr": "mongodb_memory{instance=~\"$instance\",type=~\"resident|virtual\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 2,
@@ -759,7 +674,7 @@ data:
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(mongodb_network_bytes_total{instance=~\"$env\"}[$interval])",
+              "expr": "rate(mongodb_network_bytes_total{instance=~\"$instance\"}[$interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 2,
@@ -814,9 +729,7 @@ data:
       "refresh": "5s",
       "schemaVersion": 19,
       "style": "dark",
-      "tags": [
-        "prometheus"
-      ],
+      "tags": [],
       "templating": {
         "list": [
           {
@@ -829,9 +742,9 @@ data:
             "definition": "",
             "hide": 0,
             "includeAll": true,
-            "label": "env",
+            "label": "instance",
             "multi": true,
-            "name": "env",
+            "name": "instance",
             "options": [],
             "query": "label_values(mongodb_connections, instance)",
             "refresh": 1,
@@ -951,5 +864,5 @@ data:
       "timezone": "browser",
       "title": "MongoDB",
       "uid": "HEK4NbtZk",
-      "version": 1
+      "version": 2
     }

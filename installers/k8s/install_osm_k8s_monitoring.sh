@@ -46,7 +46,7 @@ NAMESPACE=monitoring
 HELM=""
 DEBUG=""
 DUMP_VARS=""
-SERVICE_TYPE="" 
+SERVICE_TYPE=""
 while getopts ":h-:n:s:" o; do
     case "${o}" in
         h)
@@ -111,8 +111,8 @@ helm > /dev/null 2>&1
 if [ $? != 0 ] ; then
     echo "Helm is not installed, installing ....."
     curl https://get.helm.sh/helm-v2.15.2-linux-amd64.tar.gz --output helm-v2.15.2.tar.gz
-    tar -zxvf helm-v2.15.2.tar.gz 
-    sudo mv linux-amd64/helm /usr/local/bin/helm 
+    tar -zxvf helm-v2.15.2.tar.gz
+    sudo mv linux-amd64/helm /usr/local/bin/helm
     rm -r linux-amd64
     rm helm-v2.15.2.tar.gz
 fi
@@ -130,10 +130,10 @@ if [ $? == 1 ] ; then
     while true
     do
     tiller_status=`kubectl -n kube-system get deployment.apps/tiller-deploy --no-headers |  awk '{print $2'}`
-        if  [ ! -z "$tiller_status" ] 
+        if  [ ! -z "$tiller_status" ]
         then
             if [ $tiller_status == "1/1" ]
-            then 
+            then
                 echo "Go...."
                 break
             fi
@@ -150,11 +150,7 @@ kubectl create namespace $NAMESPACE
 # Prometheus operator installation
 $HERE/change-charts-prometheus-operator.sh
 echo "Creating stable/prometheus-operator"
-helm install --namespace $NAMESPACE --version=$V_OPERATOR --name osm-monitoring --set kubelet.serviceMonitor.https=true,prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false $HERE/helm_charts/prometheus-operator
-
-# Change osm-monitoring-grafana-config-dashboards to have folders
-kubectl -n $NAMESPACE delete configmap osm-monitoring-grafana-config-dashboards
-kubectl -n $NAMESPACE apply -f $HERE/grafanaproviders.yaml
+helm install --namespace $NAMESPACE --version=$V_OPERATOR --name osm-monitoring --set kubelet.serviceMonitor.https=true,prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false,alertmanager.service.type=$SERVICE_TYPE,prometheus.service.type=$SERVICE_TYPE,grafana.serviceMonitor.selfMonitor=false $HERE/helm_charts/prometheus-operator
 
 # Exporters installation
 
@@ -165,14 +161,14 @@ helm install --namespace $NAMESPACE --version=$V_MONGODB_EXPORTER --name osm-mon
 #dashboard:
 kubectl -n $NAMESPACE apply -f $HERE/mongodb-exporter-dashboard.yaml
 
-# Mysql 
+# Mysql
 # exporter
 echo "Creating stable/prometheus-mysql-exporter"
 helm install --namespace $NAMESPACE --version=$V_MYSQL_EXPORTER --name osm-mysql-exporter --set serviceMonitor.enabled=true,mysql.user="root",mysql.pass=`kubectl -n osm get secret ro-db-secret -o yaml | grep MYSQL_ROOT_PASSWORD | awk '{print $2}' | base64 -d`,mysql.host="mysql.osm",mysql.port="3306" stable/prometheus-mysql-exporter
 #dashboard:
 kubectl -n $NAMESPACE apply -f $HERE/mysql-exporter-dashboard.yaml
 
-# Kafka 
+# Kafka
 # exporter
 helm install --namespace $NAMESPACE --name osm-kafka-exporter $HERE/helm_charts/prometheus-kafka-exporter
 # dashboard:
@@ -181,22 +177,6 @@ kubectl -n $NAMESPACE apply -f $HERE/kafka-exporter-dashboard.yaml
 # Deploy summary dashboard
 kubectl -n $NAMESPACE apply -f $HERE/summary-dashboard.yaml
 
-# Patch prometheus, alertmanager and grafana with service type
-# By default is created with ClusterIP type
-if [ $SERVICE_TYPE == "NodePort" ] ; then
-  kubectl --namespace $NAMESPACE patch service osm-monitoring-grafana -p '{"spec":{"type":"NodePort"}}'
-  kubectl --namespace $NAMESPACE patch service osm-monitoring-prometheus-alertmanager -p '{"spec":{"type":"NodePort"}}'
-  kubectl --namespace $NAMESPACE patch service osm-monitoring-prometheus-prometheus -p '{"spec":{"type":"NodePort"}}'
-fi
-
-if [ $SERVICE_TYPE == "LoadBalancer" ] ; then
-  kubectl --namespace $NAMESPACE patch service osm-monitoring-grafana -p '{"spec":{"type":"LoadBalancer"}}'
-  kubectl --namespace $NAMESPACE patch service osm-monitoring-prometheus-alertmanager -p '{"spec":{"type":"LoadBalancer"}}'
-  kubectl --namespace $NAMESPACE patch service osm-monitoring-prometheus-prometheus -p '{"spec":{"type":"LoadBalancer"}}'
-fi
-
-# Restart grafana to be sure patches are applied
-echo "Restarting grafana POD..."
-pod_grafana=`kubectl -n monitoring get pods | grep grafana | awk '{print $1}'`
-kubectl --namespace $NAMESPACE delete pod $pod_grafana
+# Deploy nodes dashboards
+kubectl -n $NAMESPACE apply -f $HERE/nodes-dashboard.yaml
 
