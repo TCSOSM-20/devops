@@ -23,7 +23,7 @@ metadata:
     heritage: Tiller
   name: osm-monitoring-prometheus-kafka-exporter-grafana
   annotations:
-    k8s-sidecar-target-directory: "/tmp/dashboards/OSM Third Party Modules"
+    k8s-sidecar-target-directory: "/tmp/dashboards/Open Source MANO"
 data:
   kafka-exporter-dashboard.json: |-
     {
@@ -44,8 +44,8 @@ data:
       "editable": true,
       "gnetId": 7589,
       "graphTooltip": 0,
-      "id": 36,
-      "iteration": 1569330292834,
+      "id": 10,
+      "iteration": 1578848023483,
       "links": [],
       "panels": [
         {
@@ -94,7 +94,7 @@ data:
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(kafka_topic_partition_current_offset{instance=\"$instance\", topic=~\"$topic\"}[1m])) by (topic)",
+              "expr": "sum(kafka_topic_partition_current_offset - kafka_topic_partition_oldest_offset{instance=\"$instance\", topic=~\"$topic\"}) by (topic)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{topic}}",
@@ -105,7 +105,7 @@ data:
           "timeFrom": null,
           "timeRegions": [],
           "timeShift": null,
-          "title": "Message in per second",
+          "title": "Messages stored per topic",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -166,6 +166,7 @@ data:
             "rightSide": false,
             "show": true,
             "sideWidth": 480,
+            "sort": "max",
             "sortDesc": true,
             "total": false,
             "values": true
@@ -192,7 +193,7 @@ data:
               "instant": false,
               "interval": "",
               "intervalFactor": 1,
-              "legendFormat": "{{consumergroup}} (topic: {{topic}})",
+              "legendFormat": " {{topic}} ({{consumergroup}})",
               "refId": "A"
             }
           ],
@@ -292,7 +293,7 @@ data:
           "timeFrom": null,
           "timeRegions": [],
           "timeShift": null,
-          "title": "Message in per minute",
+          "title": "Messages produced per minute",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -378,7 +379,7 @@ data:
               "expr": "sum(delta(kafka_consumergroup_current_offset{instance=~'$instance',topic=~\"$topic\"}[5m])/5) by (consumergroup, topic)",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "{{consumergroup}} (topic: {{topic}})",
+              "legendFormat": " {{topic}} ({{consumergroup}})",
               "refId": "A"
             }
           ],
@@ -386,7 +387,7 @@ data:
           "timeFrom": null,
           "timeRegions": [],
           "timeShift": null,
-          "title": "Message consume per minute",
+          "title": "Messages consumed per minute",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -521,15 +522,12 @@ data:
       "refresh": "5s",
       "schemaVersion": 19,
       "style": "dark",
-      "tags": [
-        "Kafka"
-      ],
+      "tags": [],
       "templating": {
         "list": [
           {
             "allValue": null,
             "current": {
-              "selected": true,
               "text": "osm-kafka-exporter-service",
               "value": "osm-kafka-exporter-service"
             },
@@ -554,11 +552,6 @@ data:
           },
           {
             "allValue": null,
-            "current": {
-              "selected": false,
-              "text": "10.244.0.87:9092",
-              "value": "10.244.0.87:9092"
-            },
             "datasource": "Prometheus",
             "definition": "",
             "hide": 0,
@@ -581,6 +574,7 @@ data:
           {
             "allValue": null,
             "current": {
+              "tags": [],
               "text": "All",
               "value": [
                 "$__all"
@@ -637,7 +631,7 @@ data:
         ]
       },
       "timezone": "browser",
-      "title": "Kafka Exporter Overview",
+      "title": "Kafka",
       "uid": "jwPKIsniz",
-      "version": 1
+      "version": 2
     }

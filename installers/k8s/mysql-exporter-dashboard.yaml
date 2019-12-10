@@ -23,7 +23,7 @@ metadata:
     heritage: Tiller
   name: osm-monitoring-prometheus-mysql-exporter-grafana
   annotations:
-    k8s-sidecar-target-directory: "/tmp/dashboards/OSM Third Party Modules"
+    k8s-sidecar-target-directory: "/tmp/dashboards/Open Source MANO"
 data:
   mysql-exporter-dashboard.json: |-
     {
@@ -40,7 +40,7 @@ data:
           }
         ]
       },
-      "description": "Basic Mysql dashboard for the prometheus exporter ",
+      "description": "Mysql dashboard",
       "editable": true,
       "gnetId": 6239,
       "graphTooltip": 0,
@@ -731,7 +731,7 @@ data:
           "dashLength": 10,
           "dashes": false,
           "datasource": "Prometheus",
-          "description": "The number of connections that were aborted because the client died without closing the connection properly. See Section B.5.2.10, “Communication Errors and Aborted Connections”.",
+          "description": "The number of connections that were aborted because the client died without closing the connection properly.",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
@@ -820,7 +820,7 @@ data:
           "dashLength": 10,
           "dashes": false,
           "datasource": "Prometheus",
-          "description": "The number of failed attempts to connect to the MySQL server. See Section B.5.2.10, “Communication Errors and Aborted Connections”.\n\nFor additional connection-related information, check the Connection_errors_xxx status variables and the host_cache table.",
+          "description": "The number of failed attempts to connect to the MySQL server.",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
@@ -1106,8 +1106,6 @@ data:
       "schemaVersion": 19,
       "style": "dark",
       "tags": [
-        "Databases",
-        "backgroundservices"
       ],
       "templating": {
         "list": [
@@ -1169,7 +1167,7 @@ data:
         ]
       },
       "timezone": "",
-      "title": "Mysql - Prometheus",
+      "title": "Mysql",
       "uid": "6-kPlS7ik",
       "version": 1
     }
