@@ -35,9 +35,8 @@ function usage(){
     echo -e "     -A <VCA apiproxy> use VCA/juju API proxy"
     echo -e "     --vimemu:       additionally deploy the VIM emulator as a docker container"
     echo -e "     --elk_stack:    additionally deploy an ELK docker stack for event logging"
-    echo -e "     --pm_stack:     additionally deploy a Prometheus+Grafana stack for performance monitoring (PM)"
-    echo -e "     -m <MODULE>:    install OSM but only rebuild the specified docker images (LW-UI, NBI, LCM, RO, MON, POL, KAFKA, MONGO, PROMETHEUS, KEYSTONE-DB, NONE)"
-    echo -e "     -o <ADDON>:     ONLY (un)installs one of the addons (vimemu, elk_stack, pm_stack)"
+    echo -e "     -m <MODULE>:    install OSM but only rebuild the specified docker images (LW-UI, NBI, LCM, RO, MON, POL, KAFKA, MONGO, PROMETHEUS, PROMETHEUS-CADVISOR, KEYSTONE-DB, NONE)"
+    echo -e "     -o <ADDON>:     ONLY (un)installs one of the addons (vimemu, elk_stack)"
     echo -e "     -D <devops path> use local devops installation path"
     echo -e "     -w <work dir>   Location to store runtime installation"
     echo -e "     -t <docker tag> specify osm docker tag (default is latest)"
@@ -754,9 +753,13 @@ function generate_docker_images() {
         sg docker -c "docker pull prom/prometheus:${PROMETHEUS_TAG}" || FATAL "cannot get prometheus docker image"
     fi
 
+    if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q PROMETHEUS-CADVISOR ; then
+        sg docker -c "docker pull google/cadvisor:${PROMETHEUS_CADVISOR_TAG}" || FATAL "cannot get prometheus cadvisor docker image"
+    fi
+
     if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q GRAFANA ; then
         sg docker -c "docker pull grafana/grafana:${GRAFANA_TAG}" || FATAL "cannot get grafana docker image"
-    fi    
+    fi
 
     if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q NBI || echo $TO_REBUILD | grep -q KEYSTONE-DB ; then
         sg docker -c "docker pull mariadb:${KEYSTONEDB_TAG}" || FATAL "cannot get keystone-db docker image"
@@ -1238,21 +1241,21 @@ function install_lightweight() {
         OSM_VCA_PUBKEY=$(cat $HOME/.local/share/juju/ssh/juju_id_rsa.pub)
         [ -z "$OSM_VCA_PUBKEY" ] && FATAL "Cannot obtain juju public key"
     fi
+    if [ -z "$OSM_VCA_CACERT" ]; then
+	OSM_VCA_CACERT=$(juju controllers --format json | jq -r '.controllers["osm"]["ca-cert"]' | base64 | tr -d \\n)
+       [ -z "$OSM_VCA_CACERT" ] && FATAL "Cannot obtain juju CA certificate"
+    fi
     if [ -z "$OSM_VCA_APIPROXY" ]; then
         OSM_VCA_APIPROXY=$DEFAULT_IP
         [ -z "$OSM_VCA_APIPROXY" ] && FATAL "Cannot obtain juju api proxy"
     fi
     juju_createproxy
+    track juju
 
-    if [ -z "$OSM_VCA_CACERT" ]; then
-	OSM_VCA_CACERT=$(juju controllers --format json | jq -r '.controllers["osm"]["ca-cert"]' | base64 | tr -d \\n)
-       [ -z "$OSM_VCA_CACERT" ] && FATAL "Cannot obtain juju CA certificate"
-    fi
     if [ -z "$OSM_DATABASE_COMMONKEY" ]; then
         OSM_DATABASE_COMMONKEY=$(generate_secret)
         [ -z "OSM_DATABASE_COMMONKEY" ] && FATAL "Cannot generate common db secret"
     fi
-    track juju
 
     [ -n "$INSTALL_NODOCKER" ] || install_docker_ce
     track docker_ce
@@ -1279,6 +1282,7 @@ function install_lightweight() {
         if [ -n "$K8S_MONITOR" ]; then
             # uninstall OSM MONITORING
             uninstall_k8s_monitoring
+            track uninstall_k8s_monitoring
         fi
         #remove old namespace
         remove_k8s_namespace $OSM_STACK_NAME
@@ -1288,6 +1292,11 @@ function install_lightweight() {
         namespace_vol
         deploy_osm_services
         track deploy_osm_services_k8s
+        if [ -n "$K8S_MONITOR" ]; then
+            # install OSM MONITORING
+            install_k8s_monitoring
+            track install_k8s_monitoring
+        fi
     else
         # remove old stack
         remove_stack $OSM_STACK_NAME
@@ -1296,14 +1305,9 @@ function install_lightweight() {
         generate_osmclient_script
         track docker_deploy
         install_prometheus_nodeexporter
+        track nodeexporter
         [ -n "$INSTALL_VIMEMU" ] && install_vimemu && track vimemu
         [ -n "$INSTALL_ELK" ] && deploy_elk && track elk
-    fi
-
-    if [ -n "$KUBERNETES" ] && [ -n "$K8S_MONITOR" ]; then
-        # install OSM MONITORING
-        install_k8s_monitoring
-        track install_k8s_monitoring
     fi
 
     [ -z "$INSTALL_NOHOSTCLIENT" ] && install_osmclient
@@ -1347,13 +1351,12 @@ function install_vimemu() {
 
 function install_k8s_monitoring() {
     # install OSM monitoring
-    chmod +x $WORKDIR_SUDO $OSM_DEVOPS/installers/k8s/*.sh
+    $WORKDIR_SUDO chmod +x $OSM_DEVOPS/installers/k8s/*.sh
     $WORKDIR_SUDO $OSM_DEVOPS/installers/k8s/install_osm_k8s_monitoring.sh
 }
 
 function uninstall_k8s_monitoring() {
     # install OSM monitoring
-    chmod +x $WORKDIR_SUDO $OSM_DEVOPS/installers/k8s/*.sh
     $WORKDIR_SUDO $OSM_DEVOPS/installers/k8s/uninstall_osm_k8s_monitoring.sh
 }
 
@@ -1425,7 +1428,7 @@ SHOWOPTS=""
 COMMIT_ID=""
 ASSUME_YES=""
 INSTALL_FROM_SOURCE=""
-RELEASE="ReleaseSIX"
+RELEASE="ReleaseSEVEN"
 REPOSITORY="stable"
 INSTALL_VIMEMU=""
 INSTALL_FROM_LXDIMAGES=""
@@ -1434,7 +1437,6 @@ LXD_REPOSITORY_PATH=""
 INSTALL_LIGHTWEIGHT="y"
 INSTALL_ONLY=""
 INSTALL_ELK=""
-#INSTALL_PERFMON=""
 TO_REBUILD=""
 INSTALL_NOLXD=""
 INSTALL_NODOCKER=""
@@ -1546,7 +1548,6 @@ while getopts ":hy-:b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:" o; do
             INSTALL_ONLY="y"
             [ "${OPTARG}" == "vimemu" ] && INSTALL_VIMEMU="y" && continue
             [ "${OPTARG}" == "elk_stack" ] && INSTALL_ELK="y" && continue
-            #[ "${OPTARG}" == "pm_stack" ] && INSTALL_PERFMON="y" && continue
             ;;
         m)
             [ "${OPTARG}" == "LW-UI" ] && TO_REBUILD="$TO_REBUILD LW-UI" && continue
@@ -1558,6 +1559,7 @@ while getopts ":hy-:b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:" o; do
             [ "${OPTARG}" == "KAFKA" ] && TO_REBUILD="$TO_REBUILD KAFKA" && continue
             [ "${OPTARG}" == "MONGO" ] && TO_REBUILD="$TO_REBUILD MONGO" && continue
             [ "${OPTARG}" == "PROMETHEUS" ] && TO_REBUILD="$TO_REBUILD PROMETHEUS" && continue
+            [ "${OPTARG}" == "PROMETHEUS-CADVISOR" ] && TO_REBUILD="$TO_REBUILD PROMETHEUS-CADVISOR" && continue
             [ "${OPTARG}" == "KEYSTONE-DB" ] && TO_REBUILD="$TO_REBUILD KEYSTONE-DB" && continue
             [ "${OPTARG}" == "GRAFANA" ] && TO_REBUILD="$TO_REBUILD GRAFANA" && continue
             [ "${OPTARG}" == "NONE" ] && TO_REBUILD="$TO_REBUILD NONE" && continue
@@ -1579,7 +1581,6 @@ while getopts ":hy-:b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:" o; do
             [ "${OPTARG}" == "soui" ] && INSTALL_LIGHTWEIGHT="" && RELEASE="-R ReleaseTHREE" && REPOSITORY="-r stable" && continue
             [ "${OPTARG}" == "vimemu" ] && INSTALL_VIMEMU="y" && continue
             [ "${OPTARG}" == "elk_stack" ] && INSTALL_ELK="y" && continue
-            #[ "${OPTARG}" == "pm_stack" ] && INSTALL_PERFMON="y" && continue
             [ "${OPTARG}" == "noconfigure" ] && NOCONFIGURE="y" && continue
             [ "${OPTARG}" == "showopts" ] && SHOWOPTS="y" && continue
             [ "${OPTARG}" == "daily" ] && RELEASE_DAILY="y" && continue
