@@ -120,7 +120,7 @@ function remove_volumes() {
         $WORKDIR_SUDO rm -rf ${k8_volume}
     else
         stack=$1
-        volumes="mongo_db mon_db osm_packages ro_db"
+        volumes="mongo_db mon_db osm_packages ro_db pol_db prom_db ro"
         for volume in $volumes; do
             sg docker -c "docker volume rm ${stack}_${volume}"
         done
