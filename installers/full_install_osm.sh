@@ -1363,7 +1363,7 @@ function install_k8s_monitoring() {
 }
 
 function uninstall_k8s_monitoring() {
-    # install OSM monitoring
+    # uninstall OSM monitoring
     $WORKDIR_SUDO $OSM_DEVOPS/installers/k8s/uninstall_osm_k8s_monitoring.sh
 }
 

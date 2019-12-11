@@ -33,7 +33,7 @@ As a result, there will be 3 folders in Grafana:
 
 ## Requirements
 
-- Kubernetes 15.0.X
+- Kubernetes 1.15.X
 - OSM Kubernetes version Release 7
 
 ## Components
