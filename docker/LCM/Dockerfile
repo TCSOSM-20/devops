@@ -18,7 +18,7 @@
 
 # This creates som/LCM docker from from last stable package
 
-FROM ubuntu:16.04
+FROM ubuntu:18.04
 
 # Set the working directory to /app
 WORKDIR /app/osm_lcm
@@ -40,11 +40,11 @@ APT::AutoRemove::SuggestsImportant "false";\n'\
 RUN apt-get update && apt-get -y install curl software-properties-common
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y git make python3 \
-    python3-pip python3-pymongo python3-aiohttp \
+    gpg-agent python3-pip python3-pymongo python3-aiohttp \
     python3-all python3-setuptools openssh-client libffi-dev libssl-dev \
     python3-bitarray python3-regex python3-lxml dh-python wget tox \
     python3-cffi \
-    && python3 -m pip install pip --upgrade \
+    && python3 -m pip install -U pip \
     && python3 -m pip install -U aiokafka lxml six enum34 \
     && python3 -m pip install requests \
     && python3 -m pip install -U juju \
@@ -55,8 +55,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y git make
 #     && cd modules/libjuju && python3 setup.py develop && cd ../.. \
 #     && python3 -m pip install -U -r requirements.txt
 
-RUN apt-get update && apt-get install -y curl xz-utils \
-    && apt-get update && apt-get install -y apt-transport-https \
+RUN apt-get update && apt-get install -y curl xz-utils apt-transport-https \
     && curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
     && echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | tee -a /etc/apt/sources.list.d/kubernetes.list \
     && apt-get update && apt-get install -y kubectl
@@ -71,7 +70,7 @@ RUN curl -L https://launchpad.net/juju/2.7/2.7.0/+download/juju-2.7.0-k8s.tar.xz
     && mv juju /usr/local/bin/juju
 
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
-ARG RELEASE=ReleaseFOUR-daily
+ARG RELEASE=ReleaseSEVEN-daily
 ARG REPOSITORY_KEY=OSM%20ETSI%20Release%20Key.gpg
 ARG REPOSITORY=testing
 
