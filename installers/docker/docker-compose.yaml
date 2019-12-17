@@ -270,3 +270,9 @@ services:
       - "${OSM_GRAFANA_PORTS:-3000:3000}"
     networks:
       - netOSM
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "2"
+
