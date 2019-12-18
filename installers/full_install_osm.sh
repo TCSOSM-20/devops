@@ -1303,7 +1303,7 @@ function install_lightweight() {
         remove_k8s_namespace $OSM_STACK_NAME
         deploy_cni_provider
         kube_secrets
-        [ ! $OSM_DOCKER_TAG == "latest" ] && parse_yaml $OSM_DOCKER_TAG
+        [ ! $OSM_DOCKER_TAG == "7" ] && parse_yaml $OSM_DOCKER_TAG
         namespace_vol
         deploy_osm_services
         track deploy_osm_services_k8s
