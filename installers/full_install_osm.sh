@@ -914,6 +914,14 @@ function generate_docker_env_files() {
         $WORKDIR_SUDO sed -i "s|OSMLCM_VCA_APIPROXY.*|OSMLCM_VCA_APIPROXY=${OSM_VCA_APIPROXY}|g" $OSM_DOCKER_WORK_DIR/lcm.env
     fi
 
+    if ! grep -Fq "OSMLCM_VCA_ENABLEOSUPGRADE" $OSM_DOCKER_WORK_DIR/lcm.env; then
+        echo "# OSMLCM_VCA_ENABLEOSUPGRADE=false" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lcm.env
+    fi
+
+    if ! grep -Fq "OSMLCM_VCA_APTMIRROR" $OSM_DOCKER_WORK_DIR/lcm.env; then
+        echo "# OSMLCM_VCA_APTMIRROR=http://archive.ubuntu.com/ubuntu/" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lcm.env
+    fi
+
     # RO
     MYSQL_ROOT_PASSWORD=$(generate_secret)
     if [ ! -f $OSM_DOCKER_WORK_DIR/ro-db.env ]; then
