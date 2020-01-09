@@ -140,7 +140,7 @@ ENV OSMLCM_VCA_JUJUPATH    /usr/local/bin/juju
 # ENV OSMLCM_GLOBAL_LOGLEVEL DEBUG
 
 HEALTHCHECK --start-period=120s --interval=30s --timeout=30s --retries=1 \
-  CMD python3 -m osm_lcm.lcm --health-check || exit 1
+  CMD python3 -m osm_lcm.lcm_hc || exit 1
 
 
 # Run app.py when the container launches
