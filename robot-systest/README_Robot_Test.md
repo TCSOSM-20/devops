@@ -22,7 +22,7 @@ under the License.
 All installation commands run using root user(`sudo su`)
 ## Step 1: Install python packages
 Install below python packages using pip
->pip install python-magic pyangbind haikunator requests pyvcloud progressbar pathlib robotframework robotframework-seleniumlibrary robotframework-requests
+>pip install python-magic pyangbind haikunator requests pyvcloud progressbar pathlib robotframework robotframework-seleniumlibrary robotframework-requests robotframework-jsonlibrary
 
 ## Step 2: Install linux packages
 Install below linux packages

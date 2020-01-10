@@ -31,7 +31,7 @@ DESCRIPTOR_DIR=$TOPDIR/descriptor-packages
 robot_prerequisite(){
     echo -e "\nInstalling robot requirements"
     # installing python packages
-    pip install haikunator requests robotframework robotframework-seleniumlibrary robotframework-requests
+    pip install haikunator requests robotframework robotframework-seleniumlibrary robotframework-requests robotframework-jsonlibrary
 }
 
 while getopts ":t:-:" o; do

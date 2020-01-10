@@ -50,7 +50,6 @@ properties([
         booleanParam(defaultValue: false, description: '', name: 'SAVE_ARTIFACTS_OVERRIDE'),
         string(defaultValue: '/home/jenkins/hive/openstack-etsi.rc', description: '', name: 'HIVE_VIM_1'),
         booleanParam(defaultValue: false, description: '', name: 'DO_ROBOT'),
-        booleanParam(defaultValue: false, description: '', name: 'DO_RBAC'),
         string(defaultValue: 'sanity', description: 'smoke/vim/sanity/comprehensive are the options', name: 'TEST_NAME'),
         string(defaultValue: '/home/jenkins/hive/robot-systest.cfg', description: '', name: 'ROBOT_VIM'),
     ])
@@ -310,10 +309,6 @@ node("${params.NODE}") {
                 stage_archive = false
                 stage("System Integration Test") {
                     if ( params.DO_ROBOT ) {
-                        if (params.DO_RBAC) {
-                            sh "docker service update ${container_name}_nbi --force --env-add OSMNBI_AUTHENTICATION_BACKEND=keystone --env-add OSMNBI_AUTHENTICATION_AUTH_URL=keystone --env-add OSMNBI_AUTHENTICATION_AUTH_PORT=5000 --env-add OSMNBI_AUTHENTICATION_USER_DOMAIN_NAME=default --env-add OSMNBI_AUTHENTICATION_PROJECT_DOMAIN_NAME=default --env-add OSMNBI_AUTHENTICATION_SERVICE_USERNAME=nbi --env-add OSMNBI_AUTHENTICATION_SERVICE_PROJECT=service"
-                            sh "installers/osm_health.sh -w 30 -s ${container_name}"
-                        }
                         run_robot_systest(container_name,container_name,params.TEST_NAME,params.ROBOT_VIM)
                     } //else {
                     run_systest(container_name,container_name,"openstack_stage_4",params.HIVE_VIM_1)
