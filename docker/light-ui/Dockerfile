@@ -43,6 +43,8 @@ RUN cp /usr/share/osm-lightui/supervisor-app.conf /etc/supervisor/conf.d/
 RUN rm -f db.sqlite3
 
 ENV DJANGO_ENV=prod
+ENV OSM_SERVER=nbi
+# ENV OSMUI_SQL_DATABASE_URI=mysql://root:secret@mysql:3306/lwui
 RUN python manage.py collectstatic --noinput
 RUN chmod +x /usr/share/osm-lightui/entrypoint.sh
 
