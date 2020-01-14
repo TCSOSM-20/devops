@@ -24,9 +24,9 @@ MAINTAINER Gerardo Garcia <gerardo.garciadeblas@telefonica.com>; Jayant Madavi <
 RUN apt-get update && apt-get -y install curl software-properties-common
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -y install wget python3 python3-pip \
-    libcurl4-gnutls-dev python3-openstackclient
+    libcurl4-openssl-dev libssl-dev python3-openstackclient
 
-RUN python3 -m pip install -U pip && python3 -m pip install pyyaml python-magic pyangbind pytest==4.6.3
+RUN python3 -m pip install -U pip && python3 -m pip install pyyaml python-magic pyangbind pytest==4.6.3 verboselogs
 
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
 ARG RELEASE=ReleaseSEVEN-daily
