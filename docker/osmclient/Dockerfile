@@ -17,33 +17,31 @@
 ##
 
 
-FROM ubuntu:16.04
+FROM ubuntu:18.04
 
-LABEL authors="Michael Marchetti, Jayant Madavi <JM00553988@techmahindra.com>"
+MAINTAINER Gerardo Garcia <gerardo.garciadeblas@telefonica.com>; Jayant Madavi <JM00553988@techmahindra.com>
 
 RUN apt-get update && apt-get -y install curl software-properties-common
 
-RUN apt-get update && apt-get -y install python \
-    libcurl4-gnutls-dev libgnutls-dev iputils-ping python-pip \
-    python-openstackclient wget python3-pip
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -y install wget python3 python3-pip \
+    libcurl4-openssl-dev libssl-dev python3-openstackclient
 
-RUN pip install -U pip && python -m pip install python-magic pyangbind pytest==4.6.3
-RUN python3 -m pip install -U pip && python3 -m pip install pyyaml python-magic pyangbind pytest==4.6.3
+RUN python3 -m pip install -U pip && python3 -m pip install pyyaml python-magic pyangbind pytest==4.6.3 verboselogs
 
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
-ARG RELEASE=ReleaseFOUR-daily
+ARG RELEASE=ReleaseSEVEN-daily
 ARG REPOSITORY_KEY=OSM%20ETSI%20Release%20Key.gpg
 ARG REPOSITORY=testing
 
 RUN curl ${REPOSITORY_BASE}/${RELEASE}/${REPOSITORY_KEY} | apt-key add -
-RUN add-apt-repository -y "deb ${REPOSITORY_BASE}/${RELEASE} ${REPOSITORY} devops osmclient IM" && apt update
+RUN add-apt-repository -y "deb ${REPOSITORY_BASE}/${RELEASE} ${REPOSITORY} devops osmclient IM" && apt-get update
 
 ARG OSMCLIENT_VERSION
 ARG DEVOPS_VERSION
 ARG IM_VERSION
 
-RUN apt-get update && apt-get -y install osm-devops${DEVOPS_VERSION}  python3-osm-im${IM_VERSION} \
-    python3-osmclient${OSMCLIENT_VERSION}
+RUN apt-get update && apt-get -y install osm-devops${DEVOPS_VERSION} \
+    python3-osm-im${IM_VERSION} python3-osmclient${OSMCLIENT_VERSION}
 ENV OSM_SOL005=True
 ENV OSM_HOSTNAME=nbi:9999
-ENV OSM_RO_HOSTNAME=ro:9090
+

@@ -29,7 +29,7 @@ ${ns_launch_max_wait_time}    5min
 ${ns_launch_pol_time}    30sec
 ${ns_delete_max_wait_time}    1min
 ${ns_delete_pol_time}    15sec
-
+${nsconfig}
 
 *** Keywords ***
 Get NS List
@@ -41,20 +41,38 @@ Get NS List
 
 
 Launch Network Services and Return
-    [Arguments]  ${vim_name}
+    [Arguments]  ${vim_name}  ${ns_config}=''
+    [Documentation]  Get Configuration parameter to create Newtork service
 
+    Run Keyword If    ${ns_config}==''    Get NS Config
+    ...  ELSE  Set NS Config    ${ns_config}
+    Log To Console    \n${nsconfig}
     Should Not Be Empty    ${nsd_ids}    There are no NS descriptors to launch the NS
     :FOR    ${nsd}    IN    @{nsd_ids}
     \    ${ns_name}=    GENERATE NAME
     \    Append To List     ${ns_ids}       ${ns_name}
-    \    Create Network Service    ${nsd}   ${vim_name}    ${ns_name}
+    \    Create Network Service    ${nsd}   ${vim_name}    ${ns_name}    ${nsconfig}
+
+
+Set NS Config
+    [Arguments]   ${ns_config}
+    [Documentation]  Set NS Configuration variable
+
+    ${nsconfig}=    Get Variable Value    ${ns_config}    ''
+    Set Test Variable    ${nsconfig}
+
+
+Get NS Config
+    [Documentation]  Get NS Configuration from Environment Variable
+
+    ${nsconfig}=    Get Environment Variable    NS_CONFIG    ''
+    Set Test Variable    ${nsconfig}
 
 
 Create Network Service
     [Documentation]  Create ns at osm
-    [Arguments]  ${nsd}   ${vim_name}    ${ns_name}
+    [Arguments]  ${nsd}   ${vim_name}    ${ns_name}    ${ns_config}
 
-    ${ns_config}=   Get Environment Variable    NS_CONFIG    ''
     Run Keyword If   ${ns_config}!=''   Create Network Service With Config    ${nsd}    ${vim_name}    ${ns_name}    ${ns_config}
     ...    ELSE    Create Network Service Without Config    ${nsd}   ${vim_name}    ${ns_name}
 

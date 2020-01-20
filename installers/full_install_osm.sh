@@ -719,6 +719,7 @@ function install_juju() {
 function juju_createcontroller() {
     if ! juju show-controller $OSM_STACK_NAME &> /dev/null; then
         # Not found created, create the controller
+        sudo usermod -a -G lxd ${USER}
         sg lxd -c "juju bootstrap --bootstrap-series=xenial localhost $OSM_STACK_NAME"
     fi
     [ $(juju controllers | awk "/^${OSM_STACK_NAME}[\*| ]/{print $1}"|wc -l) -eq 1 ] || FATAL "Juju installation failed"
@@ -912,6 +913,14 @@ function generate_docker_env_files() {
         echo "OSMLCM_VCA_APIPROXY=${OSM_VCA_APIPROXY}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lcm.env
     else
         $WORKDIR_SUDO sed -i "s|OSMLCM_VCA_APIPROXY.*|OSMLCM_VCA_APIPROXY=${OSM_VCA_APIPROXY}|g" $OSM_DOCKER_WORK_DIR/lcm.env
+    fi
+
+    if ! grep -Fq "OSMLCM_VCA_ENABLEOSUPGRADE" $OSM_DOCKER_WORK_DIR/lcm.env; then
+        echo "# OSMLCM_VCA_ENABLEOSUPGRADE=false" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lcm.env
+    fi
+
+    if ! grep -Fq "OSMLCM_VCA_APTMIRROR" $OSM_DOCKER_WORK_DIR/lcm.env; then
+        echo "# OSMLCM_VCA_APTMIRROR=http://archive.ubuntu.com/ubuntu/" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lcm.env
     fi
 
     # RO
@@ -1295,7 +1304,7 @@ function install_lightweight() {
         remove_k8s_namespace $OSM_STACK_NAME
         deploy_cni_provider
         kube_secrets
-        [ ! $OSM_DOCKER_TAG == "latest" ] && parse_yaml $OSM_DOCKER_TAG
+        [ ! $OSM_DOCKER_TAG == "7" ] && parse_yaml $OSM_DOCKER_TAG
         namespace_vol
         deploy_osm_services
         track deploy_osm_services_k8s
