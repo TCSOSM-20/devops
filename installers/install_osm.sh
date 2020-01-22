@@ -61,6 +61,7 @@ function usage(){
     echo -e "     --nat:          (only for Rel THREE with --soui) install only NAT rules"
     echo -e "     --noconfigure:  (only for Rel THREE with --soui) DO NOT install osmclient, DO NOT install NAT rules, DO NOT configure modules"
     echo -e "     --showopts:     print chosen options and exit (only for debugging)"
+    #echo -e "     --clean_volumes To clear all the mounted volumes from docker swarm"
     echo -e "     -y:             do not prompt for confirmation, assumes yes"
     echo -e "     -h / --help:    print this help"
 }
@@ -90,6 +91,36 @@ add_repo() {
   return 1
 }
 
+clean_old_packages() {
+dpkg -s 'osm-devops' &> /dev/null
+
+if [ $? -eq 0 ]; then
+
+  # Remove old packages
+  echo "Removing the old OSM packages"
+  sudo apt-get remove -y osm-devops
+  sudo apt-get remove -y osm-imdocs
+  sudo apt-get remove -y python3-osmclient
+  sudo apt-get remove -y python3-osm-im
+  # Clean the previous repos that might exist
+  sudo sed -i "/osm-download.etsi.org/d" /etc/apt/sources.list
+fi
+}
+
+#TBD
+clean_volumes(){
+  result=`docker stack ls|wc -l`
+  echo "Stack is running ####%%%%% $result"
+  if [ $result -gt 1 ]; then
+    echo "Inside $result > 1"
+        #TBD take user confirmation
+    docker stack ls |awk '{print $1}' |tail -n+2|xargs docker stack rm
+    sleep 3m
+    docker volume ls|awk '/_mon_db|_mongo_db|_osm_packages|_pol_db|_prom_db|_ro|_ro_db/{print $2}' \
+        |xargs -r --no-run-if-empty docker volume rm
+  fi
+}
+
 while getopts ":hr:R:u:t:-:" o; do
     case "${o}" in
         h)
@@ -116,6 +147,7 @@ while getopts ":hr:R:u:t:-:" o; do
     esac
 done
 
+clean_old_packages
 add_repo "deb [arch=amd64] $REPOSITORY_BASE/$RELEASE $REPOSITORY devops"
 sudo DEBIAN_FRONTEND=noninteractive apt-get -q update
 sudo DEBIAN_FRONTEND=noninteractive apt-get install osm-devops
