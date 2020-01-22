@@ -588,7 +588,7 @@ function install_osmclient(){
     sudo apt-get update
     sudo apt-get install -y python3-pip
     sudo -H LC_ALL=C python3 -m pip install -U pip
-    sudo -H LC_ALL=C python3 -m pip install -U python-magic pyangbind
+    sudo -H LC_ALL=C python3 -m pip install -U python-magic pyangbind verboselogs
     sudo apt-get install -y python3-osm-im python3-osmclient
     #sed 's,OSM_SOL005=[^$]*,OSM_SOL005=True,' -i ${HOME}/.bashrc
     #echo 'export OSM_HOSTNAME=localhost' >> ${HOME}/.bashrc
