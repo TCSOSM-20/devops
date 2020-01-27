@@ -115,7 +115,7 @@ Check For NS Instance To Configured
     ${rc}   ${stdout}=      Run and Return RC and Output    osm ns-list --filter name="${ns_name}"
     log     ${stdout}
     Should Be Equal As Integers    ${rc}    ${success_return_code}
-    Should Contain Any      ${stdout}   configured    failed
+    Should Contain Any      ${stdout}   READY    BROKEN
 
 
 Check For NS Instance For Failure
@@ -124,7 +124,7 @@ Check For NS Instance For Failure
     ${rc}   ${stdout}=      Run and Return RC and Output    osm ns-list --filter name="${ns_name}"
     log     ${stdout}
     Should Be Equal As Integers    ${rc}    ${success_return_code}
-    Should Not Contain      ${stdout}   failed
+    Should Not Contain      ${stdout}   BROKEN
 
 
 Check For NS Instance To Be Delete
