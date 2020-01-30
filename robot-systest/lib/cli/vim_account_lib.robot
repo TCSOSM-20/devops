@@ -63,8 +63,9 @@ Get Vim List
 
 Delete Vim Account
     [Documentation]  delete vim account details
+    [Arguments]  ${vim_name}=${vim-name}
 
-    ${rc}   ${stdout}=      Run and Return RC and Output	    osm vim-delete ${vim-name}
+    ${rc}   ${stdout}=      Run and Return RC and Output	    osm vim-delete ${vim_name}
     log  ${stdout}
     Should Be Equal As Integers 	${rc}    ${success_return_code}
 

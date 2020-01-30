@@ -19,11 +19,18 @@
 ##
 
 ## Change log:
-# 1. Feature 7829: Jayant Madavi, Mrityunjay Yadav : MY00514913@techmahindra.com : 06-aug-2019 : Improvement to the code, robot framework initial seed code.
-##
+# Jayant Madavi, Mrityunjay Yadav : MY00514913@techmahindra.com
+##̥
+
 
 import random
 from haikunator import Haikunator
+import yaml
+from os.path import basename
+import hashlib
+
+from robot.api import logger
+from robot.api.deco import keyword
 
 
 def generate_name():
@@ -35,3 +42,26 @@ def generate_name():
 def get_random_item_from_list(l):
     assert isinstance(l, list), "List should be provided"
     return random.choice(l)
+
+
+def get_scaled_vnf(nsr):
+    nsr = yaml.load(nsr)
+    if 'scaling-group' in nsr['_admin']:
+        return nsr['_admin']['scaling-group'][0]['nb-scale-op']
+    else:
+        return 0
+
+
+@keyword('Get File Name From Path')
+def get_filename(path):
+    filename = basename(path)
+    return filename, filename.split('.')[0]
+
+
+@keyword('Generate MD5')
+def generate_md5(fpath):
+    hash_md5 = hashlib.md5()
+    with open(fpath, "rb") as f:
+        for chunk in iter(lambda: f.read(1024), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()

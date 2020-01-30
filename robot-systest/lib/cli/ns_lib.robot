@@ -40,6 +40,23 @@ Get NS List
     Should Be Equal As Integers    ${rc}    ${success_return_code}
 
 
+Get NS Instance ID
+    [Arguments]    ${ns_name}
+
+    ${rc}   ${stdout}=      Run and Return RC and Output    osm ns-list --filter name="${ns_name}" | awk 'NR==4{print $4}'
+    log     ${stdout}
+    [Return]    ${stdout}
+
+
+Verify All JUJU Applications Status
+    [Arguments]    ${ns}    ${api_ip}    ${api_port}    ${username}    ${password}    ${api_cert_path}
+
+    ${juju_model}=    Get NS Instance ID    ${ns}
+
+    Import Library    robot_juju.JujuLibrary    ${api_ip}    ${api_port}    ${juju_model}    ${username}    ${password}    ${api_cert_path}
+    Assert status of applications is  ${status_active}
+
+
 Launch Network Services and Return
     [Arguments]  ${vim_name}  ${ns_config}=''
     [Documentation]  Get Configuration parameter to create Newtork service
@@ -144,3 +161,33 @@ Force Delete NS
     log     ${stdout}
     Should Be Equal As Integers    ${rc}    ${success_return_code}
     WAIT UNTIL KEYWORD SUCCEEDS    ${ns_delete_max_wait_time}   ${ns_delete_pol_time}   Check For NS Instance To Be Delete   ${ns}
+
+
+Perform VNF Scale-in Operation
+    [Arguments]  ${ns}    ${vnf_member}    ${scaling_group}
+
+    ${rc}    ${nsr}=    Run and Return RC and Output    osm ns-show ${ns} --literal
+    ${scaled_vnf}=    Get Scaled Vnf    ${nsr}
+    log to console  Scaled VNF befor scale-in operation is ${scaled_vnf}
+    ${rc}   ${stdout}=      Run and Return RC and Output    osm vnf-scale --scale-in --scaling-group ${scaling_group} ${ns} ${vnf_member}
+    Should Be Equal As Integers    ${rc}    ${success_return_code}
+    log     ${stdout}
+    Sleep    1m    Waiting for scale-in operation to complete
+    ${rc}    ${nsr}=    Run and Return RC and Output    osm ns-show ${ns} --literal
+    ${scaled_vnf}=    Get Scaled Vnf    ${nsr}
+    log to console  Scaled VNF after scale-in operation is ${scaled_vnf}
+
+
+Perform VNF Scale-out Operation
+    [Arguments]  ${ns}    ${vnf_member}    ${scaling_group}
+
+    ${rc}    ${nsr}=    Run and Return RC and Output    osm ns-show ${ns} --literal
+    ${scaled_vnf}=    Get Scaled Vnf    ${nsr}
+    log to console  Scaled VNF befor scale-out operation is ${scaled_vnf}
+    ${rc}   ${stdout}=      Run and Return RC and Output    osm vnf-scale --scale-out --scaling-group ${scaling_group} ${ns} ${vnf_member}
+    Should Be Equal As Integers    ${rc}    ${success_return_code}
+    log     ${stdout}
+    Sleep    1m    Waiting for scale-out operation to complete
+    ${rc}    ${nsr}=    Run and Return RC and Output    osm ns-show ${ns} --literal
+    ${scaled_vnf}=    Get Scaled Vnf    ${nsr}
+    log to console  Scaled VNF befor scale-out operation is ${scaled_vnf}
