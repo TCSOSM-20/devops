@@ -1494,11 +1494,8 @@ POD_NETWORK_CIDR=10.244.0.0/16
 K8S_MANIFEST_DIR="/etc/kubernetes/manifests"
 RE_CHECK='^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
 
-while getopts ":hy-:b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:" o; do
+while getopts ":b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
     case "${o}" in
-        h)
-            usage && exit 0
-            ;;
         b)
             COMMIT_ID=${OPTARG}
             PULL_IMAGES=""
@@ -1513,10 +1510,6 @@ while getopts ":hy-:b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:" o; do
             echo -e "Invalid argument for -i : ' $OPTARG'\n" >&2
             usage && exit 1
             ;;
-        R)
-            RELEASE="${OPTARG}"
-            REPO_ARGS+=(-R "$RELEASE")
-            ;;
         k)
             REPOSITORY_KEY="${OPTARG}"
             REPO_ARGS+=(-k "$REPOSITORY_KEY")
@@ -1525,8 +1518,9 @@ while getopts ":hy-:b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:" o; do
             REPOSITORY_BASE="${OPTARG}"
             REPO_ARGS+=(-u "$REPOSITORY_BASE")
             ;;
-        U)
-            DOCKER_USER="${OPTARG}"
+        R)
+            RELEASE="${OPTARG}"
+            REPO_ARGS+=(-R "$RELEASE")
             ;;
         l)
             LXD_REPOSITORY_BASE="${OPTARG}"
@@ -1536,29 +1530,6 @@ while getopts ":hy-:b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:" o; do
             ;;
         D)
             OSM_DEVOPS="${OPTARG}"
-            ;;
-        s)
-            OSM_STACK_NAME="${OPTARG}" && [ -n "$KUBERNETES" ] && [[ ! "${OPTARG}" =~ $RE_CHECK ]] && echo "Namespace $OPTARG is invalid. Regex used for validation is $RE_CHECK" && exit 0
-            ;;
-        H)
-            OSM_VCA_HOST="${OPTARG}"
-            ;;
-        S)
-            OSM_VCA_SECRET="${OPTARG}"
-            ;;
-        P)
-            OSM_VCA_PUBKEY=$(cat ${OPTARG})
-            ;;
-        A)
-            OSM_VCA_APIPROXY="${OPTARG}"
-            ;;
-        w)
-            # when specifying workdir, do not use sudo for access
-            WORKDIR_SUDO=
-            OSM_WORK_DIR="${OPTARG}"
-            ;;
-        t)
-            OSM_DOCKER_TAG="${OPTARG}"
             ;;
         o)
             INSTALL_ONLY="y"
@@ -1579,6 +1550,32 @@ while getopts ":hy-:b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:" o; do
             [ "${OPTARG}" == "KEYSTONE-DB" ] && TO_REBUILD="$TO_REBUILD KEYSTONE-DB" && continue
             [ "${OPTARG}" == "GRAFANA" ] && TO_REBUILD="$TO_REBUILD GRAFANA" && continue
             [ "${OPTARG}" == "NONE" ] && TO_REBUILD="$TO_REBUILD NONE" && continue
+            ;;
+        H)
+            OSM_VCA_HOST="${OPTARG}"
+            ;;
+        S)
+            OSM_VCA_SECRET="${OPTARG}"
+            ;;
+        s)
+            OSM_STACK_NAME="${OPTARG}" && [ -n "$KUBERNETES" ] && [[ ! "${OPTARG}" =~ $RE_CHECK ]] && echo "Namespace $OPTARG is invalid. Regex used for validation is $RE_CHECK" && exit 0
+            ;;
+        w)
+            # when specifying workdir, do not use sudo for access
+            WORKDIR_SUDO=
+            OSM_WORK_DIR="${OPTARG}"
+            ;;
+        t)
+            OSM_DOCKER_TAG="${OPTARG}"
+            ;;
+        U)
+            DOCKER_USER="${OPTARG}"
+            ;;
+        P)
+            OSM_VCA_PUBKEY=$(cat ${OPTARG})
+            ;;
+        A)
+            OSM_VCA_APIPROXY="${OPTARG}"
             ;;
         -)
             [ "${OPTARG}" == "help" ] && usage && exit 0
@@ -1609,9 +1606,16 @@ while getopts ":hy-:b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:" o; do
             echo -e "Invalid option: '--$OPTARG'\n" >&2
             usage && exit 1
             ;;
+        :)
+            echo "Option -$OPTARG requires an argument" >&2
+            usage && exit 1
+            ;;
         \?)
             echo -e "Invalid option: '-$OPTARG'\n" >&2
             usage && exit 1
+            ;;
+        h)
+            usage && exit 0
             ;;
         y)
             ASSUME_YES="y"

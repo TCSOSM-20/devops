@@ -91,41 +91,16 @@ add_repo() {
   return 1
 }
 
-clean_old_packages() {
+clean_old_repo() {
 dpkg -s 'osm-devops' &> /dev/null
-
 if [ $? -eq 0 ]; then
-
-  # Remove old packages
-  echo "Removing the old OSM packages"
-  sudo apt-get remove -y osm-devops
-  sudo apt-get remove -y osm-imdocs
-  sudo apt-get remove -y python3-osmclient
-  sudo apt-get remove -y python3-osm-im
   # Clean the previous repos that might exist
   sudo sed -i "/osm-download.etsi.org/d" /etc/apt/sources.list
 fi
 }
 
-#TBD
-clean_volumes(){
-  result=`docker stack ls|wc -l`
-  echo "Stack is running ####%%%%% $result"
-  if [ $result -gt 1 ]; then
-    echo "Inside $result > 1"
-        #TBD take user confirmation
-    docker stack ls |awk '{print $1}' |tail -n+2|xargs docker stack rm
-    sleep 3m
-    docker volume ls|awk '/_mon_db|_mongo_db|_osm_packages|_pol_db|_prom_db|_ro|_ro_db/{print $2}' \
-        |xargs -r --no-run-if-empty docker volume rm
-  fi
-}
-
-while getopts ":hr:R:u:t:-:" o; do
+while getopts ":b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
     case "${o}" in
-        h)
-            usage && exit 0
-            ;;
         r)
             REPOSITORY="${OPTARG}"
             ;;
@@ -136,18 +111,28 @@ while getopts ":hr:R:u:t:-:" o; do
             REPOSITORY_BASE="${OPTARG}"
             ;;
         t)
-            OSM_DOCKER_TAG="${OPTARG}"
+            DOCKER_TAG="${OPTARG}"
             ;;
         -)
             [ "${OPTARG}" == "help" ] && usage && exit 0
-            continue
 	    ;;
+        :)
+            echo "Option -$OPTARG requires an argument" >&2
+            usage && exit 1
+            ;;
+        \?)
+            echo -e "Invalid option: '-$OPTARG'\n" >&2
+            usage && exit 1
+            ;;
+        h)
+            usage && exit 0
+            ;;
         *)
             ;;
     esac
 done
 
-clean_old_packages
+clean_old_repo
 add_repo "deb [arch=amd64] $REPOSITORY_BASE/$RELEASE $REPOSITORY devops"
 sudo DEBIAN_FRONTEND=noninteractive apt-get -q update
 sudo DEBIAN_FRONTEND=noninteractive apt-get install osm-devops
