@@ -13,9 +13,9 @@
 #   limitations under the License.
 #
 REPOSITORY_BASE=https://osm-download.etsi.org/repository/osm/debian
-RELEASE=ReleaseSEVEN-daily
-REPOSITORY=testing
-DOCKER_TAG=releaseseven
+RELEASE=ReleaseSEVEN
+REPOSITORY=stable
+DOCKER_TAG=7
 
 function usage(){
     echo -e "usage: $0 [OPTIONS]"
