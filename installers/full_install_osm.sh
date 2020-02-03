@@ -49,41 +49,13 @@ function usage(){
     echo -e "     --uninstall:    uninstall OSM: remove the containers and delete NAT rules"
     echo -e "     --source:       install OSM from source code using the latest stable tag"
     echo -e "     --develop:      (deprecated, use '-b master') install OSM from source code using the master branch"
-    echo -e "     --soui:         install classic build of OSM (Rel THREE v3.1, based on LXD containers, with SO and UI)"
-    echo -e "     --lxdimages:    (only for Rel THREE with --soui) download lxd images from OSM repository instead of creating them from scratch"
     echo -e "     --pullimages:   pull/run osm images from docker.io/opensourcemano"
     echo -e "     --k8s_monitor:  install the OSM kubernetes moitoring with prometheus and grafana"
-    echo -e "     -l <lxd_repo>:  (only for Rel THREE with --soui) use specified repository url for lxd images"
-    echo -e "     -p <path>:      (only for Rel THREE with --soui) use specified repository path for lxd images"
 #    echo -e "     --reconfigure:  reconfigure the modules (DO NOT change NAT rules)"
-    echo -e "     --nat:          (only for Rel THREE with --soui) install only NAT rules"
-    echo -e "     --noconfigure:  (only for Rel THREE with --soui) DO NOT install osmclient, DO NOT install NAT rules, DO NOT configure modules"
 #    echo -e "     --update:       update to the latest stable release or to the latest commit if using a specific branch"
     echo -e "     --showopts:     print chosen options and exit (only for debugging)"
     echo -e "     -y:             do not prompt for confirmation, assumes yes"
     echo -e "     -h / --help:    print this help"
-}
-
-#Uninstall OSM: remove containers
-function uninstall(){
-    echo -e "\nUninstalling OSM"
-    if [ $RC_CLONE ] || [ -n "$TEST_INSTALLER" ]; then
-        $OSM_DEVOPS/jenkins/host/clean_container RO
-        $OSM_DEVOPS/jenkins/host/clean_container VCA
-        $OSM_DEVOPS/jenkins/host/clean_container MON
-        $OSM_DEVOPS/jenkins/host/clean_container SO
-        #$OSM_DEVOPS/jenkins/host/clean_container UI
-    else
-        lxc stop RO && lxc delete RO
-        lxc stop VCA && lxc delete VCA
-        lxc stop MON && lxc delete MON
-        lxc stop SO-ub && lxc delete SO-ub
-    fi
-    echo -e "\nDeleting imported lxd images if they exist"
-    lxc image show osm-ro &>/dev/null && lxc image delete osm-ro
-    lxc image show osm-vca &>/dev/null && lxc image delete osm-vca
-    lxc image show osm-soui &>/dev/null && lxc image delete osm-soui
-    return 0
 }
 
 # takes a juju/accounts.yaml file and returns the password specific
@@ -246,294 +218,6 @@ function FATAL(){
     exit 1
 }
 
-#Update RO, SO and UI:
-function update(){
-    echo -e "\nUpdating components"
-
-    echo -e "     Updating RO"
-    CONTAINER="RO"
-    MDG="RO"
-    INSTALL_FOLDER="/opt/openmano"
-    echo -e "     Fetching the repo"
-    lxc exec $CONTAINER -- git -C $INSTALL_FOLDER fetch --all
-    BRANCH=""
-    BRANCH=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER status -sb | head -n1 | sed -n 's/^## \(.*\).*/\1/p'|awk '{print $1}' |sed 's/\(.*\)\.\.\..*/\1/'`
-    [ -z "$BRANCH" ] && FATAL "Could not find the current branch in use in the '$MDG'"
-    CURRENT=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER status |head -n1`
-    CURRENT_COMMIT_ID=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER rev-parse HEAD`
-    echo "         FROM: $CURRENT ($CURRENT_COMMIT_ID)"
-    # COMMIT_ID either was  previously set with -b option, or is an empty string
-    CHECKOUT_ID=$COMMIT_ID
-    [ -z "$CHECKOUT_ID" ] && [ "$BRANCH" == "HEAD" ] && CHECKOUT_ID="tags/$LATEST_STABLE_DEVOPS"
-    [ -z "$CHECKOUT_ID" ] && [ "$BRANCH" != "HEAD" ] && CHECKOUT_ID="$BRANCH"
-    if [[ $CHECKOUT_ID == "tags/"* ]]; then
-        REMOTE_COMMIT_ID=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER rev-list -n 1 $CHECKOUT_ID`
-    else
-        REMOTE_COMMIT_ID=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER rev-parse origin/$CHECKOUT_ID`
-    fi
-    echo "         TO: $CHECKOUT_ID ($REMOTE_COMMIT_ID)"
-    if [ "$CURRENT_COMMIT_ID" == "$REMOTE_COMMIT_ID" ]; then
-        echo "         Nothing to be done."
-    else
-        echo "         Update required."
-        lxc exec $CONTAINER -- service osm-ro stop
-        lxc exec $CONTAINER -- git -C /opt/openmano stash
-        lxc exec $CONTAINER -- git -C /opt/openmano pull --rebase
-        lxc exec $CONTAINER -- git -C /opt/openmano checkout $CHECKOUT_ID
-        lxc exec $CONTAINER -- git -C /opt/openmano stash pop
-        lxc exec $CONTAINER -- /opt/openmano/database_utils/migrate_mano_db.sh
-        lxc exec $CONTAINER -- service osm-ro start
-    fi
-    echo
-
-    echo -e "     Updating SO and UI"
-    CONTAINER="SO-ub"
-    MDG="SO"
-    INSTALL_FOLDER=""   # To be filled in
-    echo -e "     Fetching the repo"
-    lxc exec $CONTAINER -- git -C $INSTALL_FOLDER fetch --all
-    BRANCH=""
-    BRANCH=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER status -sb | head -n1 | sed -n 's/^## \(.*\).*/\1/p'|awk '{print $1}' |sed 's/\(.*\)\.\.\..*/\1/'`
-    [ -z "$BRANCH" ] && FATAL "Could not find the current branch in use in the '$MDG'"
-    CURRENT=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER status |head -n1`
-    CURRENT_COMMIT_ID=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER rev-parse HEAD`
-    echo "         FROM: $CURRENT ($CURRENT_COMMIT_ID)"
-    # COMMIT_ID either was  previously set with -b option, or is an empty string
-    CHECKOUT_ID=$COMMIT_ID
-    [ -z "$CHECKOUT_ID" ] && [ "$BRANCH" == "HEAD" ] && CHECKOUT_ID="tags/$LATEST_STABLE_DEVOPS"
-    [ -z "$CHECKOUT_ID" ] && [ "$BRANCH" != "HEAD" ] && CHECKOUT_ID="$BRANCH"
-    if [[ $CHECKOUT_ID == "tags/"* ]]; then
-        REMOTE_COMMIT_ID=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER rev-list -n 1 $CHECKOUT_ID`
-    else
-        REMOTE_COMMIT_ID=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER rev-parse origin/$CHECKOUT_ID`
-    fi
-    echo "         TO: $CHECKOUT_ID ($REMOTE_COMMIT_ID)"
-    if [ "$CURRENT_COMMIT_ID" == "$REMOTE_COMMIT_ID" ]; then
-        echo "         Nothing to be done."
-    else
-        echo "         Update required."
-        # Instructions to be added
-        # lxc exec SO-ub -- ...
-    fi
-    echo
-    echo -e "Updating MON Container"
-    CONTAINER="MON"
-    MDG="MON"
-    INSTALL_FOLDER="/root/MON"
-    echo -e "     Fetching the repo"
-    lxc exec $CONTAINER -- git -C $INSTALL_FOLDER fetch --all
-    BRANCH=""
-    BRANCH=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER status -sb | head -n1 | sed -n 's/^## \(.*\).*/\1/p'|awk '{print $1}' |sed 's/\(.*\)\.\.\..*/\1/'`
-    [ -z "$BRANCH" ] && FATAL "Could not find the current branch in use in the '$MDG'"
-    CURRENT=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER status |head -n1`
-    CURRENT_COMMIT_ID=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER rev-parse HEAD`
-    echo "         FROM: $CURRENT ($CURRENT_COMMIT_ID)"
-    # COMMIT_ID either was  previously set with -b option, or is an empty string
-    CHECKOUT_ID=$COMMIT_ID
-    [ -z "$CHECKOUT_ID" ] && [ "$BRANCH" == "HEAD" ] && CHECKOUT_ID="tags/$LATEST_STABLE_DEVOPS"
-    [ -z "$CHECKOUT_ID" ] && [ "$BRANCH" != "HEAD" ] && CHECKOUT_ID="$BRANCH"
-    if [[ $CHECKOUT_ID == "tags/"* ]]; then
-        REMOTE_COMMIT_ID=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER rev-list -n 1 $CHECKOUT_ID`
-    else
-        REMOTE_COMMIT_ID=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER rev-parse origin/$CHECKOUT_ID`
-    fi
-    echo "         TO: $CHECKOUT_ID ($REMOTE_COMMIT_ID)"
-    if [ "$CURRENT_COMMIT_ID" == "$REMOTE_COMMIT_ID" ]; then
-        echo "         Nothing to be done."
-    else
-        echo "         Update required."
-    fi
-    echo
-}
-
-function so_is_up() {
-    if [ -n "$1" ]; then
-        SO_IP=$1
-    else
-        SO_IP=`lxc list SO-ub -c 4|grep eth0 |awk '{print $2}'`
-    fi
-    time=0
-    step=5
-    timelength=300
-    while [ $time -le $timelength ]
-    do
-        if [[ `curl -k -X GET   https://$SO_IP:8008/api/operational/vcs/info \
-                -H 'accept: application/vnd.yang.data+json' \
-                -H 'authorization: Basic YWRtaW46YWRtaW4=' \
-                -H 'cache-control: no-cache' 2> /dev/null | jq  '.[].components.component_info[] | select(.component_name=="RW.Restconf")' 2>/dev/null | grep "RUNNING" | wc -l` -eq 1 ]]
-        then
-            echo "RW.Restconf running....SO is up"
-            return 0
-        fi
-
-        sleep $step
-        echo -n "."
-        time=$((time+step))
-    done
-
-    FATAL "OSM Failed to startup. SO failed to startup"
-}
-
-function vca_is_up() {
-    if [[ `lxc exec VCA -- juju status | grep "osm" | wc -l` -eq 1 ]]; then
-            echo "VCA is up and running"
-            return 0
-    fi
-
-    FATAL "OSM Failed to startup. VCA failed to startup"
-}
-
-function mon_is_up() {
-    if [[ `curl http://$RO_IP:9090/openmano/ | grep "works" | wc -l` -eq 1 ]]; then
-            echo "MON is up and running"
-            return 0
-    fi
-
-    FATAL "OSM Failed to startup. MON failed to startup"
-}
-
-function ro_is_up() {
-    if [ -n "$1" ]; then
-        RO_IP=$1
-    else
-        RO_IP=`lxc list RO -c 4|grep eth0 |awk '{print $2}'`
-    fi
-    time=0
-    step=2
-    timelength=20
-    while [ $time -le $timelength ]; do
-        if [[ `curl http://$RO_IP:9090/openmano/ | grep "works" | wc -l` -eq 1 ]]; then
-            echo "RO is up and running"
-            return 0
-        fi
-        sleep $step
-        echo -n "."
-        time=$((time+step))
-    done
-
-    FATAL "OSM Failed to startup. RO failed to startup"
-}
-
-
-function configure_RO(){
-    . $OSM_DEVOPS/installers/export_ips
-    echo -e "       Configuring RO"
-    lxc exec RO -- sed -i -e "s/^\#\?log_socket_host:.*/log_socket_host: $SO_CONTAINER_IP/g" /etc/osm/openmanod.cfg
-    lxc exec RO -- service osm-ro restart
-
-    ro_is_up
-
-    lxc exec RO -- openmano tenant-delete -f osm >/dev/null
-    lxc exec RO -- openmano tenant-create osm > /dev/null
-    lxc exec RO -- sed -i '/export OPENMANO_TENANT=osm/d' .bashrc
-    lxc exec RO -- sed -i '$ i export OPENMANO_TENANT=osm' .bashrc
-    lxc exec RO -- sh -c 'echo "export OPENMANO_TENANT=osm" >> .bashrc'
-}
-
-function configure_VCA(){
-    echo -e "       Configuring VCA"
-    JUJU_PASSWD=$(generate_secret)
-    echo -e "$JUJU_PASSWD\n$JUJU_PASSWD" | lxc exec VCA -- juju change-user-password
-}
-
-function configure_SOUI(){
-    . $OSM_DEVOPS/installers/export_ips
-    JUJU_CONTROLLER_IP=`lxc exec VCA -- lxc list -c 4 |grep eth0 |awk '{print $2}'`
-    RO_TENANT_ID=`lxc exec RO -- openmano tenant-list osm |awk '{print $1}'`
-
-    echo -e " Configuring MON"
-    #Information to be added about SO socket for logging
-
-    echo -e "       Configuring SO"
-    sudo route add -host $JUJU_CONTROLLER_IP gw $VCA_CONTAINER_IP
-    sudo ip route add 10.44.127.0/24 via $VCA_CONTAINER_IP
-    sudo sed -i "$ i route add -host $JUJU_CONTROLLER_IP gw $VCA_CONTAINER_IP" /etc/rc.local
-    sudo sed -i "$ i ip route add 10.44.127.0/24 via $VCA_CONTAINER_IP" /etc/rc.local
-    # make journaling persistent
-    lxc exec SO-ub -- mkdir -p /var/log/journal
-    lxc exec SO-ub -- systemd-tmpfiles --create --prefix /var/log/journal
-    lxc exec SO-ub -- systemctl restart systemd-journald
-
-    echo RIFT_EXTERNAL_ADDRESS=$DEFAULT_IP | lxc exec SO-ub -- tee -a /usr/rift/etc/default/launchpad
-
-    lxc exec SO-ub -- systemctl restart launchpad
-
-    so_is_up $SO_CONTAINER_IP
-
-    #delete existing config agent (could be there on reconfigure)
-    curl -k --request DELETE \
-      --url https://$SO_CONTAINER_IP:8008/api/config/config-agent/account/osmjuju \
-      --header 'accept: application/vnd.yang.data+json' \
-      --header 'authorization: Basic YWRtaW46YWRtaW4=' \
-      --header 'cache-control: no-cache' \
-      --header 'content-type: application/vnd.yang.data+json' &> /dev/null
-
-    result=$(curl -k --request POST \
-      --url https://$SO_CONTAINER_IP:8008/api/config/config-agent \
-      --header 'accept: application/vnd.yang.data+json' \
-      --header 'authorization: Basic YWRtaW46YWRtaW4=' \
-      --header 'cache-control: no-cache' \
-      --header 'content-type: application/vnd.yang.data+json' \
-      --data '{"account": [ { "name": "osmjuju", "account-type": "juju", "juju": { "ip-address": "'$JUJU_CONTROLLER_IP'", "port": "17070", "user": "admin", "secret": "'$JUJU_PASSWD'" }  }  ]}')
-    [[ $result =~ .*success.* ]] || FATAL "Failed config-agent configuration: $result"
-
-    #R1/R2 config line
-    #result=$(curl -k --request PUT \
-    #  --url https://$SO_CONTAINER_IP:8008/api/config/resource-orchestrator \
-    #  --header 'accept: application/vnd.yang.data+json' \
-    #  --header 'authorization: Basic YWRtaW46YWRtaW4=' \
-    #  --header 'cache-control: no-cache' \
-    #  --header 'content-type: application/vnd.yang.data+json' \
-    #  --data '{ "openmano": { "host": "'$RO_CONTAINER_IP'", "port": "9090", "tenant-id": "'$RO_TENANT_ID'" }, "name": "osmopenmano", "account-type": "openmano" }')
-
-    result=$(curl -k --request PUT \
-      --url https://$SO_CONTAINER_IP:8008/api/config/project/default/ro-account/account \
-      --header 'accept: application/vnd.yang.data+json' \
-      --header 'authorization: Basic YWRtaW46YWRtaW4=' \
-      --header 'cache-control: no-cache'   \
-      --header 'content-type: application/vnd.yang.data+json' \
-      --data '{"rw-ro-account:account": [ { "openmano": { "host": "'$RO_CONTAINER_IP'", "port": "9090", "tenant-id": "'$RO_TENANT_ID'"}, "name": "osmopenmano", "ro-account-type": "openmano" }]}')
-    [[ $result =~ .*success.* ]] || FATAL "Failed resource-orchestrator configuration: $result"
-
-    result=$(curl -k --request PATCH \
-      --url https://$SO_CONTAINER_IP:8008/v2/api/config/openidc-provider-config/rw-ui-client/redirect-uri \
-      --header 'accept: application/vnd.yang.data+json' \
-      --header 'authorization: Basic YWRtaW46YWRtaW4=' \
-      --header 'cache-control: no-cache'   \
-      --header 'content-type: application/vnd.yang.data+json' \
-      --data '{"redirect-uri": "https://'$DEFAULT_IP':8443/callback" }')
-    [[ $result =~ .*success.* ]] || FATAL "Failed redirect-uri configuration: $result"
-
-    result=$(curl -k --request PATCH \
-      --url https://$SO_CONTAINER_IP:8008/v2/api/config/openidc-provider-config/rw-ui-client/post-logout-redirect-uri \
-      --header 'accept: application/vnd.yang.data+json' \
-      --header 'authorization: Basic YWRtaW46YWRtaW4=' \
-      --header 'cache-control: no-cache'   \
-      --header 'content-type: application/vnd.yang.data+json' \
-      --data '{"post-logout-redirect-uri": "https://'$DEFAULT_IP':8443/?api_server=https://'$DEFAULT_IP'" }')
-    [[ $result =~ .*success.* ]] || FATAL "Failed post-logout-redirect-uri configuration: $result"
-
-    lxc exec SO-ub -- tee /etc/network/interfaces.d/60-rift.cfg <<EOF
-auto lo:1
-iface lo:1 inet static
-        address  $DEFAULT_IP
-        netmask 255.255.255.255
-EOF
-    lxc exec SO-ub ifup lo:1
-}
-
-#Configure RO, VCA, and SO with the initial configuration:
-#  RO -> tenant:osm, logs to be sent to SO
-#  VCA -> juju-password
-#  SO -> route to Juju Controller, add RO account, add VCA account
-function configure(){
-    #Configure components
-    echo -e "\nConfiguring components"
-    configure_RO
-    configure_VCA
-    configure_SOUI
-}
-
 function install_lxd() {
     sudo apt-get update
     sudo apt-get install -y lxd
@@ -562,19 +246,6 @@ function ask_user(){
         [ "${USER_CONFIRMATION,,}" == "no" ]  || [ "${USER_CONFIRMATION,,}" == "n" ] && return 1
         read -e -p "Please type 'yes' or 'no': " USER_CONFIRMATION
     done
-}
-
-function launch_container_from_lxd(){
-    export OSM_MDG=$1
-    OSM_load_config
-    export OSM_BASE_IMAGE=$2
-    if ! container_exists $OSM_BUILD_CONTAINER; then
-        CONTAINER_OPTS=""
-        [[ "$OSM_BUILD_CONTAINER_PRIVILEGED" == yes ]] && CONTAINER_OPTS="$CONTAINER_OPTS -c security.privileged=true"
-        [[ "$OSM_BUILD_CONTAINER_ALLOW_NESTED" == yes ]] && CONTAINER_OPTS="$CONTAINER_OPTS -c security.nesting=true"
-        create_container $OSM_BASE_IMAGE $OSM_BUILD_CONTAINER $CONTAINER_OPTS
-        wait_container_up $OSM_BUILD_CONTAINER
-    fi
 }
 
 function install_osmclient(){
@@ -642,41 +313,6 @@ function uninstall_prometheus_nodeexporter(){
     sudo userdel node_exporter
     sudo rm /usr/local/bin/node_exporter
     return 0
-}
-
-function install_from_lxdimages(){
-    LXD_RELEASE=${RELEASE#"-R "}
-    if [ -n "$LXD_REPOSITORY_PATH" ]; then
-        LXD_IMAGE_DIR="$LXD_REPOSITORY_PATH"
-    else
-        LXD_IMAGE_DIR="$(mktemp -d -q --tmpdir "osmimages.XXXXXX")"
-        trap 'rm -rf "$LXD_IMAGE_DIR"' EXIT
-    fi
-    echo -e "\nDeleting previous lxd images if they exist"
-    lxc image show osm-ro &>/dev/null && lxc image delete osm-ro
-    lxc image show osm-vca &>/dev/null && lxc image delete osm-vca
-    lxc image show osm-soui &>/dev/null && lxc image delete osm-soui
-    echo -e "\nImporting osm-ro"
-    [ -z "$LXD_REPOSITORY_PATH" ] && wget -O $LXD_IMAGE_DIR/osm-ro.tar.gz $LXD_REPOSITORY_BASE/$LXD_RELEASE/osm-ro.tar.gz
-    lxc image import $LXD_IMAGE_DIR/osm-ro.tar.gz --alias osm-ro
-    rm -f $LXD_IMAGE_DIR/osm-ro.tar.gz
-    echo -e "\nImporting osm-vca"
-    [ -z "$LXD_REPOSITORY_PATH" ] && wget -O $LXD_IMAGE_DIR/osm-vca.tar.gz $LXD_REPOSITORY_BASE/$LXD_RELEASE/osm-vca.tar.gz
-    lxc image import $LXD_IMAGE_DIR/osm-vca.tar.gz --alias osm-vca
-    rm -f $LXD_IMAGE_DIR/osm-vca.tar.gz
-    echo -e "\nImporting osm-soui"
-    [ -z "$LXD_REPOSITORY_PATH" ] && wget -O $LXD_IMAGE_DIR/osm-soui.tar.gz $LXD_REPOSITORY_BASE/$LXD_RELEASE/osm-soui.tar.gz
-    lxc image import $LXD_IMAGE_DIR/osm-soui.tar.gz --alias osm-soui
-    rm -f $LXD_IMAGE_DIR/osm-soui.tar.gz
-    launch_container_from_lxd RO osm-ro
-    ro_is_up && track RO
-    launch_container_from_lxd VCA osm-vca
-    vca_is_up && track VCA
-    launch_container_from_lxd MON osm-mon
-    mon_is_up && track MON
-    launch_container_from_lxd SO osm-soui
-    #so_is_up && track SOUI
-    track SOUI
 }
 
 function install_docker_ce() {
@@ -1380,15 +1016,11 @@ function dump_vars(){
     echo "DEVELOP=$DEVELOP"
     echo "INSTALL_FROM_SOURCE=$INSTALL_FROM_SOURCE"
     echo "UNINSTALL=$UNINSTALL"
-    echo "NAT=$NAT"
     echo "UPDATE=$UPDATE"
     echo "RECONFIGURE=$RECONFIGURE"
     echo "TEST_INSTALLER=$TEST_INSTALLER"
     echo "INSTALL_VIMEMU=$INSTALL_VIMEMU"
     echo "INSTALL_LXD=$INSTALL_LXD"
-    echo "INSTALL_FROM_LXDIMAGES=$INSTALL_FROM_LXDIMAGES"
-    echo "LXD_REPOSITORY_BASE=$LXD_REPOSITORY_BASE"
-    echo "LXD_REPOSITORY_PATH=$LXD_REPOSITORY_PATH"
     echo "INSTALL_LIGHTWEIGHT=$INSTALL_LIGHTWEIGHT"
     echo "INSTALL_ONLY=$INSTALL_ONLY"
     echo "INSTALL_ELK=$INSTALL_ELK"
@@ -1401,7 +1033,6 @@ function dump_vars(){
     echo "REPOSITORY=$REPOSITORY"
     echo "REPOSITORY_BASE=$REPOSITORY_BASE"
     echo "REPOSITORY_KEY=$REPOSITORY_KEY"
-    echo "NOCONFIGURE=$NOCONFIGURE"
     echo "OSM_DEVOPS=$OSM_DEVOPS"
     echo "OSM_VCA_HOST=$OSM_VCA_HOST"
     echo "OSM_VCA_SECRET=$OSM_VCA_SECRET"
@@ -1435,7 +1066,6 @@ function track(){
 
 UNINSTALL=""
 DEVELOP=""
-NAT=""
 UPDATE=""
 RECONFIGURE=""
 TEST_INSTALLER=""
@@ -1447,7 +1077,6 @@ INSTALL_FROM_SOURCE=""
 RELEASE="ReleaseSEVEN"
 REPOSITORY="stable"
 INSTALL_VIMEMU=""
-INSTALL_FROM_LXDIMAGES=""
 LXD_REPOSITORY_BASE="https://osm-download.etsi.org/repository/osm/lxd"
 LXD_REPOSITORY_PATH=""
 INSTALL_LIGHTWEIGHT="y"
@@ -1460,8 +1089,6 @@ INSTALL_NOJUJU=""
 KUBERNETES=""
 K8S_MONITOR=""
 INSTALL_NOHOSTCLIENT=""
-NOCONFIGURE=""
-RELEASE_DAILY=""
 SESSION_ID=`date +%s`
 OSM_DEVOPS=
 OSM_VCA_HOST=
@@ -1494,7 +1121,7 @@ POD_NETWORK_CIDR=10.244.0.0/16
 K8S_MANIFEST_DIR="/etc/kubernetes/manifests"
 RE_CHECK='^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
 
-while getopts ":b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
+while getopts ":b:r:c:k:u:R:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
     case "${o}" in
         b)
             COMMIT_ID=${OPTARG}
@@ -1521,12 +1148,6 @@ while getopts ":b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
         R)
             RELEASE="${OPTARG}"
             REPO_ARGS+=(-R "$RELEASE")
-            ;;
-        l)
-            LXD_REPOSITORY_BASE="${OPTARG}"
-            ;;
-        p)
-            LXD_REPOSITORY_PATH="${OPTARG}"
             ;;
         D)
             OSM_DEVOPS="${OPTARG}"
@@ -1582,21 +1203,16 @@ while getopts ":b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
             [ "${OPTARG}" == "source" ] && INSTALL_FROM_SOURCE="y" && PULL_IMAGES="" && continue
             [ "${OPTARG}" == "develop" ] && DEVELOP="y" && continue
             [ "${OPTARG}" == "uninstall" ] && UNINSTALL="y" && continue
-            [ "${OPTARG}" == "nat" ] && NAT="y" && continue
             [ "${OPTARG}" == "update" ] && UPDATE="y" && continue
             [ "${OPTARG}" == "reconfigure" ] && RECONFIGURE="y" && continue
             [ "${OPTARG}" == "test" ] && TEST_INSTALLER="y" && continue
             [ "${OPTARG}" == "lxdinstall" ] && INSTALL_LXD="y" && continue
             [ "${OPTARG}" == "nolxd" ] && INSTALL_NOLXD="y" && continue
             [ "${OPTARG}" == "nodocker" ] && INSTALL_NODOCKER="y" && continue
-            [ "${OPTARG}" == "lxdimages" ] && INSTALL_FROM_LXDIMAGES="y" && continue
             [ "${OPTARG}" == "lightweight" ] && INSTALL_LIGHTWEIGHT="y" && continue
-            [ "${OPTARG}" == "soui" ] && INSTALL_LIGHTWEIGHT="" && RELEASE="-R ReleaseTHREE" && REPOSITORY="-r stable" && continue
             [ "${OPTARG}" == "vimemu" ] && INSTALL_VIMEMU="y" && continue
             [ "${OPTARG}" == "elk_stack" ] && INSTALL_ELK="y" && continue
-            [ "${OPTARG}" == "noconfigure" ] && NOCONFIGURE="y" && continue
             [ "${OPTARG}" == "showopts" ] && SHOWOPTS="y" && continue
-            [ "${OPTARG}" == "daily" ] && RELEASE_DAILY="y" && continue
             [ "${OPTARG}" == "nohostports" ] && NO_HOST_PORTS="y" && continue
             [ "${OPTARG}" == "nojuju" ] && INSTALL_NOJUJU="y" && continue
             [ "${OPTARG}" == "nodockerbuild" ] && DOCKER_NOBUILD="y" && continue
@@ -1626,21 +1242,12 @@ while getopts ":b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
     esac
 done
 
-[ -n "$INSTALL_FROM_LXDIMAGES" ] && [ -n "$INSTALL_LIGHTWEIGHT" ] && FATAL "Incompatible options: --lxd can only be used with --soui"
-[ -n "$NAT" ] && [ -n "$INSTALL_LIGHTWEIGHT" ] && FATAL "Incompatible options: --nat can only be used with --soui"
-[ -n "$NOCONFIGURE" ] && [ -n "$INSTALL_LIGHTWEIGHT" ] && FATAL "Incompatible options: --noconfigure can only be used with --soui"
-[ -n "$RELEASE_DAILY" ] && [ -n "$INSTALL_LIGHTWEIGHT" ] && FATAL "Incompatible options: --daily can only be used with --soui"
-[ -n "$INSTALL_NOLXD" ] && [ -z "$INSTALL_LIGHTWEIGHT" ] && FATAL "Incompatible option: --nolxd cannot be used with --soui"
-[ -n "$INSTALL_NODOCKER" ] && [ -z "$INSTALL_LIGHTWEIGHT" ] && FATAL "Incompatible option: --nodocker cannot be used with --soui"
-[ -n "$TO_REBUILD" ] && [ -z "$INSTALL_LIGHTWEIGHT" ] && FATAL "Incompatible option: -m cannot be used with --soui"
 [ -n "$TO_REBUILD" ] && [ "$TO_REBUILD" != " NONE" ] && echo $TO_REBUILD | grep -q NONE && FATAL "Incompatible option: -m NONE cannot be used with other -m options"
 
 if [ -n "$SHOWOPTS" ]; then
     dump_vars
     exit 0
 fi
-
-[ -n "$RELEASE_DAILY" ] && echo -e "\nInstalling from daily build repo" && RELEASE="-R ReleaseTHREE-daily" && REPOSITORY="-r testing" && COMMIT_ID="master"
 
 # if develop, we force master
 [ -z "$COMMIT_ID" ] && [ -n "$DEVELOP" ] && COMMIT_ID="master"
@@ -1684,10 +1291,6 @@ fi
 . $OSM_DEVOPS/common/all_funcs
 
 [ -n "$INSTALL_LIGHTWEIGHT" ] && [ -n "$UNINSTALL" ] && uninstall_lightweight && echo -e "\nDONE" && exit 0
-[ -n "$UNINSTALL" ] && uninstall && echo -e "\nDONE" && exit 0
-[ -n "$NAT" ] && nat && echo -e "\nDONE" && exit 0
-[ -n "$UPDATE" ] && update && echo -e "\nDONE" && exit 0
-[ -n "$RECONFIGURE" ] && configure && echo -e "\nDONE" && exit 0
 [ -n "$INSTALL_ONLY" ] && [ -n "$INSTALL_ELK" ] && deploy_elk
 #[ -n "$INSTALL_ONLY" ] && [ -n "$INSTALL_PERFMON" ] && deploy_perfmon
 [ -n "$INSTALL_ONLY" ] && [ -n "$INSTALL_VIMEMU" ] && install_vimemu
@@ -1709,43 +1312,8 @@ lxd --version &>/dev/null || FATAL "lxd not present, exiting."
 
 # use local devops for containers
 export OSM_USE_LOCAL_DEVOPS=true
-if [ -n "$INSTALL_FROM_SOURCE" ]; then #install from source
-    echo -e "\nCreating the containers and building from source ..."
-    $OSM_DEVOPS/jenkins/host/start_build RO --notest checkout $COMMIT_ID || FATAL "RO container build failed (refspec: '$COMMIT_ID')"
-    ro_is_up && track RO
-    $OSM_DEVOPS/jenkins/host/start_build VCA || FATAL "VCA container build failed"
-    vca_is_up && track VCA
-    $OSM_DEVOPS/jenkins/host/start_build MON || FATAL "MON install failed"
-    mon_is_up && track MON
-    $OSM_DEVOPS/jenkins/host/start_build SO checkout $COMMIT_ID || FATAL "SO container build failed (refspec: '$COMMIT_ID')"
-    $OSM_DEVOPS/jenkins/host/start_build UI checkout $COMMIT_ID || FATAL "UI container build failed (refspec: '$COMMIT_ID')"
-    #so_is_up && track SOUI
-    track SOUI
-elif [ -n "$INSTALL_FROM_LXDIMAGES" ]; then #install from LXD images stored in OSM repo
-    echo -e "\nInstalling from lxd images ..."
-    install_from_lxdimages
-else #install from binaries
-    echo -e "\nCreating the containers and installing from binaries ..."
-    $OSM_DEVOPS/jenkins/host/install RO ${REPO_ARGS[@]} || FATAL "RO install failed"
-    ro_is_up && track RO
-    $OSM_DEVOPS/jenkins/host/start_build VCA || FATAL "VCA install failed"
-    vca_is_up && track VCA
-    $OSM_DEVOPS/jenkins/host/install MON || FATAL "MON build failed"
-    mon_is_up && track MON
-    $OSM_DEVOPS/jenkins/host/install SO ${REPO_ARGS[@]} || FATAL "SO install failed"
-    $OSM_DEVOPS/jenkins/host/install UI ${REPO_ARGS[@]} || FATAL "UI install failed"
-    #so_is_up && track SOUI
-    track SOUI
-fi
-
-#Install iptables-persistent and configure NAT rules
-[ -z "$NOCONFIGURE" ] && nat
-
-#Configure components
-[ -z "$NOCONFIGURE" ] && configure
 
 #Install osmclient
-[ -z "$NOCONFIGURE" ] && install_osmclient
 
 #Install vim-emu (optional)
 [ -n "$INSTALL_VIMEMU" ] && install_docker_ce && install_vimemu
