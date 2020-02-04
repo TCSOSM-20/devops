@@ -13,9 +13,9 @@
 #   limitations under the License.
 #
 REPOSITORY_BASE=https://osm-download.etsi.org/repository/osm/debian
-RELEASE=ReleaseSEVEN-daily
-REPOSITORY=testing
-DOCKER_TAG=releaseseven
+RELEASE=ReleaseSEVEN
+REPOSITORY=stable
+DOCKER_TAG=7
 
 function usage(){
     echo -e "usage: $0 [OPTIONS]"
@@ -61,6 +61,7 @@ function usage(){
     echo -e "     --nat:          (only for Rel THREE with --soui) install only NAT rules"
     echo -e "     --noconfigure:  (only for Rel THREE with --soui) DO NOT install osmclient, DO NOT install NAT rules, DO NOT configure modules"
     echo -e "     --showopts:     print chosen options and exit (only for debugging)"
+    #echo -e "     --clean_volumes To clear all the mounted volumes from docker swarm"
     echo -e "     -y:             do not prompt for confirmation, assumes yes"
     echo -e "     -h / --help:    print this help"
 }
@@ -90,11 +91,16 @@ add_repo() {
   return 1
 }
 
-while getopts ":hr:R:u:t:-:" o; do
+clean_old_repo() {
+dpkg -s 'osm-devops' &> /dev/null
+if [ $? -eq 0 ]; then
+  # Clean the previous repos that might exist
+  sudo sed -i "/osm-download.etsi.org/d" /etc/apt/sources.list
+fi
+}
+
+while getopts ":b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
     case "${o}" in
-        h)
-            usage && exit 0
-            ;;
         r)
             REPOSITORY="${OPTARG}"
             ;;
@@ -105,17 +111,28 @@ while getopts ":hr:R:u:t:-:" o; do
             REPOSITORY_BASE="${OPTARG}"
             ;;
         t)
-            OSM_DOCKER_TAG="${OPTARG}"
+            DOCKER_TAG="${OPTARG}"
             ;;
         -)
             [ "${OPTARG}" == "help" ] && usage && exit 0
-            continue
 	    ;;
+        :)
+            echo "Option -$OPTARG requires an argument" >&2
+            usage && exit 1
+            ;;
+        \?)
+            echo -e "Invalid option: '-$OPTARG'\n" >&2
+            usage && exit 1
+            ;;
+        h)
+            usage && exit 0
+            ;;
         *)
             ;;
     esac
 done
 
+clean_old_repo
 add_repo "deb [arch=amd64] $REPOSITORY_BASE/$RELEASE $REPOSITORY devops"
 sudo DEBIAN_FRONTEND=noninteractive apt-get -q update
 sudo DEBIAN_FRONTEND=noninteractive apt-get install osm-devops

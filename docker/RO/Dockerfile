@@ -24,7 +24,7 @@ RUN apt-get update && apt-get -y install curl software-properties-common git tox
     && python3 -m pip install --upgrade pip && python3 -m pip install pyangbind
 
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
-ARG RELEASE=ReleaseFOUR-daily
+ARG RELEASE=ReleaseSEVEN-daily
 ARG REPOSITORY_KEY=OSM%20ETSI%20Release%20Key.gpg
 ARG REPOSITORY=testing
 
@@ -37,6 +37,7 @@ ARG IM_VERSION
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y python3-osm-ro${RO_VERSION} python3-osm-im${IM_VERSION} \
     python3-osm-roclient${RO_VERSION} \
     python3-osm-rosdn-tapi${RO_VERSION} python3-osm-rosdn-dynpac${RO_VERSION} python3-osm-rosdn-onosof${RO_VERSION} \
+    python3-osm-rosdn-onos-vpls${RO_VERSION} \
     python3-osm-rovim-vmware${RO_VERSION} python3-osm-rovim-openstack${RO_VERSION} \
     python3-osm-rovim-openvim${RO_VERSION} python3-osm-rovim-azure${RO_VERSION} \
     python3-osm-rovim-aws${RO_VERSION} python3-osm-rovim-fos${RO_VERSION} python3-osm-rovim-opennebula${RO_VERSION}
