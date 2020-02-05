@@ -20,12 +20,12 @@
 # contact: bdiaz@whitestack.com or glavado@whitestack.com
 ##
 
-FROM ubuntu:16.04
+FROM ubuntu:18.04
 
 LABEL authors="Guillermo Calvino"
 
 RUN apt-get update \
-    && apt-get -y install curl \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y curl \
                           software-properties-common \
                           git \
                           python \
@@ -38,7 +38,7 @@ RUN apt-get update \
                           mysql-client \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
-    && pip3 install pip==9.0.3
+    && python3 -m pip install -U pip
 
 RUN pip3 install  'macaroonbakery>=1.1,<2.0' 'pyRFC3339>=1.0,<2.0' \
       'pyyaml>=5.1.2' 'theblues>=0.3.8,<1.0' 'websockets>=4.0,<5.0' \
@@ -56,7 +56,7 @@ ARG N2VC_VERSION
 RUN curl ${REPOSITORY_BASE}/${RELEASE}/${REPOSITORY_KEY} | apt-key add - \
     && add-apt-repository -y "deb ${REPOSITORY_BASE}/${RELEASE} ${REPOSITORY} MON N2VC common" \
     && apt update \
-    && apt-get -y install python3-osm-common${COMMON_VERSION} \
+    && DEBIAN_FRONTEND=noninteractive apt-get -y install python3-osm-common${COMMON_VERSION} \
                           python3-osm-mon${MON_VERSION} \
                           python3-n2vc${N2VC_VERSION}
 
