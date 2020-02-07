@@ -36,8 +36,8 @@ Create NST
     [Arguments]  ${nst_pkg}
 
     ${rc}   ${stdout}=      Run and Return RC and Output	    osm nst-create ${nst_pkg}
-    Should Be Equal As Integers 	${rc}	  ${success_return_code}
     log     ${stdout}
+    Should Be Equal As Integers 	${rc}	  ${success_return_code}
     [Return]  ${stdout}
 
 
@@ -46,8 +46,8 @@ Delete NST
     [Arguments]  ${nst}
 
     ${rc}   ${stdout}=      Run and Return RC and Output	    osm nst-delete ${nst}
-    Should Be Equal As Integers 	${rc}	  ${success_return_code}
     log     ${stdout}
+    Should Be Equal As Integers 	${rc}	  ${success_return_code}
     [Return]  ${stdout}
 
 
@@ -66,8 +66,8 @@ Create Network Slice With Config
     [Arguments]  ${nsi_name}    ${nst_name}    ${vim}    ${config}
 
     ${rc}   ${stdout}=      Run and Return RC and Output    osm nsi-create --nsi_name ${nsi_name} --nst_name ${nst_name} --vim_account ${vim} --config ${config}
-    Should Be Equal As Integers    ${rc}    ${success_return_code}
     log     ${stdout}
+    Should Be Equal As Integers    ${rc}    ${success_return_code}
     Append To List     ${nsi_list}       ${nsi_name}
 
 
@@ -75,8 +75,8 @@ Create Network Slice Without Config
     [Arguments]  ${nsi_name}    ${nst_name}    ${vim}
 
     ${rc}   ${stdout}=      Run and Return RC and Output    osm nsi-create --nsi_name ${nsi_name} --nst_name ${nst_name} --vim_account ${vim}
-    Should Be Equal As Integers    ${rc}    ${success_return_code}
     log     ${stdout}
+    Should Be Equal As Integers    ${rc}    ${success_return_code}
     Append To List     ${nsi_list}       ${nsi_name}
 
 
@@ -84,8 +84,8 @@ Check For Network Slice Instance For Failure
     [Arguments]  ${nsi_name}
 
     ${rc}   ${stdout}=      Run and Return RC and Output    osm nsi-list --filter name="${nsi_name}"
-    Should Be Equal As Integers    ${rc}    ${success_return_code}
     log     ${stdout}
+    Should Be Equal As Integers    ${rc}    ${success_return_code}
     Should Not Contain      ${stdout}   failed
 
 
@@ -93,8 +93,8 @@ Check For Network Slice Instance To Configured
     [Arguments]  ${nsi_name}
 
     ${rc}   ${stdout}=      Run and Return RC and Output    osm nsi-list --filter name="${nsi_name}"
-    Should Be Equal As Integers    ${rc}    ${success_return_code}
     log     ${stdout}
+    Should Be Equal As Integers    ${rc}    ${success_return_code}
     Should Contain Any      ${stdout}   configured    failed
 
 
@@ -103,8 +103,8 @@ Delete Network Slice Instance
     [Arguments]  ${nsi}
 
     ${rc}   ${stdout}=      Run and Return RC and Output    osm nsi-delete ${nsi}
-    Should Be Equal As Integers    ${rc}    ${success_return_code}
     log     ${stdout}
+    Should Be Equal As Integers    ${rc}    ${success_return_code}
 
     WAIT UNTIL KEYWORD SUCCEEDS  ${delete_max_wait_time}   ${delete_pol_time}   Check For NSI Instance To Be Delete   ${nsi}
 
@@ -113,6 +113,6 @@ Check For NSI Instance To Be Delete
     [Arguments]  ${nsi}
 
     ${rc}   ${stdout}=      Run and Return RC and Output    osm nsi-list
-    Should Be Equal As Integers    ${rc}    ${success_return_code}
     log     ${stdout}
+    Should Be Equal As Integers    ${rc}    ${success_return_code}
     Should Not Contain      ${stdout}   ${nsi}
