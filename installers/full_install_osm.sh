@@ -1338,6 +1338,8 @@ function install_vimemu() {
     echo "\nInstalling vim-emu"
     EMUTEMPDIR="$(mktemp -d -q --tmpdir "installosmvimemu.XXXXXX")"
     trap 'rm -rf "${EMUTEMPDIR}"' EXIT
+    # install prerequisites (OVS is a must for the emulator to work)
+    sudo apt-get install openvswitch-switch
     # clone vim-emu repository (attention: branch is currently master only)
     echo "Cloning vim-emu repository ..."
     git clone https://osm.etsi.org/gerrit/osm/vim-emu.git $EMUTEMPDIR
