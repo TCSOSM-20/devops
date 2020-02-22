@@ -203,11 +203,21 @@ EONG
     return 0
 }
 
+#Safe unattended install of iptables-persistent
+function check_install_iptables_persistent(){
+    echo -e "\nChecking required packages: iptables-persistent"
+    if dpkg -l iptables-persistent &>/dev/null; then
+        echo -e "    Not installed.\nInstalling iptables-persistent requires root privileges"
+        echo iptables-persistent iptables-persistent/autosave_v4 boolean true | sudo debconf-set-selections
+        echo iptables-persistent iptables-persistent/autosave_v6 boolean true | sudo debconf-set-selections
+        sudo apt-get -yq install iptables-persistent
+    fi
+}
+
 #Configure NAT rules, based on the current IP addresses of containers
 function nat(){
-    echo -e "\nChecking required packages: iptables-persistent"
-    dpkg -l iptables-persistent &>/dev/null || ! echo -e "    Not installed.\nInstalling iptables-persistent requires root privileges" || \
-    sudo apt-get -yq install iptables-persistent
+    check_install_iptables_persistent
+    
     echo -e "\nConfiguring NAT rules"
     echo -e "   Required root privileges"
     sudo $OSM_DEVOPS/installers/nat_osm
@@ -362,9 +372,7 @@ function juju_createcontroller() {
 }
 
 function juju_createproxy() {
-    echo -e "\nChecking required packages: iptables-persistent"
-    dpkg -l iptables-persistent &>/dev/null || ! echo -e "    Not installed.\nInstalling iptables-persistent requires root privileges" || \
-    sudo apt-get -yq install iptables-persistent
+    check_install_iptables_persistent
 
     if ! sudo iptables -t nat -C PREROUTING -p tcp -m tcp -d $DEFAULT_IP --dport 17070 -j DNAT --to-destination $OSM_VCA_HOST; then
         sudo iptables -t nat -A PREROUTING -p tcp -m tcp -d $DEFAULT_IP --dport 17070 -j DNAT --to-destination $OSM_VCA_HOST
