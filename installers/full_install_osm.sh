@@ -35,12 +35,13 @@ function usage(){
     echo -e "     -A <VCA apiproxy> use VCA/juju API proxy"
     echo -e "     --vimemu:       additionally deploy the VIM emulator as a docker container"
     echo -e "     --elk_stack:    additionally deploy an ELK docker stack for event logging"
-    echo -e "     -m <MODULE>:    install OSM but only rebuild the specified docker images (LW-UI, NBI, LCM, RO, MON, POL, KAFKA, MONGO, PROMETHEUS, PROMETHEUS-CADVISOR, KEYSTONE-DB, NONE)"
+    echo -e "     --pla:          install the PLA module for placement support"
+    echo -e "     -m <MODULE>:    install OSM but only rebuild the specified docker images (LW-UI, NBI, LCM, RO, MON, POL, KAFKA, MONGO, PROMETHEUS, PROMETHEUS-CADVISOR, KEYSTONE-DB, PLA, NONE)"
     echo -e "     -o <ADDON>:     ONLY (un)installs one of the addons (vimemu, elk_stack)"
     echo -e "     -D <devops path> use local devops installation path"
     echo -e "     -w <work dir>   Location to store runtime installation"
     echo -e "     -t <docker tag> specify osm docker tag (default is latest)"
-    echo -e "     --nolxd:        do not install and configure LXD, allowing unattended installations (assumes LXD is already installed and confifured)"
+    echo -e "     --nolxd:        do not install and configure LXD, allowing unattended installations (assumes LXD is already installed and configured)"
     echo -e "     --nodocker:     do not install docker, do not initialize a swarm (assumes docker is already installed and a swarm has been initialized)"
     echo -e "     --nojuju:       do not juju, assumes already installed"
     echo -e "     --nodockerbuild:do not build docker images (use existing locally cached images)"
@@ -190,6 +191,7 @@ function uninstall_lightweight() {
         docker image rm ${DOCKER_USER}/nbi:${OSM_DOCKER_TAG}
         docker image rm ${DOCKER_USER}/mon:${OSM_DOCKER_TAG}
         docker image rm ${DOCKER_USER}/pol:${OSM_DOCKER_TAG}
+        docker image rm ${DOCKER_USER}/pla:${OSM_DOCKER_TAG}
         docker image rm ${DOCKER_USER}/osmclient:${OSM_DOCKER_TAG}
 EONG
 
@@ -449,6 +451,14 @@ function generate_docker_images() {
         sg docker -c "docker build ${LWTEMPDIR}/POL -f ${LWTEMPDIR}/POL/docker/Dockerfile -t ${DOCKER_USER}/pol --no-cache" || FATAL "cannot build POL docker image"
     fi
 
+    if [ -n "$PULL_IMAGES" -a -n "$INSTALL_PLA" ]; then
+        sg docker -c "docker pull ${DOCKER_USER}/pla:${OSM_DOCKER_TAG}" || FATAL "cannot pull PLA docker image"
+    elif [ -z "$TO_REBUILD" -a -n "$INSTALL_PLA" ] || echo $TO_REBUILD | grep -q PLA ; then
+        git -C ${LWTEMPDIR} clone https://osm.etsi.org/gerrit/osm/PLA
+        git -C ${LWTEMPDIR}/PLA checkout ${COMMIT_ID}
+        sg docker -c "docker build ${LWTEMPDIR}/PLA -f ${LWTEMPDIR}/PLA/docker/Dockerfile -t ${DOCKER_USER}/pla --no-cache" || FATAL "cannot build PLA docker image"
+    fi
+
     if [ -n "$PULL_IMAGES" ]; then
         sg docker -c "docker pull ${DOCKER_USER}/nbi:${OSM_DOCKER_TAG}" || FATAL "cannot pull NBI docker image"
         sg docker -c "docker pull ${DOCKER_USER}/keystone:${OSM_DOCKER_TAG}" || FATAL "cannot pull KEYSTONE docker image"
@@ -527,6 +537,9 @@ function generate_docker_env_files() {
     else
         # Docker-compose
         $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/docker-compose.yaml $OSM_DOCKER_WORK_DIR/docker-compose.yaml
+        if [ -n "$INSTALL_PLA" ]; then
+            $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/osm_pla/docker-compose.yaml $OSM_DOCKER_WORK_DIR/osm_pla/docker-compose.yaml
+        fi
 
         # Prometheus
         $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/files/prometheus.yml $OSM_DOCKER_WORK_DIR/prometheus.yml
@@ -710,6 +723,15 @@ function deploy_osm_services() {
     kubectl apply -n $OSM_STACK_NAME -f $OSM_K8S_WORK_DIR
 }
 
+function deploy_osm_pla_service() {
+    # corresponding to parse_yaml
+    [ ! $OSM_DOCKER_TAG == "7" ] && $WORKDIR_SUDO sed -i "s/opensourcemano\/pla:.*/opensourcemano\/pla:$OSM_DOCKER_TAG/g" $OSM_DOCKER_WORK_DIR/osm_pla/pla.yaml
+    # corresponding to namespace_vol
+    $WORKDIR_SUDO  sed -i "s#path: /var/lib/osm#path: $OSM_NAMESPACE_VOL#g" $OSM_DOCKER_WORK_DIR/osm_pla/pla.yaml
+    # corresponding to deploy_osm_services
+    kubectl apply -n $OSM_STACK_NAME -f $OSM_DOCKER_WORK_DIR/osm_pla
+}
+
 function parse_yaml() {
     osm_services="nbi lcm ro pol mon light-ui keystone"
     TAG=$1
@@ -790,7 +812,11 @@ function deploy_lightweight() {
     echo "export GRAFANA_TAG=${GRAFANA_TAG}" | $WORKDIR_SUDO tee --append $OSM_DOCKER_WORK_DIR/osm_ports.sh
 
     pushd $OSM_DOCKER_WORK_DIR
-    sg docker -c ". ./osm_ports.sh; docker stack deploy -c $OSM_DOCKER_WORK_DIR/docker-compose.yaml $OSM_STACK_NAME"
+    if [ -n "$INSTALL_PLA" ]; then
+        sg docker -c ". ./osm_ports.sh; docker stack deploy -c $OSM_DOCKER_WORK_DIR/docker-compose.yaml -c $OSM_DOCKER_WORK_DIR/osm_pla/docker-compose.yaml $OSM_STACK_NAME"
+    else
+        sg docker -c ". ./osm_ports.sh; docker stack deploy -c $OSM_DOCKER_WORK_DIR/docker-compose.yaml $OSM_STACK_NAME"
+    fi
     popd
 
     echo "Finished deployment of lightweight build"
@@ -850,6 +876,7 @@ function install_lightweight() {
     [ "${OSM_STACK_NAME}" == "osm" ] || OSM_DOCKER_WORK_DIR="$OSM_WORK_DIR/stack/$OSM_STACK_NAME"
     [ -n "$KUBERNETES" ] && OSM_K8S_WORK_DIR="$OSM_DOCKER_WORK_DIR/osm_pods" && OSM_NAMESPACE_VOL="${OSM_HOST_VOL}/${OSM_STACK_NAME}"
     [ ! -d "$OSM_DOCKER_WORK_DIR" ] && $WORKDIR_SUDO mkdir -p $OSM_DOCKER_WORK_DIR
+    [ ! -d "$OSM_DOCKER_WORK_DIR/osm_pla" -a -n "$INSTALL_PLA" ] && $WORKDIR_SUDO mkdir -p $OSM_DOCKER_WORK_DIR/osm_pla
     [ -n "$KUBERNETES" ] && $WORKDIR_SUDO cp -b $OSM_DEVOPS/installers/docker/cluster-config.yaml $OSM_DOCKER_WORK_DIR/cluster-config.yaml
 
     track checkingroot
@@ -964,6 +991,10 @@ function install_lightweight() {
         [ ! $OSM_DOCKER_TAG == "7" ] && parse_yaml $OSM_DOCKER_TAG
         namespace_vol
         deploy_osm_services
+        if [ -n "$INSTALL_PLA"]; then
+            # optional PLA install
+            deploy_osm_pla_service
+        fi
         track deploy_osm_services_k8s
         if [ -n "$INSTALL_K8S_MONITOR" ]; then
             # install OSM MONITORING
@@ -1043,6 +1074,7 @@ function dump_vars(){
     echo "RECONFIGURE=$RECONFIGURE"
     echo "TEST_INSTALLER=$TEST_INSTALLER"
     echo "INSTALL_VIMEMU=$INSTALL_VIMEMU"
+    echo "INSTALL_PLA=$INSTALL_PLA"
     echo "INSTALL_LXD=$INSTALL_LXD"
     echo "INSTALL_LIGHTWEIGHT=$INSTALL_LIGHTWEIGHT"
     echo "INSTALL_ONLY=$INSTALL_ONLY"
@@ -1101,6 +1133,7 @@ INSTALL_FROM_SOURCE=""
 RELEASE="ReleaseSEVEN"
 REPOSITORY="stable"
 INSTALL_VIMEMU=""
+INSTALL_PLA=""
 LXD_REPOSITORY_BASE="https://osm-download.etsi.org/repository/osm/lxd"
 LXD_REPOSITORY_PATH=""
 INSTALL_LIGHTWEIGHT="y"
@@ -1196,6 +1229,7 @@ while getopts ":b:r:c:k:u:R:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
             [ "${OPTARG}" == "KEYSTONE-DB" ] && TO_REBUILD="$TO_REBUILD KEYSTONE-DB" && continue
             [ "${OPTARG}" == "GRAFANA" ] && TO_REBUILD="$TO_REBUILD GRAFANA" && continue
             [ "${OPTARG}" == "NONE" ] && TO_REBUILD="$TO_REBUILD NONE" && continue
+            [ "${OPTARG}" == "PLA" ] && TO_REBUILD="$TO_REBUILD PLA" && continue
             ;;
         H)
             OSM_VCA_HOST="${OPTARG}"
@@ -1250,6 +1284,7 @@ while getopts ":b:r:c:k:u:R:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
             [ "${OPTARG}" == "lxdendpoint" ] && continue
             [ "${OPTARG}" == "lxdcert" ] && continue
             [ "${OPTARG}" == "microstack" ] && continue
+            [ "${OPTARG}" == "pla" ] && INSTALL_PLA="y" && continue
             echo -e "Invalid option: '--$OPTARG'\n" >&2
             usage && exit 1
             ;;
@@ -1274,6 +1309,7 @@ while getopts ":b:r:c:k:u:R:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
 done
 
 [ -n "$TO_REBUILD" ] && [ "$TO_REBUILD" != " NONE" ] && echo $TO_REBUILD | grep -q NONE && FATAL "Incompatible option: -m NONE cannot be used with other -m options"
+[ -n "$TO_REBUILD" ] && [ "$TO_REBUILD" == " PLA" ] && [ -z "$INSTALL_PLA" ] && FATAL "Incompatible option: -m PLA cannot be used without --pla option"
 
 if [ -n "$SHOWOPTS" ]; then
     dump_vars
