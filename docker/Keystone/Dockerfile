@@ -35,7 +35,7 @@ RUN apt-get update && \
     apt-get install -y software-properties-common && \
     add-apt-repository -y cloud-archive:pike && \
     apt-get update && apt dist-upgrade -y && \
-    apt-get install -y python-openstackclient keystone apache2 libapache2-mod-wsgi net-tools mysql-client && \
+    apt-get install -y python-openstackclient keystone apache2 libapache2-mod-wsgi net-tools mysql-client dnsutils && \
     apt-get install -y python-pip build-essential python-dev libldap2-dev libsasl2-dev libssl-dev libffi-dev libxml2-dev libxslt1-dev zlib1g-dev ldap-utils && \
     pip install python-ldap ldappool && \
     rm -rf /var/lib/apt/lists/* && \

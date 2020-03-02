@@ -41,6 +41,24 @@ function wait_db(){
     return 0
 }
 
+function wait_keystone_host(){
+    attempt=0
+    timeout=2
+    echo "Wait until Keystone hostname can be resolved "
+    while ! nslookup $KEYSTONE_HOST; do
+        #wait 120 sec
+        if [ $attempt -ge $max_attempts ]; then
+            echo
+            echo "Can not resolve ${KEYSTONE_HOST} during $max_attempts sec"
+            return 1
+        fi
+        attempt=$[$attempt+1]
+        echo -n "."
+        sleep 1
+    done
+    return 0
+}
+
 function is_db_created() {
     db_host=$1
     db_port=$2
@@ -66,17 +84,17 @@ if [ -z $DB_EXISTS ]; then
     mysql -h"$DB_HOST" -P"$DB_PORT" -u"$ROOT_DB_USER" -p"$ROOT_DB_PASSWORD" --default_character_set utf8 -e "GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'localhost' IDENTIFIED BY '$KEYSTONE_DB_PASSWORD'"
     mysql -h"$DB_HOST" -P"$DB_PORT" -u"$ROOT_DB_USER" -p"$ROOT_DB_PASSWORD" --default_character_set utf8 -e "GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'%' IDENTIFIED BY '$KEYSTONE_DB_PASSWORD'"
 else
-    if [ $(mysql -h"$DB_HOST" -P"$DB_PORT" -u"$ROOT_DB_USER" -p"$ROOT_DB_PASSWORD" --default_character_set utf8 -sse "SELECT COUNT(*) FROM keystone;") -gt 0 ]; then
+    if [ $(mysql -h"$DB_HOST" -P"$DB_PORT" -u"$ROOT_DB_USER" -p"$ROOT_DB_PASSWORD" --default_character_set utf8 -sse "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'keystone';") -gt 0 ]; then
         echo "DB keystone is empty"
         DB_NOT_EMPTY="y"
     fi
 fi
 
 # Setting Keystone database connection
-sed -i "721s%.*%connection = mysql+pymysql://keystone:$KEYSTONE_DB_PASSWORD@$DB_HOST:$DB_PORT/keystone%" /etc/keystone/keystone.conf
+sed -i '/^\[database\]$/,/^\[/ s/^connection = .*/connection = mysql+pymysql:\/\/keystone:'$KEYSTONE_DB_PASSWORD'@'$DB_HOST':'$DB_PORT'\/keystone/' /etc/keystone/keystone.conf
 
 # Setting Keystone tokens
-sed -i "2934s%.*%provider = fernet%" /etc/keystone/keystone.conf
+sed -i '/^\[token\]$/,/^\[/ s/^.*provider = .*/provider = fernet/' /etc/keystone/keystone.conf
 
 
 # Use LDAP authentication for Identity
@@ -157,6 +175,8 @@ fi
 keystone-manage fernet_setup --keystone-user keystone --keystone-group keystone
 keystone-manage credential_setup --keystone-user keystone --keystone-group keystone
 
+wait_keystone_host
+
 # Bootstrap Keystone service
 if [ -z $DB_EXISTS ] || [ -z $DB_NOT_EMPTY ]; then
     keystone-manage bootstrap \
@@ -169,6 +189,7 @@ if [ -z $DB_EXISTS ] || [ -z $DB_NOT_EMPTY ]; then
         --bootstrap-region-id "$REGION_ID"
 fi
 
+echo "ServerName $KEYSTONE_HOST" >> /etc/apache2/apache2.conf
 # Restart Apache Service
 service apache2 restart
 
