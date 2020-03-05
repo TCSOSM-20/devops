@@ -164,7 +164,7 @@ function uninstall_lightweight() {
     else
         echo -e "\nUninstalling OSM"
         if [ -n "$KUBERNETES" ]; then
-            if [ -n "$K8S_MONITOR" ]; then
+            if [ -n "$INSTALL_K8S_MONITOR" ]; then
                 # uninstall OSM MONITORING
                 uninstall_k8s_monitoring
             fi
@@ -939,7 +939,7 @@ function install_lightweight() {
     generate_docker_env_files
 
     if [ -n "$KUBERNETES" ]; then
-        if [ -n "$K8S_MONITOR" ]; then
+        if [ -n "$INSTALL_K8S_MONITOR" ]; then
             # uninstall OSM MONITORING
             uninstall_k8s_monitoring
             track uninstall_k8s_monitoring
@@ -952,7 +952,7 @@ function install_lightweight() {
         namespace_vol
         deploy_osm_services
         track deploy_osm_services_k8s
-        if [ -n "$K8S_MONITOR" ]; then
+        if [ -n "$INSTALL_K8S_MONITOR" ]; then
             # install OSM MONITORING
             install_k8s_monitoring
             track install_k8s_monitoring
@@ -1035,6 +1035,7 @@ function dump_vars(){
     echo "INSTALL_ONLY=$INSTALL_ONLY"
     echo "INSTALL_ELK=$INSTALL_ELK"
     #echo "INSTALL_PERFMON=$INSTALL_PERFMON"
+    echo "INSTALL_K8S_MONITOR=$INSTALL_K8S_MONITOR"
     echo "TO_REBUILD=$TO_REBUILD"
     echo "INSTALL_NOLXD=$INSTALL_NOLXD"
     echo "INSTALL_NODOCKER=$INSTALL_NODOCKER"
@@ -1097,7 +1098,7 @@ INSTALL_NOLXD=""
 INSTALL_NODOCKER=""
 INSTALL_NOJUJU=""
 KUBERNETES=""
-K8S_MONITOR=""
+INSTALL_K8S_MONITOR=""
 INSTALL_NOHOSTCLIENT=""
 SESSION_ID=`date +%s`
 OSM_DEVOPS=
@@ -1166,6 +1167,7 @@ while getopts ":b:r:c:k:u:R:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
             INSTALL_ONLY="y"
             [ "${OPTARG}" == "vimemu" ] && INSTALL_VIMEMU="y" && continue
             [ "${OPTARG}" == "elk_stack" ] && INSTALL_ELK="y" && continue
+            [ "${OPTARG}" == "k8s_monitor" ] && INSTALL_K8S_MONITOR="y" && continue
             ;;
         m)
             [ "${OPTARG}" == "LW-UI" ] && TO_REBUILD="$TO_REBUILD LW-UI" && continue
@@ -1228,7 +1230,7 @@ while getopts ":b:r:c:k:u:R:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
             [ "${OPTARG}" == "nodockerbuild" ] && DOCKER_NOBUILD="y" && continue
             [ "${OPTARG}" == "nohostclient" ] && INSTALL_NOHOSTCLIENT="y" && continue
             [ "${OPTARG}" == "pullimages" ] && continue
-            [ "${OPTARG}" == "k8s_monitor" ] && K8S_MONITOR="y" && continue
+            [ "${OPTARG}" == "k8s_monitor" ] && INSTALL_K8S_MONITOR="y" && continue
             echo -e "Invalid option: '--$OPTARG'\n" >&2
             usage && exit 1
             ;;
@@ -1304,6 +1306,7 @@ fi
 [ -n "$INSTALL_ONLY" ] && [ -n "$INSTALL_ELK" ] && deploy_elk
 #[ -n "$INSTALL_ONLY" ] && [ -n "$INSTALL_PERFMON" ] && deploy_perfmon
 [ -n "$INSTALL_ONLY" ] && [ -n "$INSTALL_VIMEMU" ] && install_vimemu
+[ -n "$INSTALL_ONLY" ] && [ -n "$INSTALL_K8S_MONITOR" ] && install_k8s_monitoring
 [ -n "$INSTALL_ONLY" ] && echo -e "\nDONE" && exit 0
 
 #Installation starts here
