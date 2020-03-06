@@ -56,6 +56,13 @@ function usage(){
     echo -e "     --showopts:     print chosen options and exit (only for debugging)"
     echo -e "     -y:             do not prompt for confirmation, assumes yes"
     echo -e "     -h / --help:    print this help"
+    echo -e "     --charmed:                       install OSM with charms"
+    echo -e "     --bundle <bundle path>:          Specify with which bundle to deploy OSM with charms (--charmed option)"
+    echo -e "     --kubeconfig <kubeconfig path>:  Specify with which kubernetes to deploy OSM with charms (--charmed option)"
+    echo -e "     --lxdendpoint <lxd endpoint ip>: Specify with which LXD to deploy OSM with charms (--charmed option)"
+    echo -e "     --lxdcert <lxd cert path>:       Specify external LXD cert to deploy OSM with charms (--charmed option)"
+    echo -e "     --microstack:                    Installs microstack as a vim. (--charmed option)"
+
 }
 
 # takes a juju/accounts.yaml file and returns the password specific
@@ -1237,6 +1244,12 @@ while getopts ":b:r:c:k:u:R:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
             [ "${OPTARG}" == "nohostclient" ] && INSTALL_NOHOSTCLIENT="y" && continue
             [ "${OPTARG}" == "pullimages" ] && continue
             [ "${OPTARG}" == "k8s_monitor" ] && INSTALL_K8S_MONITOR="y" && continue
+            [ "${OPTARG}" == "charmed" ] && CHARMED="y" && continue
+            [ "${OPTARG}" == "bundle" ] && continue
+            [ "${OPTARG}" == "kubeconfig" ] && continue
+            [ "${OPTARG}" == "lxdendpoint" ] && continue
+            [ "${OPTARG}" == "lxdcert" ] && continue
+            [ "${OPTARG}" == "microstack" ] && continue
             echo -e "Invalid option: '--$OPTARG'\n" >&2
             usage && exit 1
             ;;
@@ -1265,6 +1278,32 @@ done
 if [ -n "$SHOWOPTS" ]; then
     dump_vars
     exit 0
+fi
+
+if [ -n "$CHARMED" ]; then
+     if [ -n "$UNINSTALL" ]; then
+        /usr/share/osm-devops/installers/charmed_uninstall.sh -R $RELEASE -r $REPOSITORY -u $REPOSITORY_BASE -D /usr/share/osm-devops -t $DOCKER_TAG "$@"
+     else
+        /usr/share/osm-devops/installers/charmed_install.sh -R $RELEASE -r $REPOSITORY -u $REPOSITORY_BASE -D /usr/share/osm-devops -t $DOCKER_TAG "$@"
+     fi
+
+     echo "Your installation is now complete, follow these steps for configuring the osmclient:"
+     echo
+     echo "1. Get the NBI IP with the following command:"
+     echo
+     echo "juju status --format yaml | yq r - applications.nbi-k8s.address"
+     echo
+     echo "2. Create the OSM_HOSTNAME environment variable with the NBI IP"
+     echo
+     echo "export OSM_HOSTNAME=<NBI-IP>"
+     echo
+     echo "3. Add the previous command to your .bashrc for other Shell sessions"
+     echo
+     echo "export OSM_HOSTNAME=<previous-IP> >> ~/.bashrc"
+     echo
+     echo "DONE"
+
+     exit 0
 fi
 
 # if develop, we force master
@@ -1340,3 +1379,4 @@ export OSM_USE_LOCAL_DEVOPS=true
 wget -q -O- https://osm-download.etsi.org/ftp/osm-7.0-seven/README2.txt &> /dev/null
 track end
 echo -e "\nDONE"
+

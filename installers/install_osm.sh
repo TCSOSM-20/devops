@@ -64,6 +64,12 @@ function usage(){
     #echo -e "     --clean_volumes To clear all the mounted volumes from docker swarm"
     echo -e "     -y:             do not prompt for confirmation, assumes yes"
     echo -e "     -h / --help:    print this help"
+    echo -e "     --charmed:                       install OSM with charms"
+    echo -e "     --bundle <bundle path>:          Specify with which bundle to deploy OSM with charms (--charmed option)"
+    echo -e "     --kubeconfig <kubeconfig path>:  Specify with which kubernetes to deploy OSM with charms (--charmed option)"
+    echo -e "     --lxdendpoint <lxd endpoint ip>: Specify with which LXD to deploy OSM with charms (--charmed option)"
+    echo -e "     --lxdcert <lxd cert path>:       Specify external LXD cert to deploy OSM with charms (--charmed option)"
+
 }
 
 add_repo() {
@@ -115,7 +121,7 @@ while getopts ":b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
             ;;
         -)
             [ "${OPTARG}" == "help" ] && usage && exit 0
-	    ;;
+            ;;
         :)
             echo "Option -$OPTARG requires an argument" >&2
             usage && exit 1
