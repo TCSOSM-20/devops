@@ -35,3 +35,6 @@ osm-devops_*.post*
 *.local
 local
 
+installers/charm/**/release/
+__pycache__
+.tox
