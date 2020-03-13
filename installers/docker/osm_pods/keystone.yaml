@@ -19,6 +19,7 @@ kind: Service
 metadata:
   name: keystone
 spec:
+  clusterIP: None
   ports:
   - port: 5000
     protocol: TCP
