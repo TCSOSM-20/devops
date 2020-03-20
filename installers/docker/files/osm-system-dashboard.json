@@ -1830,7 +1830,7 @@
   "refresh": "10s",
   "schemaVersion": 20,
   "style": "dark",
-  "tags": ["osm_automated"],
+  "tags": [],
   "templating": {
     "list": []
   },
