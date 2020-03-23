@@ -78,6 +78,76 @@ sed -i "721s%.*%connection = mysql+pymysql://keystone:$KEYSTONE_DB_PASSWORD@$DB_
 # Setting Keystone tokens
 sed -i "2934s%.*%provider = fernet%" /etc/keystone/keystone.conf
 
+
+# Use LDAP authentication for Identity
+if [ $LDAP_AUTHENTICATION_DOMAIN_NAME ]; then
+    # Enable Keyston domains
+    sed -i "s%.*domain_specific_drivers_enabled =.*%domain_specific_drivers_enabled = true%" /etc/keystone/keystone.conf
+    sed -i "s%.*domain_config_dir =.*%domain_config_dir = /etc/keystone/domains%" /etc/keystone/keystone.conf
+    mkdir -p /etc/keystone/domains
+    # Configure domain for LDAP authentication
+    cat << EOF > /etc/keystone/domains/keystone.$LDAP_AUTHENTICATION_DOMAIN_NAME.conf
+[identity]
+driver = ldap
+[ldap]
+url = $LDAP_URL
+user_allow_create=false
+user_allow_update=false
+user_allow_delete=false
+group_allow_create=false
+group_allow_update=false
+group_allow_delete=false
+query_scope = sub
+EOF
+    if [ $LDAP_BIND_USER ]; then
+        echo "user = $LDAP_BIND_USER" >> /etc/keystone/domains/keystone.$LDAP_AUTHENTICATION_DOMAIN_NAME.conf
+    fi
+    if [ $LDAP_BIND_PASSWORD ]; then
+        echo "password = $LDAP_BIND_PASSWORD" >> /etc/keystone/domains/keystone.$LDAP_AUTHENTICATION_DOMAIN_NAME.conf
+    fi
+    if [ $LDAP_USER_TREE_DN ]; then
+        echo "user_tree_dn = $LDAP_USER_TREE_DN" >> /etc/keystone/domains/keystone.$LDAP_AUTHENTICATION_DOMAIN_NAME.conf
+    fi
+    if [ $LDAP_USER_OBJECTCLASS ]; then
+        echo "user_objectclass = $LDAP_USER_OBJECTCLASS" >> /etc/keystone/domains/keystone.$LDAP_AUTHENTICATION_DOMAIN_NAME.conf
+    fi
+    if [ $LDAP_USER_ID_ATTRIBUTE ]; then
+        echo "user_id_attribute = $LDAP_USER_ID_ATTRIBUTE" >> /etc/keystone/domains/keystone.$LDAP_AUTHENTICATION_DOMAIN_NAME.conf
+    fi
+    if [ $LDAP_USER_NAME_ATTRIBUTE ]; then
+        echo "user_name_attribute = $LDAP_USER_NAME_ATTRIBUTE" >> /etc/keystone/domains/keystone.$LDAP_AUTHENTICATION_DOMAIN_NAME.conf
+    fi
+    if [ $LDAP_USER_PASS_ATTRIBUTE ]; then
+        echo "user_pass_attribute = $LDAP_USER_PASS_ATTRIBUTE" >> /etc/keystone/domains/keystone.$LDAP_AUTHENTICATION_DOMAIN_NAME.conf
+    fi
+    if [ $LDAP_USER_FILTER ]; then
+        echo "user_filter = $LDAP_USER_FILTER" >> /etc/keystone/domains/keystone.$LDAP_AUTHENTICATION_DOMAIN_NAME.conf
+    fi
+    if [ $LDAP_USER_ENABLED_ATTRIBUTE ]; then
+        echo "user_enabled_attribute = $LDAP_USER_ENABLED_ATTRIBUTE" >> /etc/keystone/domains/keystone.$LDAP_AUTHENTICATION_DOMAIN_NAME.conf
+    fi
+    if [ $LDAP_USER_ENABLED_MASK ]; then
+        echo "user_enabled_mask = $LDAP_USER_ENABLED_MASK" >> /etc/keystone/domains/keystone.$LDAP_AUTHENTICATION_DOMAIN_NAME.conf
+    fi
+    if [ $LDAP_USER_ENABLED_DEFAULT ]; then
+        echo "user_enabled_default = $LDAP_USER_ENABLED_DEFAULT" >> /etc/keystone/domains/keystone.$LDAP_AUTHENTICATION_DOMAIN_NAME.conf
+    fi
+    if [ $LDAP_USER_ENABLED_INVERT ]; then
+        echo "user_enabled_invert = $LDAP_USER_ENABLED_INVERT" >> /etc/keystone/domains/keystone.$LDAP_AUTHENTICATION_DOMAIN_NAME.conf
+    fi
+    if [ $LDAP_USE_STARTTLS ] && [ "$LDAP_USE_STARTTLS" == "true" ]; then
+        echo "use_tls = true" >> /etc/keystone/domains/keystone.$LDAP_AUTHENTICATION_DOMAIN_NAME.conf
+        mkdir -p /etc/keystone/ssl/certs/
+        echo "-----BEGIN CERTIFICATE-----" > /etc/keystone/ssl/certs/ca.pem
+        echo $LDAP_TLS_CACERT_BASE64 >> /etc/keystone/ssl/certs/ca.pem
+        echo "-----END CERTIFICATE-----" >> /etc/keystone/ssl/certs/ca.pem
+        echo "tls_cacertfile = /etc/keystone/ssl/certs/ca.pem" >> /etc/keystone/domains/keystone.$LDAP_AUTHENTICATION_DOMAIN_NAME.conf
+        if [ $LDAP_TLS_REQ_CERT ]; then
+            echo "tls_req_cert = $LDAP_TLS_REQ_CERT" >> /etc/keystone/domains/keystone.$LDAP_AUTHENTICATION_DOMAIN_NAME.conf
+        fi
+    fi
+fi
+
 # Populate Keystone database
 if [ -z $DB_EXISTS ] || [ -z $DB_NOT_EMPTY ]; then
     su -s /bin/sh -c "keystone-manage db_sync" keystone
@@ -120,7 +190,17 @@ if [ -z $DB_EXISTS ] || [ -z $DB_NOT_EMPTY ]; then
     openstack user create --domain default --password "$SERVICE_PASSWORD" "$SERVICE_USERNAME"
     openstack project create --domain default --description "Service Project" "$SERVICE_PROJECT"
     openstack role add --project "$SERVICE_PROJECT" --user "$SERVICE_USERNAME" admin
-    openstack role delete _member_
+fi
+
+if [ $LDAP_AUTHENTICATION_DOMAIN_NAME ]; then
+    if !(openstack domain list | grep -q $LDAP_AUTHENTICATION_DOMAIN_NAME); then
+        # Create domain in keystone for LDAP authentication
+        openstack domain create $LDAP_AUTHENTICATION_DOMAIN_NAME
+        # Restart Apache Service
+        service apache2 restart
+    fi
+	# Check periodically LDAP for updates
+	echo "0 1 * * * keystone-manage mapping_purge --domain-name $LDAP_AUTHENTICATION_DOMAIN_NAME; keystone-manage mapping_populate --domain-name $LDAP_AUTHENTICATION_DOMAIN_NAME" >> /var/spool/cron/crontabs/root
 fi
 
 while ps -ef | grep -v grep | grep -q apache2
