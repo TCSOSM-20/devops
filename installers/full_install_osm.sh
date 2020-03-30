@@ -229,15 +229,21 @@ function FATAL(){
 }
 
 function install_lxd() {
-    sudo apt-get update
-    sudo apt-get install -y lxd
-    newgrp lxd
-    lxd init --auto
-    lxd waitready
-    lxc network create lxdbr0 ipv4.address=auto ipv4.nat=true ipv6.address=none ipv6.nat=false
+    # Apply sysctl production values for optimal performance
+    sudo cp /usr/share/osm-devops/installers/60-lxd-production.conf /etc/sysctl.d/60-lxd-production.conf
+    sudo sysctl --system
+
+    # Install LXD snap
+    sudo apt-get remove --purge -y liblxc1 lxc-common lxcfs lxd lxd-client
+    sudo snap install lxd --channel=3.0/stable
+
+    # Configure LXD
+    sudo usermod -a -G lxd `whoami`
+    cat /usr/share/osm-devops/installers/lxd-preseed.conf | sg lxd -c "lxd init --preseed"
+    sg lxd -c "lxd waitready"
     DEFAULT_INTERFACE=$(route -n | awk '$1~/^0.0.0.0/ {print $8}')
     DEFAULT_MTU=$(ip addr show $DEFAULT_INTERFACE | perl -ne 'if (/mtu\s(\d+)/) {print $1;}')
-    lxc profile device set default eth0 mtu $DEFAULT_MTU
+    sg lxd -c "lxc profile device set default eth0 mtu $DEFAULT_MTU"
     #sudo systemctl stop lxd-bridge
     #sudo systemctl --system daemon-reload
     #sudo systemctl enable lxd-bridge
@@ -356,7 +362,6 @@ function install_docker_compose() {
 function install_juju() {
     echo "Installing juju"
     sudo snap install juju --classic
-    [ -z "$INSTALL_NOLXD" ] && sudo dpkg-reconfigure -p medium lxd
     [[ ":$PATH": != *":/snap/bin:"* ]] && PATH="/snap/bin:${PATH}"
     echo "Finished installation of juju"
     return 0
@@ -870,7 +875,7 @@ function install_lightweight() {
 
     # if no host is passed in, we need to install lxd/juju, unless explicilty asked not to
     if [ -z "$OSM_VCA_HOST" ] && [ -z "$INSTALL_NOLXD" ]; then
-        need_packages_lw="lxd snapd"
+        need_packages_lw="snapd"
         echo -e "Checking required packages: $need_packages_lw"
         dpkg -l $need_packages_lw &>/dev/null \
           || ! echo -e "One or several required packages are not installed. Updating apt cache requires root privileges." \
@@ -880,6 +885,7 @@ function install_lightweight() {
           || ! echo -e "Installing $need_packages_lw requires root privileges." \
           || sudo apt-get install -y $need_packages_lw \
           || FATAL "failed to install $need_packages_lw"
+        install_lxd
     fi
     track prereqok
 
