@@ -24,6 +24,12 @@ osm-devops_*.post*
 
 #IDEs
 .idea
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
 
 #local stuff files that end in ".local" or folders called "local"
 *.local
