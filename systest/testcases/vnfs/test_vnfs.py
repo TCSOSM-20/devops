@@ -116,13 +116,13 @@ class TestClass(object):
 
             time.sleep(10)
 
-            assert not osm.get_api().ns.delete(ns_name)
+            assert not osm.get_api().ns.delete(ns_name, wait=True)
 
             #wait for the ns to delete
-            try:
-                utils.wait_for_value( lambda: osm.get_api().ns.get(ns_name), result=False, wait_time=180)
-            except:
-                print("Exception: Failed to get NAME after NS DELETE ... ")
+            #try:
+            #    utils.wait_for_value( lambda: osm.get_api().ns.get(ns_name), result=False, wait_time=180)
+            #except:
+            #    print("Exception: Failed to get NAME after NS DELETE ... ")
             
             #TODO find the reason for 502 exception from osmclient/nbi            
             try:
