@@ -45,7 +45,9 @@ function usage(){
     echo -e "     -D <devops path> use local devops installation path"
     echo -e "     -w <work dir>   Location to store runtime installation"
     echo -e "     -t <docker tag> specify osm docker tag (default is latest)"
-    echo -e "     --nolxd:        do not install and configure LXD, allowing unattended installations (assumes LXD is already installed and configured)"
+    echo -e "     -l:             LXD cloud yaml file"
+    echo -e "     -L:             LXD credentials yaml file"
+    echo -e "     --nolxd:        do not install and configure LXD, allowing unattended installations (assumes LXD is already installed and confifured)"
     echo -e "     --nodocker:     do not install docker, do not initialize a swarm (assumes docker is already installed and a swarm has been initialized)"
     echo -e "     --nojuju:       do not juju, assumes already installed"
     echo -e "     --nodockerbuild:do not build docker images (use existing locally cached images)"
@@ -106,7 +108,7 @@ if [ $? -eq 0 ]; then
 fi
 }
 
-while getopts ":b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
+while getopts ":b:r:c:k:u:R:l:L:p:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
     case "${o}" in
         r)
             REPOSITORY="${OPTARG}"

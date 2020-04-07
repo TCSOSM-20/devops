@@ -41,7 +41,9 @@ function usage(){
     echo -e "     -D <devops path> use local devops installation path"
     echo -e "     -w <work dir>   Location to store runtime installation"
     echo -e "     -t <docker tag> specify osm docker tag (default is latest)"
-    echo -e "     --nolxd:        do not install and configure LXD, allowing unattended installations (assumes LXD is already installed and configured)"
+    echo -e "     -l:             LXD cloud yaml file"
+    echo -e "     -L:             LXD credentials yaml file"
+    echo -e "     --nolxd:        do not install and configure LXD, allowing unattended installations (assumes LXD is already installed and confifured)"
     echo -e "     --nodocker:     do not install docker, do not initialize a swarm (assumes docker is already installed and a swarm has been initialized)"
     echo -e "     --nojuju:       do not juju, assumes already installed"
     echo -e "     --nodockerbuild:do not build docker images (use existing locally cached images)"
@@ -379,8 +381,9 @@ function install_juju() {
 function juju_createcontroller() {
     if ! juju show-controller $OSM_STACK_NAME &> /dev/null; then
         # Not found created, create the controller
+        [ -n "$LXD_CLOUD_FILE" ] && OSM_VCA_CLOUDNAME="lxd-cloud"
         sudo usermod -a -G lxd ${USER}
-        sg lxd -c "juju bootstrap --bootstrap-series=xenial localhost $OSM_STACK_NAME"
+        sg lxd -c "juju bootstrap --bootstrap-series=xenial $OSM_VCA_CLOUDNAME $OSM_STACK_NAME"
     fi
     [ $(juju controllers | awk "/^${OSM_STACK_NAME}[\*| ]/{print $1}"|wc -l) -eq 1 ] || FATAL "Juju installation failed"
 }
@@ -598,6 +601,12 @@ function generate_docker_env_files() {
 
     if ! grep -Fq "OSMLCM_VCA_APTMIRROR" $OSM_DOCKER_WORK_DIR/lcm.env; then
         echo "# OSMLCM_VCA_APTMIRROR=http://archive.ubuntu.com/ubuntu/" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lcm.env
+    fi
+
+    if ! grep -Fq "OSMLCM_VCA_CLOUD" $OSM_DOCKER_WORK_DIR/lcm.env; then
+        echo "OSMLCM_VCA_CLOUD=${OSM_VCA_CLOUDNAME}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lcm.env
+    else
+        $WORKDIR_SUDO sed -i "s|OSMLCM_VCA_CLOUD.*|OSMLCM_VCA_CLOUD=${OSM_VCA_CLOUDNAME}|g" $OSM_DOCKER_WORK_DIR/lcm.env
     fi
 
     # RO
@@ -916,7 +925,7 @@ function install_lightweight() {
     DEFAULT_MTU=$(ip addr show ${DEFAULT_IF} | perl -ne 'if (/mtu\s(\d+)/) {print $1;}')
 
     # if no host is passed in, we need to install lxd/juju, unless explicilty asked not to
-    if [ -z "$OSM_VCA_HOST" ] && [ -z "$INSTALL_NOLXD" ]; then
+    if [ -z "$OSM_VCA_HOST" ] && [ -z "$INSTALL_NOLXD" ] && [ -z "$LXD_CLOUD_FILE" ]; then
         need_packages_lw="snapd"
         echo -e "Checking required packages: $need_packages_lw"
         dpkg -l $need_packages_lw &>/dev/null \
@@ -929,10 +938,17 @@ function install_lightweight() {
           || FATAL "failed to install $need_packages_lw"
         install_lxd
     fi
+
     track prereqok
 
     [ -z "$INSTALL_NOJUJU" ] && install_juju
     track juju_install
+    
+    if [ -n "$LXD_CLOUD_FILE" ]; then
+        [ -z "$LXD_CRED_FILE" ] && FATAL "The installer needs the LXD credential yaml if the LXD is external"
+           juju add-cloud lxd-cloud $LXD_CLOUD_FILE --force || juju update-cloud lxd-cloud --client -f $LXD_CLOUD_FILE
+           juju add-credential lxd-cloud -f $LXD_CRED_FILE || juju update-credential lxd-cloud lxd-cloud-creds -f $LXD_CRED_FILE
+    fi
 
     if [ -z "$OSM_VCA_HOST" ]; then
         juju_createcontroller
@@ -1159,6 +1175,7 @@ OSM_DEVOPS=
 OSM_VCA_HOST=
 OSM_VCA_SECRET=
 OSM_VCA_PUBKEY=
+OSM_VCA_CLOUDNAME="localhost"
 OSM_STACK_NAME=osm
 NO_HOST_PORTS=""
 DOCKER_NOBUILD=""
@@ -1186,7 +1203,7 @@ POD_NETWORK_CIDR=10.244.0.0/16
 K8S_MANIFEST_DIR="/etc/kubernetes/manifests"
 RE_CHECK='^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
 
-while getopts ":b:r:c:k:u:R:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
+while getopts ":b:r:c:k:u:R:D:o:m:H:S:s:w:t:U:P:A:l:L:-: hy" o; do
     case "${o}" in
         b)
             COMMIT_ID=${OPTARG}
@@ -1264,6 +1281,12 @@ while getopts ":b:r:c:k:u:R:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
             ;;
         A)
             OSM_VCA_APIPROXY="${OPTARG}"
+            ;;
+        l)
+            LXD_CLOUD_FILE="${OPTARG}"
+            ;;
+        L)
+            LXD_CRED_FILE="${OPTARG}"
             ;;
         -)
             [ "${OPTARG}" == "help" ] && usage && exit 0
