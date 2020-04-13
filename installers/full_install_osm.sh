@@ -312,7 +312,7 @@ function install_prometheus_nodeexporter(){
             sudo cp /tmp/node_exporter-$PROMETHEUS_NODE_EXPORTER_TAG.linux-amd64/node_exporter /usr/local/bin
             sudo chown node_exporter:node_exporter /usr/local/bin/node_exporter
             sudo rm -rf node_exporter-$PROMETHEUS_NODE_EXPORTER_TAG.linux-amd64*
-            sudo cp ${OSM_DEVOPS}/installers/docker/files/node_exporter.service /etc/systemd/system/node_exporter.service
+            sudo cp ${OSM_DEVOPS}/installers/docker/prometheus/node_exporter.service /etc/systemd/system/node_exporter.service
             sudo systemctl daemon-reload
             sudo systemctl restart node_exporter
             sudo systemctl enable node_exporter
@@ -521,12 +521,20 @@ function generate_docker_env_files() {
         # Docker-compose
         $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/docker-compose.yaml $OSM_DOCKER_WORK_DIR/docker-compose.yaml
 
-        # Prometheus
-        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/files/prometheus.yml $OSM_DOCKER_WORK_DIR/prometheus.yml
+        # Prometheus files
+        $WORKDIR_SUDO mkdir -p $OSM_DOCKER_WORK_DIR/prometheus
+        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/prometheus/prometheus.yml $OSM_DOCKER_WORK_DIR/prometheus/prometheus.yml
 
-        # Grafana & Prometheus Exporter files
-        $WORKDIR_SUDO mkdir -p $OSM_DOCKER_WORK_DIR/files
-        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/files/* $OSM_DOCKER_WORK_DIR/files/
+        # Grafana files
+        $WORKDIR_SUDO mkdir -p $OSM_DOCKER_WORK_DIR/grafana
+        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/grafana/dashboards-osm.yml $OSM_DOCKER_WORK_DIR/grafana/dashboards-osm.yml
+        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/grafana/datasource-prometheus.yml $OSM_DOCKER_WORK_DIR/grafana/datasource-prometheus.yml
+        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/grafana/osm-sample-dashboard.json $OSM_DOCKER_WORK_DIR/grafana/osm-sample-dashboard.json
+        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/grafana/osm-system-dashboard.json $OSM_DOCKER_WORK_DIR/grafana/osm-system-dashboard.json
+
+        # Prometheus Exporters files
+        $WORKDIR_SUDO mkdir -p $OSM_DOCKER_WORK_DIR/prometheus_exporters
+        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/prometheus_exporters/node_exporter.service $OSM_DOCKER_WORK_DIR/prometheus_exporters/node_exporter.service
     fi
 
     # LCM
