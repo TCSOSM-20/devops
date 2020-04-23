@@ -38,6 +38,8 @@ function usage(){
     echo -e "     --pla:          install the PLA module for placement support"
     echo -e "     -m <MODULE>:    install OSM but only rebuild the specified docker images (LW-UI, NBI, LCM, RO, MON, POL, KAFKA, MONGO, PROMETHEUS, PROMETHEUS-CADVISOR, KEYSTONE-DB, PLA, NONE)"
     echo -e "     -o <ADDON>:     ONLY (un)installs one of the addons (vimemu, elk_stack, k8s_monitor)"
+    echo -e "     -O <openrc file/cloud name>: Install OSM to an OpenStack infrastructure. <openrc file/cloud name> is required. If a <cloud name> is used, the clouds.yaml file should be under ~/.config/openstack/ or /etc/openstack/"
+    echo -e "     -N <openstack public network name/ID>: Public network name required to setup OSM to OpenStack"
     echo -e "     -D <devops path> use local devops installation path"
     echo -e "     -w <work dir>   Location to store runtime installation"
     echo -e "     -t <docker tag> specify osm docker tag (default is latest)"
@@ -55,6 +57,7 @@ function usage(){
     echo -e "     --develop:      (deprecated, use '-b master') install OSM from source code using the master branch"
     echo -e "     --pullimages:   pull/run osm images from docker.io/opensourcemano"
     echo -e "     --k8s_monitor:  install the OSM kubernetes monitoring with prometheus and grafana"
+    echo -e "     --volume:       create a VM volume when installing to OpenStack"
 #    echo -e "     --reconfigure:  reconfigure the modules (DO NOT change NAT rules)"
 #    echo -e "     --update:       update to the latest stable release or to the latest commit if using a specific branch"
     echo -e "     --showopts:     print chosen options and exit (only for debugging)"
@@ -1146,6 +1149,36 @@ EOF
     return 0
 }
 
+function install_to_openstack() {
+
+    if [ -z "$2" ]; then
+        FATAL "OpenStack installer requires a valid external network name"
+    fi
+
+    # Install Pip for Python3
+    $WORKDIR_SUDO apt install -y python3-pip
+    $WORKDIR_SUDO -H LC_ALL=C python3 -m pip install -U pip
+
+    # Install Ansible, OpenStack client and SDK
+    $WORKDIR_SUDO -H LC_ALL=C python3 -m pip install -U python-openstackclient "openstacksdk<1" "ansible>=2.9,<3"
+
+    export ANSIBLE_CONFIG="$OSM_DEVOPS/installers/openstack/ansible.cfg"
+
+    OSM_INSTALLER_ARGS="${REPO_ARGS[@]}"
+
+    # Execute the Ansible playbook based on openrc or clouds.yaml
+    if [ -e "$1" ]; then
+        . $1
+        ansible-playbook -e external_network_name=$2 -e installer_args="\"$OSM_INSTALLER_ARGS\"" \
+        -e setup_volume=$3 $OSM_DEVOPS/installers/openstack/site.yml
+    else
+        ansible-playbook -e external_network_name=$2 -e installer_args="\"$OSM_INSTALLER_ARGS\"" \
+        -e setup_volume=$3 -e cloud_name=$1 $OSM_DEVOPS/installers/openstack/site.yml
+    fi
+
+    return 0
+}
+
 function install_vimemu() {
     echo "\nInstalling vim-emu"
     EMUTEMPDIR="$(mktemp -d -q --tmpdir "installosmvimemu.XXXXXX")"
@@ -1204,6 +1237,10 @@ function dump_vars(){
     echo "INSTALL_ONLY=$INSTALL_ONLY"
     echo "INSTALL_ELK=$INSTALL_ELK"
     #echo "INSTALL_PERFMON=$INSTALL_PERFMON"
+    echo "INSTALL_TO_OPENSTACK=$INSTALL_TO_OPENSTACK"
+    echo "OPENSTACK_PUBLIC_NET_NAME=$OPENSTACK_PUBLIC_NET_NAME"
+    echo "OPENSTACK_OPENRC_FILE_OR_CLOUD=$OPENSTACK_OPENRC_FILE_OR_CLOUD"
+    echo "OPENSTACK_ATTACH_VOLUME=$OPENSTACK_ATTACH_VOLUME"
     echo "INSTALL_K8S_MONITOR=$INSTALL_K8S_MONITOR"
     echo "TO_REBUILD=$TO_REBUILD"
     echo "INSTALL_NOLXD=$INSTALL_NOLXD"
@@ -1261,6 +1298,10 @@ INSTALL_PLA=""
 LXD_REPOSITORY_BASE="https://osm-download.etsi.org/repository/osm/lxd"
 LXD_REPOSITORY_PATH=""
 INSTALL_LIGHTWEIGHT="y"
+INSTALL_TO_OPENSTACK=""
+OPENSTACK_OPENRC_FILE_OR_CLOUD=""
+OPENSTACK_PUBLIC_NET_NAME=""
+OPENSTACK_ATTACH_VOLUME="false"
 INSTALL_ONLY=""
 INSTALL_ELK=""
 TO_REBUILD=""
@@ -1303,7 +1344,7 @@ POD_NETWORK_CIDR=10.244.0.0/16
 K8S_MANIFEST_DIR="/etc/kubernetes/manifests"
 RE_CHECK='^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
 
-while getopts ":b:r:c:k:u:R:D:o:m:H:S:s:w:t:U:P:A:l:L:K:-: hy" o; do
+while getopts ":b:r:c:k:u:R:D:o:O:m:N:H:S:s:w:t:U:P:A:l:L:K:-: hy" o; do
     case "${o}" in
         b)
             COMMIT_ID=${OPTARG}
@@ -1340,6 +1381,18 @@ while getopts ":b:r:c:k:u:R:D:o:m:H:S:s:w:t:U:P:A:l:L:K:-: hy" o; do
             [ "${OPTARG}" == "elk_stack" ] && INSTALL_ELK="y" && continue
             [ "${OPTARG}" == "k8s_monitor" ] && INSTALL_K8S_MONITOR="y" && continue
             ;;
+        O)
+            INSTALL_TO_OPENSTACK="y"
+            if [ -n "${OPTARG}" ]; then
+                OPENSTACK_OPENRC_FILE_OR_CLOUD="${OPTARG}"
+            else
+                echo -e "Invalid argument for -O : ' $OPTARG'\n" >&2
+                usage && exit 1
+            fi
+            ;;
+        N)
+            OPENSTACK_PUBLIC_NET_NAME="${OPTARG}"
+            ;;
         m)
             [ "${OPTARG}" == "LW-UI" ] && TO_REBUILD="$TO_REBUILD LW-UI" && continue
             [ "${OPTARG}" == "NBI" ] && TO_REBUILD="$TO_REBUILD NBI" && continue
@@ -1372,6 +1425,7 @@ while getopts ":b:r:c:k:u:R:D:o:m:H:S:s:w:t:U:P:A:l:L:K:-: hy" o; do
             ;;
         t)
             OSM_DOCKER_TAG="${OPTARG}"
+            REPO_ARGS+=(-t "$OSM_DOCKER_TAG")
             ;;
         U)
             DOCKER_USER="${OPTARG}"
@@ -1421,6 +1475,7 @@ while getopts ":b:r:c:k:u:R:D:o:m:H:S:s:w:t:U:P:A:l:L:K:-: hy" o; do
             [ "${OPTARG}" == "ha" ] && continue
             [ "${OPTARG}" == "tag" ] && continue
             [ "${OPTARG}" == "pla" ] && INSTALL_PLA="y" && continue
+            [ "${OPTARG}" == "volume" ] && OPENSTACK_ATTACH_VOLUME="true" && continue
             echo -e "Invalid option: '--$OPTARG'\n" >&2
             usage && exit 1
             ;;
@@ -1482,6 +1537,9 @@ fi
 [ -z "$COMMIT_ID" ] && [ -n "$DEVELOP" ] && COMMIT_ID="master"
 
 need_packages="git wget curl tar"
+
+[ -n "$INSTALL_TO_OPENSTACK" ] && install_to_openstack $OPENSTACK_OPENRC_FILE_OR_CLOUD $OPENSTACK_PUBLIC_NET_NAME $OPENSTACK_ATTACH_VOLUME && echo -e "\nDONE" && exit 0
+
 echo -e "Checking required packages: $need_packages"
 dpkg -l $need_packages &>/dev/null \
   || ! echo -e "One or several required packages are not installed. Updating apt cache requires root privileges." \

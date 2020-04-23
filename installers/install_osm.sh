@@ -113,7 +113,7 @@ if [ $? -eq 0 ]; then
 fi
 }
 
-while getopts ":b:r:c:k:u:R:l:L:K:p:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
+while getopts ":b:r:c:k:u:R:l:L:K:p:D:o:O:m:N:H:S:s:w:t:U:P:A:-: hy" o; do
     case "${o}" in
         r)
             REPOSITORY="${OPTARG}"
