@@ -38,6 +38,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y python3-
     python3-osm-roclient${RO_VERSION} \
     python3-osm-rosdn-tapi${RO_VERSION} python3-osm-rosdn-dynpac${RO_VERSION} python3-osm-rosdn-onosof${RO_VERSION} \
     python3-osm-rosdn-onos-vpls${RO_VERSION} python3-osm-rosdn-floodlightof${RO_VERSION} \
+    python3-osm-rosdn-arista${RO_VERSION} python3-osm-rosdn-odlof${RO_VERSION} \
     python3-osm-rovim-vmware${RO_VERSION} python3-osm-rovim-openstack${RO_VERSION} \
     python3-osm-rovim-openvim${RO_VERSION} python3-osm-rovim-azure${RO_VERSION} \
     python3-osm-rovim-aws${RO_VERSION} python3-osm-rovim-fos${RO_VERSION} python3-osm-rovim-opennebula${RO_VERSION}
