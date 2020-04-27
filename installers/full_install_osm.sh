@@ -246,7 +246,7 @@ function install_lxd() {
 
     # Install LXD snap
     sudo apt-get remove --purge -y liblxc1 lxc-common lxcfs lxd lxd-client
-    sudo snap install lxd --channel=3.0/stable
+    sudo snap install lxd
 
     # Configure LXD
     sudo usermod -a -G lxd `whoami`
