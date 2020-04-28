@@ -47,6 +47,7 @@ function usage(){
     echo -e "     -t <docker tag> specify osm docker tag (default is latest)"
     echo -e "     -l:             LXD cloud yaml file"
     echo -e "     -L:             LXD credentials yaml file"
+    echo -e "     -K:             Specifies the name of the controller to use - The controller must be already bootstrapped"
     echo -e "     --nolxd:        do not install and configure LXD, allowing unattended installations (assumes LXD is already installed and confifured)"
     echo -e "     --nodocker:     do not install docker, do not initialize a swarm (assumes docker is already installed and a swarm has been initialized)"
     echo -e "     --nojuju:       do not juju, assumes already installed"
@@ -70,9 +71,9 @@ function usage(){
     echo -e "     --charmed:                       install OSM with charms"
     echo -e "     --bundle <bundle path>:          Specify with which bundle to deploy OSM with charms (--charmed option)"
     echo -e "     --kubeconfig <kubeconfig path>:  Specify with which kubernetes to deploy OSM with charms (--charmed option)"
-    echo -e "     --lxdendpoint <lxd endpoint ip>: Specify with which LXD to deploy OSM with charms (--charmed option)"
-    echo -e "     --lxdcert <lxd cert path>:       Specify external LXD cert to deploy OSM with charms (--charmed option)"
-
+    echo -e "     --controller <name>:             Specifies the name of the controller to use - The controller must be already bootstrapped (--charmed option)" 
+    echo -e "     --lxd-cloud <yaml path>:         Takes a YAML file as a parameter with the LXD Cloud information (--charmed option)" 
+    echo -e "     --lxd-credentials <yaml path>:   Takes a YAML file as a parameter with the LXD Credentials information (--charmed option)"
 }
 
 add_repo() {
@@ -108,7 +109,7 @@ if [ $? -eq 0 ]; then
 fi
 }
 
-while getopts ":b:r:c:k:u:R:l:L:p:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
+while getopts ":b:r:c:k:u:R:l:L:K:p:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
     case "${o}" in
         r)
             REPOSITORY="${OPTARG}"

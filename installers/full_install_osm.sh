@@ -43,6 +43,7 @@ function usage(){
     echo -e "     -t <docker tag> specify osm docker tag (default is latest)"
     echo -e "     -l:             LXD cloud yaml file"
     echo -e "     -L:             LXD credentials yaml file"
+    echo -e "     -K:             Specifies the name of the controller to use - The controller must be already bootstrapped"
     echo -e "     --nolxd:        do not install and configure LXD, allowing unattended installations (assumes LXD is already installed and confifured)"
     echo -e "     --nodocker:     do not install docker, do not initialize a swarm (assumes docker is already installed and a swarm has been initialized)"
     echo -e "     --nojuju:       do not juju, assumes already installed"
@@ -62,8 +63,9 @@ function usage(){
     echo -e "     --charmed:                       install OSM with charms"
     echo -e "     --bundle <bundle path>:          Specify with which bundle to deploy OSM with charms (--charmed option)"
     echo -e "     --kubeconfig <kubeconfig path>:  Specify with which kubernetes to deploy OSM with charms (--charmed option)"
-    echo -e "     --lxdendpoint <lxd endpoint ip>: Specify with which LXD to deploy OSM with charms (--charmed option)"
-    echo -e "     --lxdcert <lxd cert path>:       Specify external LXD cert to deploy OSM with charms (--charmed option)"
+    echo -e "     --controller <name>:             Specifies the name of the controller to use - The controller must be already bootstrapped (--charmed option)" 
+    echo -e "     --lxd-cloud <yaml path>:         Takes a YAML file as a parameter with the LXD Cloud information (--charmed option)" 
+    echo -e "     --lxd-credentials <yaml path>:   Takes a YAML file as a parameter with the LXD Credentials information (--charmed option)"
     echo -e "     --microstack:                    Installs microstack as a vim. (--charmed option)"
 
 }
@@ -204,10 +206,10 @@ EONG
             remove_volumes $OSM_STACK_NAME
             remove_network $OSM_STACK_NAME
         fi
-        remove_iptables $OSM_STACK_NAME
+        [ -z "$CONTROLLER_NAME" ] && remove_iptables $OSM_STACK_NAME
         echo "Removing $OSM_DOCKER_WORK_DIR"
         $WORKDIR_SUDO rm -rf $OSM_DOCKER_WORK_DIR
-        sg lxd -c "juju destroy-controller --destroy-all-models --yes $OSM_STACK_NAME"
+        [ -z "$CONTROLLER_NAME" ] && sg lxd -c "juju destroy-controller --destroy-all-models --yes $OSM_STACK_NAME"
     fi
     echo "Some docker images will be kept in case they are used by other docker stacks"
     echo "To remove them, just run 'docker image prune' in a terminal"
@@ -247,10 +249,11 @@ function install_lxd() {
     # Install LXD snap
     sudo apt-get remove --purge -y liblxc1 lxc-common lxcfs lxd lxd-client
     sudo snap install lxd
+    sudo apt-get install zfsutils-linux -y
 
     # Configure LXD
     sudo usermod -a -G lxd `whoami`
-    cat /usr/share/osm-devops/installers/lxd-preseed.conf | sg lxd -c "lxd init --preseed"
+    cat /usr/share/osm-devops/installers/lxd-preseed.conf | sed 's/^config: {}/config:\n  core.https_address: '$DEFAULT_IP':8443/' | sg lxd -c "lxd init --preseed"
     sg lxd -c "lxd waitready"
     DEFAULT_INTERFACE=$(route -n | awk '$1~/^0.0.0.0/ {print $8}')
     DEFAULT_MTU=$(ip addr show $DEFAULT_INTERFACE | perl -ne 'if (/mtu\s(\d+)/) {print $1;}')
@@ -381,9 +384,8 @@ function install_juju() {
 function juju_createcontroller() {
     if ! juju show-controller $OSM_STACK_NAME &> /dev/null; then
         # Not found created, create the controller
-        [ -n "$LXD_CLOUD_FILE" ] && OSM_VCA_CLOUDNAME="lxd-cloud"
         sudo usermod -a -G lxd ${USER}
-        sg lxd -c "juju bootstrap --bootstrap-series=xenial $OSM_VCA_CLOUDNAME $OSM_STACK_NAME"
+    sg lxd -c "juju bootstrap $OSM_VCA_CLOUDNAME $OSM_STACK_NAME"
     fi
     [ $(juju controllers | awk "/^${OSM_STACK_NAME}[\*| ]/{print $1}"|wc -l) -eq 1 ] || FATAL "Juju installation failed"
 }
@@ -943,22 +945,63 @@ function install_lightweight() {
 
     [ -z "$INSTALL_NOJUJU" ] && install_juju
     track juju_install
-    
-    if [ -n "$LXD_CLOUD_FILE" ]; then
-        [ -z "$LXD_CRED_FILE" ] && FATAL "The installer needs the LXD credential yaml if the LXD is external"
-           juju add-cloud lxd-cloud $LXD_CLOUD_FILE --force || juju update-cloud lxd-cloud --client -f $LXD_CLOUD_FILE
-           juju add-credential lxd-cloud -f $LXD_CRED_FILE || juju update-credential lxd-cloud lxd-cloud-creds -f $LXD_CRED_FILE
-    fi
 
     if [ -z "$OSM_VCA_HOST" ]; then
-        juju_createcontroller
-        OSM_VCA_HOST=`sg lxd -c "juju show-controller $OSM_STACK_NAME"|grep api-endpoints|awk -F\' '{print $2}'|awk -F\: '{print $1}'`
+        if [ -z "$CONTROLLER_NAME" ]; then
+            if [ -n "$LXD_CLOUD_FILE" ]; then
+                [ -z "$LXD_CRED_FILE" ] && FATAL "The installer needs the LXD credential yaml if the LXD is external"
+                OSM_VCA_CLOUDNAME="lxd-cloud"
+                juju add-cloud $OSM_VCA_CLOUDNAME $LXD_CLOUD_FILE --force || juju update-cloud $OSM_VCA_CLOUDNAME --client -f $LXD_CLOUD_FILE
+                juju add-credential $OSM_VCA_CLOUDNAME -f $LXD_CRED_FILE || juju update-credential $OSM_VCA_CLOUDNAME lxd-cloud-creds -f $LXD_CRED_FILE
+            fi
+            juju_createcontroller
+        else
+            OSM_VCA_CLOUDNAME="lxd-cloud"
+            if [ -n "$LXD_CLOUD_FILE" ]; then
+                [ -z "$LXD_CRED_FILE" ] && FATAL "The installer needs the LXD credential yaml if the LXD is external"
+                juju add-cloud -c $CONTROLLER_NAME $OSM_VCA_CLOUDNAME $LXD_CLOUD_FILE --force || juju update-cloud lxd-cloud -c $CONTROLLER_NAME -f $LXD_CLOUD_FILE
+                juju add-credential -c $CONTROLLER_NAME $OSM_VCA_CLOUDNAME -f $LXD_CRED_FILE || juju update-credential lxd-cloud -c $CONTROLLER_NAME -f $LXD_CRED_FILE
+            else
+                mkdir -p ~/.osm
+                cat << EOF > ~/.osm/lxd-cloud.yaml
+clouds:
+  lxd-cloud:
+    type: lxd
+    auth-types: [certificate]
+    endpoint: "https://$DEFAULT_IP:8443"
+    config:
+      ssl-hostname-verification: false
+EOF
+                openssl req -nodes -new -x509 -keyout ~/.osm/client.key -out ~/.osm/client.crt -days 365 -subj "/C=FR/ST=Nice/L=Nice/O=ETSI/OU=OSM/CN=osm.etsi.org"
+                local server_cert=`cat /var/snap/lxd/common/lxd/server.crt | sed 's/^/        /'`
+                local client_cert=`cat ~/.osm/client.crt | sed 's/^/        /'`
+                local client_key=`cat ~/.osm/client.key | sed 's/^/        /'`
+                cat << EOF > ~/.osm/lxd-credentials.yaml
+credentials:
+  lxd-cloud:
+    lxd-cloud:
+      auth-type: certificate
+      server-cert: |
+$server_cert
+      client-cert: |
+$client_cert
+      client-key: |
+$client_key
+EOF
+                lxc config trust add local: ~/.osm/client.crt
+                juju add-cloud -c $CONTROLLER_NAME $OSM_VCA_CLOUDNAME ~/.osm/lxd-cloud.yaml --force || juju update-cloud lxd-cloud -c $CONTROLLER_NAME -f ~/.osm/lxd-cloud.yaml
+                juju add-credential -c $CONTROLLER_NAME $OSM_VCA_CLOUDNAME -f ~/.osm/lxd-credentials.yaml || juju update-credential lxd-cloud -c $CONTROLLER_NAME -f ~/.osm/lxd-credentials.yaml
+            fi
+        fi
+        [ -z "$CONTROLLER_NAME" ] && OSM_VCA_HOST=`sg lxd -c "juju show-controller $OSM_STACK_NAME"|grep api-endpoints|awk -F\' '{print $2}'|awk -F\: '{print $1}'`
+        [ -n "$CONTROLLER_NAME" ] && OSM_VCA_HOST=`juju show-controller $CONTROLLER_NAME |grep api-endpoints|awk -F\' '{print $2}'|awk -F\: '{print $1}'`
         [ -z "$OSM_VCA_HOST" ] && FATAL "Cannot obtain juju controller IP address"
     fi
     track juju_controller
 
     if [ -z "$OSM_VCA_SECRET" ]; then
-        OSM_VCA_SECRET=$(parse_juju_password $OSM_STACK_NAME)
+        [ -z "$CONTROLLER_NAME" ] && OSM_VCA_SECRET=$(parse_juju_password $OSM_STACK_NAME)
+        [ -n "$CONTROLLER_NAME" ] && OSM_VCA_SECRET=$(parse_juju_password $CONTROLLER_NAME)
         [ -z "$OSM_VCA_SECRET" ] && FATAL "Cannot obtain juju secret"
     fi
     if [ -z "$OSM_VCA_PUBKEY" ]; then
@@ -966,7 +1009,8 @@ function install_lightweight() {
         [ -z "$OSM_VCA_PUBKEY" ] && FATAL "Cannot obtain juju public key"
     fi
     if [ -z "$OSM_VCA_CACERT" ]; then
-	OSM_VCA_CACERT=$(juju controllers --format json | jq -r '.controllers["osm"]["ca-cert"]' | base64 | tr -d \\n)
+        [ -z "$CONTROLLER_NAME" ] && OSM_VCA_CACERT=$(juju controllers --format json | jq -r --arg controller $OSM_STACK_NAME '.controllers[$controller]["ca-cert"]' | base64 | tr -d \\n)
+        [ -n "$CONTROLLER_NAME" ] && OSM_VCA_CACERT=$(juju controllers --format json | jq -r --arg controller $CONTROLLER_NAME '.controllers[$controller]["ca-cert"]' | base64 | tr -d \\n)
        [ -z "$OSM_VCA_CACERT" ] && FATAL "Cannot obtain juju CA certificate"
     fi
     if [ -z "$OSM_VCA_APIPROXY" ]; then
@@ -1203,7 +1247,7 @@ POD_NETWORK_CIDR=10.244.0.0/16
 K8S_MANIFEST_DIR="/etc/kubernetes/manifests"
 RE_CHECK='^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
 
-while getopts ":b:r:c:k:u:R:D:o:m:H:S:s:w:t:U:P:A:l:L:-: hy" o; do
+while getopts ":b:r:c:k:u:R:D:o:m:H:S:s:w:t:U:P:A:l:L:K:-: hy" o; do
     case "${o}" in
         b)
             COMMIT_ID=${OPTARG}
@@ -1287,6 +1331,9 @@ while getopts ":b:r:c:k:u:R:D:o:m:H:S:s:w:t:U:P:A:l:L:-: hy" o; do
             ;;
         L)
             LXD_CRED_FILE="${OPTARG}"
+            ;;
+        K)
+            CONTROLLER_NAME="${OPTARG}"
             ;;
         -)
             [ "${OPTARG}" == "help" ] && usage && exit 0
@@ -1376,7 +1423,7 @@ fi
 # if develop, we force master
 [ -z "$COMMIT_ID" ] && [ -n "$DEVELOP" ] && COMMIT_ID="master"
 
-need_packages="git jq wget curl tar"
+need_packages="git wget curl tar"
 echo -e "Checking required packages: $need_packages"
 dpkg -l $need_packages &>/dev/null \
   || ! echo -e "One or several required packages are not installed. Updating apt cache requires root privileges." \
@@ -1386,7 +1433,7 @@ dpkg -l $need_packages &>/dev/null \
   || ! echo -e "Installing $need_packages requires root privileges." \
   || sudo apt-get install -y $need_packages \
   || FATAL "failed to install $need_packages"
-
+sudo snap install jq
 if [ -z "$OSM_DEVOPS" ]; then
     if [ -n "$TEST_INSTALLER" ]; then
         echo -e "\nUsing local devops repo for OSM installation"
