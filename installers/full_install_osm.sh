@@ -322,11 +322,11 @@ function install_prometheus_nodeexporter(){
                 echo "Creating user node_exporter"
                 sudo useradd --no-create-home --shell /bin/false node_exporter
             fi
-            sudo wget -q https://github.com/prometheus/node_exporter/releases/download/v$PROMETHEUS_NODE_EXPORTER_TAG/node_exporter-$PROMETHEUS_NODE_EXPORTER_TAG.linux-amd64.tar.gz  -P /tmp/
+            wget -q https://github.com/prometheus/node_exporter/releases/download/v$PROMETHEUS_NODE_EXPORTER_TAG/node_exporter-$PROMETHEUS_NODE_EXPORTER_TAG.linux-amd64.tar.gz  -P /tmp/
             sudo tar -C /tmp -xf /tmp/node_exporter-$PROMETHEUS_NODE_EXPORTER_TAG.linux-amd64.tar.gz
             sudo cp /tmp/node_exporter-$PROMETHEUS_NODE_EXPORTER_TAG.linux-amd64/node_exporter /usr/local/bin
             sudo chown node_exporter:node_exporter /usr/local/bin/node_exporter
-            sudo rm -rf node_exporter-$PROMETHEUS_NODE_EXPORTER_TAG.linux-amd64*
+            sudo rm -rf /tmp/node_exporter-$PROMETHEUS_NODE_EXPORTER_TAG.linux-amd64*
             sudo cp ${OSM_DEVOPS}/installers/docker/prometheus/node_exporter.service /etc/systemd/system/node_exporter.service
             sudo systemctl daemon-reload
             sudo systemctl restart node_exporter
