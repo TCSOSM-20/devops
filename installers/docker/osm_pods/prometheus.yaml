@@ -53,7 +53,7 @@ data:
     # Here it's Prometheus itself.
     scrape_configs:
       # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
-      - job_name: 'prometheus'
+      - job_name: 'mon_exporter'
 
         # metrics_path defaults to '/metrics'
         # scheme defaults to 'http'.
@@ -84,6 +84,9 @@ spec:
       containers:
       - name: prometheus
         image: prom/prometheus:v2.4.3
+        args:
+        - --config.file=/etc/prometheus/prometheus.yml
+        - --web.enable-lifecycle
         ports:
         - containerPort: 9090
           protocol: TCP
