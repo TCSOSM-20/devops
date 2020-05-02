@@ -135,7 +135,7 @@ node("${params.NODE}") {
             // grab all stable upstream builds based on the
 
             dir("${RELEASE}") {
-                def list = ["RO", "openvim", "osmclient", "IM", "devops", "MON", "N2VC", "NBI", "common", "LCM", "POL", "LW-UI"]
+                def list = ["RO", "openvim", "osmclient", "IM", "devops", "MON", "N2VC", "NBI", "common", "LCM", "POL", "LW-UI","NG-UI"]
                 for (component in list) {
                     step ([$class: 'CopyArtifact',
                            projectName: "${component}${upstream_main_job}/${GERRIT_BRANCH}"])
