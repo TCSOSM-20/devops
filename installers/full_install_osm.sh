@@ -125,7 +125,8 @@ function remove_iptables() {
     fi
 
     if [ -z "$DEFAULT_IP" ]; then
-        DEFAULT_IF=`route -n |awk '$1~/^0.0.0.0/ {print $8}'`
+        DEFAULT_IF=$(ip route list|awk '$1=="default" {print $5}')
+        [ -z "$DEFAULT_IF" ] && DEFAULT_IF=$(route -n |awk '$1~/^0.0.0.0/ {print $8}')
         [ -z "$DEFAULT_IF" ] && FATAL "Not possible to determine the interface with the default route 0.0.0.0"
         DEFAULT_IP=`ip -o -4 a |grep ${DEFAULT_IF}|awk '{split($4,a,"/"); print a[1]}'`
         [ -z "$DEFAULT_IP" ] && FATAL "Not possible to determine the IP address of the interface with the default route"
@@ -256,7 +257,8 @@ function install_lxd() {
     sudo usermod -a -G lxd `whoami`
     cat /usr/share/osm-devops/installers/lxd-preseed.conf | sed 's/^config: {}/config:\n  core.https_address: '$DEFAULT_IP':8443/' | sg lxd -c "lxd init --preseed"
     sg lxd -c "lxd waitready"
-    DEFAULT_INTERFACE=$(route -n | awk '$1~/^0.0.0.0/ {print $8}')
+    DEFAULT_INTERFACE=$(ip route list|awk '$1=="default" {print $5}')
+    [ -z "$DEFAULT_INTERFACE" ] && DEFAULT_INTERFACE=$(route -n |awk '$1~/^0.0.0.0/ {print $8}')
     DEFAULT_MTU=$(ip addr show $DEFAULT_INTERFACE | perl -ne 'if (/mtu\s(\d+)/) {print $1;}')
     sg lxd -c "lxc profile device set default eth0 mtu $DEFAULT_MTU"
     #sudo systemctl stop lxd-bridge
@@ -921,7 +923,8 @@ function install_lightweight() {
     echo "Installing lightweight build of OSM"
     LWTEMPDIR="$(mktemp -d -q --tmpdir "installosmlight.XXXXXX")"
     trap 'rm -rf "${LWTEMPDIR}"' EXIT
-    DEFAULT_IF=`route -n |awk '$1~/^0.0.0.0/ {print $8}'`
+    DEFAULT_IF=$(ip route list|awk '$1=="default" {print $5}')
+    [ -z "$DEFAULT_IF" ] && DEFAULT_IF=$(route -n |awk '$1~/^0.0.0.0/ {print $8}')
     [ -z "$DEFAULT_IF" ] && FATAL "Not possible to determine the interface with the default route 0.0.0.0"
     DEFAULT_IP=`ip -o -4 a |grep ${DEFAULT_IF}|awk '{split($4,a,"/"); print a[1]}'`
     [ -z "$DEFAULT_IP" ] && FATAL "Not possible to determine the IP address of the interface with the default route"
