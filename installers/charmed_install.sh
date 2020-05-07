@@ -16,7 +16,7 @@
 # set -eux
 
 K8S_CLOUD_NAME="k8s-cloud"
-
+IMAGES_OVERLAY_FILE=~/.osm/images-overlay.yaml
 function check_arguments(){
     while [ $# -gt 0 ] ; do
         case $1 in
@@ -25,7 +25,8 @@ function check_arguments(){
             --controller) CONTROLLER="$2" ;;
             --lxd-cloud) LXD_CLOUD="$2" ;;
             --lxd-credentials) LXD_CREDENTIALS="$2" ;;
-            --microstack) MICROSTACK=y
+            --microstack) MICROSTACK=y ;;
+            --tag) TAG="$2" ;;
         esac
         shift
     done
@@ -122,7 +123,9 @@ function deploy_charmed_osm(){
     if [ -v BUNDLE ]; then
         juju deploy $BUNDLE --overlay ~/.osm/vca-overlay.yaml
     else
-        juju deploy osm --overlay ~/.osm/vca-overlay.yaml
+        images_overlay=""
+        [ -v TAG ] && generate_images_overlay && images_overlay="--overlay $IMAGES_OVERLAY_FILE"
+        juju deploy osm --overlay ~/.osm/vca-overlay.yaml $images_overlay
     fi
     echo "Waiting for deployment to finish..."
     check_osm_deployed &> /dev/null
@@ -186,6 +189,32 @@ applications:
 EOF
     mv /tmp/vca-overlay.yaml ~/.osm/
     OSM_VCA_HOST=$vca_host
+}
+
+function generate_images_overlay(){
+    cat << EOF > /tmp/images-overlay.yaml
+applications:
+  lcm-k8s:
+    options:
+      image: opensourcemano/lcm:$TAG
+  mon-k8s:
+    options:
+      image: opensourcemano/mon:$TAG
+  ro-k8s:
+    options:
+      image: opensourcemano/ro:$TAG
+  nbi-k8s:
+    options:
+      image: opensourcemano/nbi:$TAG
+  pol-k8s:
+    options:
+      image: opensourcemano/pol:$TAG
+  ui-k8s:
+    options:
+      image: opensourcemano/light-ui:$TAG
+
+EOF
+    mv /tmp/images-overlay.yaml $IMAGES_OVERLAY_FILE
 }
 
 function install_osmclient() {

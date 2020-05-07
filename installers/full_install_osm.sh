@@ -67,6 +67,7 @@ function usage(){
     echo -e "     --lxd-cloud <yaml path>:         Takes a YAML file as a parameter with the LXD Cloud information (--charmed option)" 
     echo -e "     --lxd-credentials <yaml path>:   Takes a YAML file as a parameter with the LXD Credentials information (--charmed option)"
     echo -e "     --microstack:                    Installs microstack as a vim. (--charmed option)"
+    echo -e "     --tag:                           Docker image tag"
 
 }
 
@@ -1362,6 +1363,7 @@ while getopts ":b:r:c:k:u:R:D:o:m:H:S:s:w:t:U:P:A:l:L:K:-: hy" o; do
             [ "${OPTARG}" == "lxdendpoint" ] && continue
             [ "${OPTARG}" == "lxdcert" ] && continue
             [ "${OPTARG}" == "microstack" ] && continue
+            [ "${OPTARG}" == "tag" ] && continue
             [ "${OPTARG}" == "pla" ] && INSTALL_PLA="y" && continue
             echo -e "Invalid option: '--$OPTARG'\n" >&2
             usage && exit 1
