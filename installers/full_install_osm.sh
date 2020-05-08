@@ -167,6 +167,12 @@ function remove_k8s_namespace() {
     kubectl delete ns $1
 }
 
+#Uninstall osmclient
+function uninstall_osmclient() {
+    sudo apt-get remove --purge -y python-osmclient
+    sudo apt-get remove --purge -y python3-osmclient
+}
+
 #Uninstall lightweight OSM: remove dockers
 function uninstall_lightweight() {
     if [ -n "$INSTALL_ONLY" ]; then
@@ -213,6 +219,7 @@ EONG
         $WORKDIR_SUDO rm -rf $OSM_DOCKER_WORK_DIR
         [ -z "$CONTROLLER_NAME" ] && sg lxd -c "juju destroy-controller --destroy-all-models --yes $OSM_STACK_NAME"
     fi
+    uninstall_osmclient
     echo "Some docker images will be kept in case they are used by other docker stacks"
     echo "To remove them, just run 'docker image prune' in a terminal"
     return 0
