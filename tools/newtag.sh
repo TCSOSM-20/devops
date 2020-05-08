@@ -14,6 +14,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
+
 if [ $# -ne 5 ]; then
     echo "Usage $0 <repo> <branch> <tag> <user> <release_name>"
     echo "Example: $0 all master v4.0.2 garciadeblas FOUR"
@@ -28,7 +29,7 @@ RELEASE_NAME="$5"
 tag_header="OSM Release $RELEASE_NAME:"
 tag_message="$tag_header version $TAG"
 
-modules="common devops IM LCM LW-UI MON N2VC NBI openvim osmclient RO vim-emu POL NG-UI"
+modules="common devops IM LCM LW-UI MON N2VC NBI openvim osmclient RO vim-emu POL NG-UI PLA"
 list=""
 for i in $modules; do
     if [ "$1" == "$i" -o "$1" == "all" ]; then

@@ -34,7 +34,7 @@ CONTAINER_NAME ?= $(LOWER_MDG)
 CMD_DOCKER_ARGS ?= -q
 DOCKER_ARGS     = $(CMD_DOCKER_ARGS)
 
-DEPS := MON IM LCM RO common osmclient devops NBI policy-module Keystone N2VC lightui NG-UI
+DEPS := MON IM LCM RO common osmclient devops NBI policy-module Keystone N2VC lightui NG-UI PLA
 
 DEPS_TARGETS = $(addprefix $(MKBUILD)/.dep_, $(DEPS))
 
@@ -66,6 +66,7 @@ build: $(MKBUILD) $(DEPS_TARGETS)
                    --build-arg OSMCLIENT_VERSION==$(shell cat $(MKBUILD)/.dep_osmclient) \
                    --build-arg NBI_VERSION==$(shell cat $(MKBUILD)/.dep_NBI) \
                    --build-arg POL_VERSION==$(shell cat $(MKBUILD)/.dep_policy-module) \
+                   --build-arg PLA_VERSION==$(shell cat $(MKBUILD)/.dep_PLA) \
                    --build-arg DEVOPS_VERSION==$(shell cat $(MKBUILD)/.dep_devops) \
                    --build-arg N2VC_VERSION==$(shell cat $(MKBUILD)/.dep_N2VC) \
                    --build-arg LWUI_VERSION==$(shell cat $(MKBUILD)/.dep_lightui) \

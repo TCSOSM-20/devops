@@ -14,5 +14,5 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
-SUBDIRS = MON NBI osmclient RO LCM light-ui POL Keystone NG-UI
+SUBDIRS = MON NBI osmclient RO LCM light-ui POL Keystone NG-UI PLA
 include mk/dirs.mk
