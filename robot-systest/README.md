@@ -32,9 +32,7 @@
 
 ```bash
 sudo -H python3 -m pip install --ignore-installed haikunator requests pyvcloud progressbar pathlib robotframework robotframework-seleniumlibrary robotframework-requests robotframework-SSHLibrary
-curl -sS -o - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-sudo add-apt-repository -y "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main"
-sudo apt-get install -y google-chrome-stable chromium-chromedriver
+sudo snap install yq
 sudo apt-get install -y python3-openstackclient  # Installs Queens by default
 ```
 
