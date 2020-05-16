@@ -88,8 +88,11 @@ services:
     ports:
       - "${OSM_PROM_PORTS:-9091:9090}"
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/:/etc/prometheus/
       - prom_db:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--web.enable-lifecycle'
     networks:
       - netOSM
     logging:

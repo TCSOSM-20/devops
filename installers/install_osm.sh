@@ -38,12 +38,16 @@ function usage(){
     echo -e "     -A <VCA apiproxy> use VCA/juju API proxy"
     echo -e "     --vimemu:       additionally deploy the VIM emulator as a docker container"
     echo -e "     --elk_stack:    additionally deploy an ELK docker stack for event logging"
+    echo -e "     --pla:          install the PLA module for placement support"
     echo -e "     --pm_stack:     additionally deploy a Prometheus+Grafana stack for performance monitoring (PM)"
-    echo -e "     -m <MODULE>:    install OSM but only rebuild the specified docker images (LW-UI, NBI, LCM, RO, MON, POL, KAFKA, MONGO, PROMETHEUS, KEYSTONE-DB, NONE)"
+    echo -e "     -m <MODULE>:    install OSM but only rebuild the specified docker images (LW-UI, NBI, LCM, RO, MON, POL, KAFKA, MONGO, PROMETHEUS, KEYSTONE-DB, PLA, NONE)"
     echo -e "     -o <ADDON>:     ONLY (un)installs one of the addons (vimemu, elk_stack, pm_stack)"
     echo -e "     -D <devops path> use local devops installation path"
     echo -e "     -w <work dir>   Location to store runtime installation"
     echo -e "     -t <docker tag> specify osm docker tag (default is latest)"
+    echo -e "     -l:             LXD cloud yaml file"
+    echo -e "     -L:             LXD credentials yaml file"
+    echo -e "     -K:             Specifies the name of the controller to use - The controller must be already bootstrapped"
     echo -e "     --nolxd:        do not install and configure LXD, allowing unattended installations (assumes LXD is already installed and confifured)"
     echo -e "     --nodocker:     do not install docker, do not initialize a swarm (assumes docker is already installed and a swarm has been initialized)"
     echo -e "     --nojuju:       do not juju, assumes already installed"
@@ -64,6 +68,12 @@ function usage(){
     #echo -e "     --clean_volumes To clear all the mounted volumes from docker swarm"
     echo -e "     -y:             do not prompt for confirmation, assumes yes"
     echo -e "     -h / --help:    print this help"
+    echo -e "     --charmed:                       install OSM with charms"
+    echo -e "     --bundle <bundle path>:          Specify with which bundle to deploy OSM with charms (--charmed option)"
+    echo -e "     --kubeconfig <kubeconfig path>:  Specify with which kubernetes to deploy OSM with charms (--charmed option)"
+    echo -e "     --controller <name>:             Specifies the name of the controller to use - The controller must be already bootstrapped (--charmed option)" 
+    echo -e "     --lxd-cloud <yaml path>:         Takes a YAML file as a parameter with the LXD Cloud information (--charmed option)" 
+    echo -e "     --lxd-credentials <yaml path>:   Takes a YAML file as a parameter with the LXD Credentials information (--charmed option)"
 }
 
 add_repo() {
@@ -99,7 +109,7 @@ if [ $? -eq 0 ]; then
 fi
 }
 
-while getopts ":b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
+while getopts ":b:r:c:k:u:R:l:L:K:p:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
     case "${o}" in
         r)
             REPOSITORY="${OPTARG}"
@@ -115,7 +125,7 @@ while getopts ":b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
             ;;
         -)
             [ "${OPTARG}" == "help" ] && usage && exit 0
-	    ;;
+            ;;
         :)
             echo "Option -$OPTARG requires an argument" >&2
             usage && exit 1

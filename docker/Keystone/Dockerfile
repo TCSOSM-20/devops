@@ -35,7 +35,9 @@ RUN apt-get update && \
     apt-get install -y software-properties-common && \
     add-apt-repository -y cloud-archive:pike && \
     apt-get update && apt dist-upgrade -y && \
-    apt-get install -y python-openstackclient keystone apache2 libapache2-mod-wsgi net-tools mysql-client && \
+    apt-get install -y python-openstackclient keystone apache2 libapache2-mod-wsgi net-tools mysql-client dnsutils && \
+    apt-get install -y python-pip build-essential python-dev libldap2-dev libsasl2-dev libssl-dev libffi-dev libxml2-dev libxslt1-dev zlib1g-dev ldap-utils && \
+    pip install python-ldap ldappool && \
     rm -rf /var/lib/apt/lists/* && \
     chmod +x start.sh
 
@@ -56,5 +58,23 @@ ENV ADMIN_PROJECT           admin
 ENV SERVICE_USERNAME        nbi
 ENV SERVICE_PASSWORD        nbi
 ENV SERVICE_PROJECT         service
+# ldap
+# ENV LDAP_AUTHENTICATION_DOMAIN_NAME     no default
+# ENV LDAP_URL                            ldap://localhost
+# ENV LDAP_BIND_USER                      no defauslt
+# ENV LDAP_BIND_PASSWORD                  no default
+# ENV LDAP_USER_TREE_DN                   no default
+# ENV LDAP_USER_OBJECTCLASS               inetOrgPerson
+# ENV LDAP_USER_ID_ATTRIBUTE              cn
+# ENV LDAP_USER_NAME_ATTRIBUTE            sn
+# ENV LDAP_USER_PASS_ATTRIBUTE            userPassword
+# ENV LDAP_USER_FILTER                    no default
+# ENV LDAP_USER_ENABLED_ATTRIBUTE         enabled
+# ENV LDAP_USER_ENABLED_MASK              0
+# ENV LDAP_USER_ENABLED_DEFAULT           true
+# ENV LDAP_USER_ENABLED_INVERT            false
+# ENV LDAP_USE_STARTTLS                   false
+# ENV LDAP_TLS_CACERT_BASE64              no default
+# ENV LDAP_TLS_REQ_CERT                   demand
 
 ENTRYPOINT ./start.sh

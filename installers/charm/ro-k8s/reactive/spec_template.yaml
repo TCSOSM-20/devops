@@ -1,0 +1,55 @@
+# Copyright 2020 Canonical Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+#     Unless required by applicable law or agreed to in writing, software
+#     distributed under the License is distributed on an "AS IS" BASIS,
+#     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#     See the License for the specific language governing permissions and
+#     limitations under the License.
+version: 2
+service:
+  scalePolicy: serial
+containers:
+  - name: %(name)s
+    image: %(docker_image)s
+    kubernetes:
+      readinessProbe:
+        httpGet:
+          path: /openmano/tenants
+          port: %(advertised-port)s
+        periodSeconds: 10
+        timeoutSeconds: 5
+        successThreshold: 1
+        failureThreshold: 3
+      livenessProbe:
+        tcpSocket:
+          port: %(advertised-port)s
+        initialDelaySeconds: 600
+        periodSeconds: 10
+        timeoutSeconds: 5
+        successThreshold: 1
+        failureThreshold: 3
+    ports:
+    - containerPort: %(advertised-port)s
+      protocol: TCP
+    config:
+        ALLOW_ANONYMOUS_LOGIN: 'yes'
+        RO_DB_HOST: %(mysql_host)s
+        RO_DB_PORT: %(mysql_port)s
+        RO_DB_NAME: %(ro_database)s
+        RO_DB_USER: %(mysql_user)s
+        RO_DB_ROOT_PASSWORD: %(mysql_root_password)s
+        RO_DB_PASSWORD: %(mysql_password)s
+
+        RO_DB_OVIM_PASSWORD: %(mysql_password)s
+        RO_DB_OVIM_HOST: %(mysql_host)s
+        RO_DB_OVIM_PORT: %(mysql_port)s
+        RO_DB_OVIM_USER: %(mysql_user)s
+        RO_DB_OVIM_ROOT_PASSWORD: %(mysql_root_password)s
+        RO_DB_OVIM_NAME: %(vim_database)s
+        OPENMANO_TENANT: %(OPENMANO_TENANT)s

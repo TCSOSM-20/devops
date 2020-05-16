@@ -19,7 +19,7 @@
 # 1. Bug 722 : Jayant Madavi : JM00553988@techmahindra.com : Enhancement to use new fossology server. Had to change the variable name at #    couple of places, while scanning the variable name was adding curl as a license.
 # 2. Bug 542 : Jayant Madavi, Mrityunjay Yadav : JM00553988@techmahindra.com : 24-jul-2019 : Enhancement to raise exit in case files modified or added does #    not contain license.
 # 3. Bug 542  : Jayant Madavi, Mrityunjay Yadav : JM00553988@techmahindra.com :add exception list. for now as inLine. later need to create a variable for exception_list
- 
+
 echo GERRIT BRANCH is $GERRIT_BRANCH
 dpkg -l wget &>/dev/null ||sudo apt-get install -y wget
 dpkg -l curl &>/dev/null ||sudo apt-get install -y curl
@@ -29,7 +29,7 @@ dpkg -l curl &>/dev/null ||sudo apt-get install -y curl
 apache=0
 nolicense=0
 other=0
-exception_list="':(exclude)*.pdf' ':(exclude)*.png' ':(exclude)*.jpeg' ':(exclude)*.jpg' ':(exclude)*.gif' ':(exclude)*.json'"
+exception_list="':(exclude)*.pdf' ':(exclude)*.png' ':(exclude)*.jpeg' ':(exclude)*.jpg' ':(exclude)*.gif' ':(exclude)*.json' ':(exclude)*.ico'"
 git fetch
 
 RE="FATAL: your file did not get passed through"

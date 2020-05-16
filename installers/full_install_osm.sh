@@ -35,11 +35,15 @@ function usage(){
     echo -e "     -A <VCA apiproxy> use VCA/juju API proxy"
     echo -e "     --vimemu:       additionally deploy the VIM emulator as a docker container"
     echo -e "     --elk_stack:    additionally deploy an ELK docker stack for event logging"
-    echo -e "     -m <MODULE>:    install OSM but only rebuild the specified docker images (LW-UI, NBI, LCM, RO, MON, POL, KAFKA, MONGO, PROMETHEUS, PROMETHEUS-CADVISOR, KEYSTONE-DB, NONE)"
+    echo -e "     --pla:          install the PLA module for placement support"
+    echo -e "     -m <MODULE>:    install OSM but only rebuild the specified docker images (LW-UI, NBI, LCM, RO, MON, POL, KAFKA, MONGO, PROMETHEUS, PROMETHEUS-CADVISOR, KEYSTONE-DB, PLA, NONE)"
     echo -e "     -o <ADDON>:     ONLY (un)installs one of the addons (vimemu, elk_stack)"
     echo -e "     -D <devops path> use local devops installation path"
     echo -e "     -w <work dir>   Location to store runtime installation"
     echo -e "     -t <docker tag> specify osm docker tag (default is latest)"
+    echo -e "     -l:             LXD cloud yaml file"
+    echo -e "     -L:             LXD credentials yaml file"
+    echo -e "     -K:             Specifies the name of the controller to use - The controller must be already bootstrapped"
     echo -e "     --nolxd:        do not install and configure LXD, allowing unattended installations (assumes LXD is already installed and confifured)"
     echo -e "     --nodocker:     do not install docker, do not initialize a swarm (assumes docker is already installed and a swarm has been initialized)"
     echo -e "     --nojuju:       do not juju, assumes already installed"
@@ -49,41 +53,22 @@ function usage(){
     echo -e "     --uninstall:    uninstall OSM: remove the containers and delete NAT rules"
     echo -e "     --source:       install OSM from source code using the latest stable tag"
     echo -e "     --develop:      (deprecated, use '-b master') install OSM from source code using the master branch"
-    echo -e "     --soui:         install classic build of OSM (Rel THREE v3.1, based on LXD containers, with SO and UI)"
-    echo -e "     --lxdimages:    (only for Rel THREE with --soui) download lxd images from OSM repository instead of creating them from scratch"
     echo -e "     --pullimages:   pull/run osm images from docker.io/opensourcemano"
     echo -e "     --k8s_monitor:  install the OSM kubernetes moitoring with prometheus and grafana"
-    echo -e "     -l <lxd_repo>:  (only for Rel THREE with --soui) use specified repository url for lxd images"
-    echo -e "     -p <path>:      (only for Rel THREE with --soui) use specified repository path for lxd images"
 #    echo -e "     --reconfigure:  reconfigure the modules (DO NOT change NAT rules)"
-    echo -e "     --nat:          (only for Rel THREE with --soui) install only NAT rules"
-    echo -e "     --noconfigure:  (only for Rel THREE with --soui) DO NOT install osmclient, DO NOT install NAT rules, DO NOT configure modules"
 #    echo -e "     --update:       update to the latest stable release or to the latest commit if using a specific branch"
     echo -e "     --showopts:     print chosen options and exit (only for debugging)"
     echo -e "     -y:             do not prompt for confirmation, assumes yes"
     echo -e "     -h / --help:    print this help"
-}
+    echo -e "     --charmed:                       install OSM with charms"
+    echo -e "     --bundle <bundle path>:          Specify with which bundle to deploy OSM with charms (--charmed option)"
+    echo -e "     --kubeconfig <kubeconfig path>:  Specify with which kubernetes to deploy OSM with charms (--charmed option)"
+    echo -e "     --controller <name>:             Specifies the name of the controller to use - The controller must be already bootstrapped (--charmed option)" 
+    echo -e "     --lxd-cloud <yaml path>:         Takes a YAML file as a parameter with the LXD Cloud information (--charmed option)" 
+    echo -e "     --lxd-credentials <yaml path>:   Takes a YAML file as a parameter with the LXD Credentials information (--charmed option)"
+    echo -e "     --microstack:                    Installs microstack as a vim. (--charmed option)"
+    echo -e "     --tag:                           Docker image tag"
 
-#Uninstall OSM: remove containers
-function uninstall(){
-    echo -e "\nUninstalling OSM"
-    if [ $RC_CLONE ] || [ -n "$TEST_INSTALLER" ]; then
-        $OSM_DEVOPS/jenkins/host/clean_container RO
-        $OSM_DEVOPS/jenkins/host/clean_container VCA
-        $OSM_DEVOPS/jenkins/host/clean_container MON
-        $OSM_DEVOPS/jenkins/host/clean_container SO
-        #$OSM_DEVOPS/jenkins/host/clean_container UI
-    else
-        lxc stop RO && lxc delete RO
-        lxc stop VCA && lxc delete VCA
-        lxc stop MON && lxc delete MON
-        lxc stop SO-ub && lxc delete SO-ub
-    fi
-    echo -e "\nDeleting imported lxd images if they exist"
-    lxc image show osm-ro &>/dev/null && lxc image delete osm-ro
-    lxc image show osm-vca &>/dev/null && lxc image delete osm-vca
-    lxc image show osm-soui &>/dev/null && lxc image delete osm-soui
-    return 0
 }
 
 # takes a juju/accounts.yaml file and returns the password specific
@@ -140,7 +125,8 @@ function remove_iptables() {
     fi
 
     if [ -z "$DEFAULT_IP" ]; then
-        DEFAULT_IF=`route -n |awk '$1~/^0.0.0.0/ {print $8}'`
+        DEFAULT_IF=$(ip route list|awk '$1=="default" {print $5}')
+        [ -z "$DEFAULT_IF" ] && DEFAULT_IF=$(route -n |awk '$1~/^0.0.0.0/ {print $8}')
         [ -z "$DEFAULT_IF" ] && FATAL "Not possible to determine the interface with the default route 0.0.0.0"
         DEFAULT_IP=`ip -o -4 a |grep ${DEFAULT_IF}|awk '{split($4,a,"/"); print a[1]}'`
         [ -z "$DEFAULT_IP" ] && FATAL "Not possible to determine the IP address of the interface with the default route"
@@ -181,6 +167,12 @@ function remove_k8s_namespace() {
     kubectl delete ns $1
 }
 
+#Uninstall osmclient
+function uninstall_osmclient() {
+    sudo apt-get remove --purge -y python-osmclient
+    sudo apt-get remove --purge -y python3-osmclient
+}
+
 #Uninstall lightweight OSM: remove dockers
 function uninstall_lightweight() {
     if [ -n "$INSTALL_ONLY" ]; then
@@ -192,7 +184,7 @@ function uninstall_lightweight() {
     else
         echo -e "\nUninstalling OSM"
         if [ -n "$KUBERNETES" ]; then
-            if [ -n "$K8S_MONITOR" ]; then
+            if [ -n "$INSTALL_K8S_MONITOR" ]; then
                 # uninstall OSM MONITORING
                 uninstall_k8s_monitoring
             fi
@@ -211,6 +203,7 @@ function uninstall_lightweight() {
         docker image rm ${DOCKER_USER}/nbi:${OSM_DOCKER_TAG}
         docker image rm ${DOCKER_USER}/mon:${OSM_DOCKER_TAG}
         docker image rm ${DOCKER_USER}/pol:${OSM_DOCKER_TAG}
+        docker image rm ${DOCKER_USER}/pla:${OSM_DOCKER_TAG}
         docker image rm ${DOCKER_USER}/osmclient:${OSM_DOCKER_TAG}
 EONG
 
@@ -221,21 +214,32 @@ EONG
             remove_volumes $OSM_STACK_NAME
             remove_network $OSM_STACK_NAME
         fi
-        remove_iptables $OSM_STACK_NAME
+        [ -z "$CONTROLLER_NAME" ] && remove_iptables $OSM_STACK_NAME
         echo "Removing $OSM_DOCKER_WORK_DIR"
         $WORKDIR_SUDO rm -rf $OSM_DOCKER_WORK_DIR
-        sg lxd -c "juju destroy-controller --destroy-all-models --yes $OSM_STACK_NAME"
+        [ -z "$CONTROLLER_NAME" ] && sg lxd -c "juju destroy-controller --destroy-all-models --yes $OSM_STACK_NAME"
     fi
+    uninstall_osmclient
     echo "Some docker images will be kept in case they are used by other docker stacks"
     echo "To remove them, just run 'docker image prune' in a terminal"
     return 0
 }
 
+#Safe unattended install of iptables-persistent
+function check_install_iptables_persistent(){
+    echo -e "\nChecking required packages: iptables-persistent"
+    if dpkg -l iptables-persistent &>/dev/null; then
+        echo -e "    Not installed.\nInstalling iptables-persistent requires root privileges"
+        echo iptables-persistent iptables-persistent/autosave_v4 boolean true | sudo debconf-set-selections
+        echo iptables-persistent iptables-persistent/autosave_v6 boolean true | sudo debconf-set-selections
+        sudo apt-get -yq install iptables-persistent
+    fi
+}
+
 #Configure NAT rules, based on the current IP addresses of containers
 function nat(){
-    echo -e "\nChecking required packages: iptables-persistent"
-    dpkg -l iptables-persistent &>/dev/null || ! echo -e "    Not installed.\nInstalling iptables-persistent requires root privileges" || \
-    sudo apt-get -yq install iptables-persistent
+    check_install_iptables_persistent
+    
     echo -e "\nConfiguring NAT rules"
     echo -e "   Required root privileges"
     sudo $OSM_DEVOPS/installers/nat_osm
@@ -246,304 +250,24 @@ function FATAL(){
     exit 1
 }
 
-#Update RO, SO and UI:
-function update(){
-    echo -e "\nUpdating components"
-
-    echo -e "     Updating RO"
-    CONTAINER="RO"
-    MDG="RO"
-    INSTALL_FOLDER="/opt/openmano"
-    echo -e "     Fetching the repo"
-    lxc exec $CONTAINER -- git -C $INSTALL_FOLDER fetch --all
-    BRANCH=""
-    BRANCH=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER status -sb | head -n1 | sed -n 's/^## \(.*\).*/\1/p'|awk '{print $1}' |sed 's/\(.*\)\.\.\..*/\1/'`
-    [ -z "$BRANCH" ] && FATAL "Could not find the current branch in use in the '$MDG'"
-    CURRENT=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER status |head -n1`
-    CURRENT_COMMIT_ID=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER rev-parse HEAD`
-    echo "         FROM: $CURRENT ($CURRENT_COMMIT_ID)"
-    # COMMIT_ID either was  previously set with -b option, or is an empty string
-    CHECKOUT_ID=$COMMIT_ID
-    [ -z "$CHECKOUT_ID" ] && [ "$BRANCH" == "HEAD" ] && CHECKOUT_ID="tags/$LATEST_STABLE_DEVOPS"
-    [ -z "$CHECKOUT_ID" ] && [ "$BRANCH" != "HEAD" ] && CHECKOUT_ID="$BRANCH"
-    if [[ $CHECKOUT_ID == "tags/"* ]]; then
-        REMOTE_COMMIT_ID=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER rev-list -n 1 $CHECKOUT_ID`
-    else
-        REMOTE_COMMIT_ID=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER rev-parse origin/$CHECKOUT_ID`
-    fi
-    echo "         TO: $CHECKOUT_ID ($REMOTE_COMMIT_ID)"
-    if [ "$CURRENT_COMMIT_ID" == "$REMOTE_COMMIT_ID" ]; then
-        echo "         Nothing to be done."
-    else
-        echo "         Update required."
-        lxc exec $CONTAINER -- service osm-ro stop
-        lxc exec $CONTAINER -- git -C /opt/openmano stash
-        lxc exec $CONTAINER -- git -C /opt/openmano pull --rebase
-        lxc exec $CONTAINER -- git -C /opt/openmano checkout $CHECKOUT_ID
-        lxc exec $CONTAINER -- git -C /opt/openmano stash pop
-        lxc exec $CONTAINER -- /opt/openmano/database_utils/migrate_mano_db.sh
-        lxc exec $CONTAINER -- service osm-ro start
-    fi
-    echo
-
-    echo -e "     Updating SO and UI"
-    CONTAINER="SO-ub"
-    MDG="SO"
-    INSTALL_FOLDER=""   # To be filled in
-    echo -e "     Fetching the repo"
-    lxc exec $CONTAINER -- git -C $INSTALL_FOLDER fetch --all
-    BRANCH=""
-    BRANCH=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER status -sb | head -n1 | sed -n 's/^## \(.*\).*/\1/p'|awk '{print $1}' |sed 's/\(.*\)\.\.\..*/\1/'`
-    [ -z "$BRANCH" ] && FATAL "Could not find the current branch in use in the '$MDG'"
-    CURRENT=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER status |head -n1`
-    CURRENT_COMMIT_ID=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER rev-parse HEAD`
-    echo "         FROM: $CURRENT ($CURRENT_COMMIT_ID)"
-    # COMMIT_ID either was  previously set with -b option, or is an empty string
-    CHECKOUT_ID=$COMMIT_ID
-    [ -z "$CHECKOUT_ID" ] && [ "$BRANCH" == "HEAD" ] && CHECKOUT_ID="tags/$LATEST_STABLE_DEVOPS"
-    [ -z "$CHECKOUT_ID" ] && [ "$BRANCH" != "HEAD" ] && CHECKOUT_ID="$BRANCH"
-    if [[ $CHECKOUT_ID == "tags/"* ]]; then
-        REMOTE_COMMIT_ID=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER rev-list -n 1 $CHECKOUT_ID`
-    else
-        REMOTE_COMMIT_ID=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER rev-parse origin/$CHECKOUT_ID`
-    fi
-    echo "         TO: $CHECKOUT_ID ($REMOTE_COMMIT_ID)"
-    if [ "$CURRENT_COMMIT_ID" == "$REMOTE_COMMIT_ID" ]; then
-        echo "         Nothing to be done."
-    else
-        echo "         Update required."
-        # Instructions to be added
-        # lxc exec SO-ub -- ...
-    fi
-    echo
-    echo -e "Updating MON Container"
-    CONTAINER="MON"
-    MDG="MON"
-    INSTALL_FOLDER="/root/MON"
-    echo -e "     Fetching the repo"
-    lxc exec $CONTAINER -- git -C $INSTALL_FOLDER fetch --all
-    BRANCH=""
-    BRANCH=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER status -sb | head -n1 | sed -n 's/^## \(.*\).*/\1/p'|awk '{print $1}' |sed 's/\(.*\)\.\.\..*/\1/'`
-    [ -z "$BRANCH" ] && FATAL "Could not find the current branch in use in the '$MDG'"
-    CURRENT=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER status |head -n1`
-    CURRENT_COMMIT_ID=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER rev-parse HEAD`
-    echo "         FROM: $CURRENT ($CURRENT_COMMIT_ID)"
-    # COMMIT_ID either was  previously set with -b option, or is an empty string
-    CHECKOUT_ID=$COMMIT_ID
-    [ -z "$CHECKOUT_ID" ] && [ "$BRANCH" == "HEAD" ] && CHECKOUT_ID="tags/$LATEST_STABLE_DEVOPS"
-    [ -z "$CHECKOUT_ID" ] && [ "$BRANCH" != "HEAD" ] && CHECKOUT_ID="$BRANCH"
-    if [[ $CHECKOUT_ID == "tags/"* ]]; then
-        REMOTE_COMMIT_ID=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER rev-list -n 1 $CHECKOUT_ID`
-    else
-        REMOTE_COMMIT_ID=`lxc exec $CONTAINER -- git -C $INSTALL_FOLDER rev-parse origin/$CHECKOUT_ID`
-    fi
-    echo "         TO: $CHECKOUT_ID ($REMOTE_COMMIT_ID)"
-    if [ "$CURRENT_COMMIT_ID" == "$REMOTE_COMMIT_ID" ]; then
-        echo "         Nothing to be done."
-    else
-        echo "         Update required."
-    fi
-    echo
-}
-
-function so_is_up() {
-    if [ -n "$1" ]; then
-        SO_IP=$1
-    else
-        SO_IP=`lxc list SO-ub -c 4|grep eth0 |awk '{print $2}'`
-    fi
-    time=0
-    step=5
-    timelength=300
-    while [ $time -le $timelength ]
-    do
-        if [[ `curl -k -X GET   https://$SO_IP:8008/api/operational/vcs/info \
-                -H 'accept: application/vnd.yang.data+json' \
-                -H 'authorization: Basic YWRtaW46YWRtaW4=' \
-                -H 'cache-control: no-cache' 2> /dev/null | jq  '.[].components.component_info[] | select(.component_name=="RW.Restconf")' 2>/dev/null | grep "RUNNING" | wc -l` -eq 1 ]]
-        then
-            echo "RW.Restconf running....SO is up"
-            return 0
-        fi
-
-        sleep $step
-        echo -n "."
-        time=$((time+step))
-    done
-
-    FATAL "OSM Failed to startup. SO failed to startup"
-}
-
-function vca_is_up() {
-    if [[ `lxc exec VCA -- juju status | grep "osm" | wc -l` -eq 1 ]]; then
-            echo "VCA is up and running"
-            return 0
-    fi
-
-    FATAL "OSM Failed to startup. VCA failed to startup"
-}
-
-function mon_is_up() {
-    if [[ `curl http://$RO_IP:9090/openmano/ | grep "works" | wc -l` -eq 1 ]]; then
-            echo "MON is up and running"
-            return 0
-    fi
-
-    FATAL "OSM Failed to startup. MON failed to startup"
-}
-
-function ro_is_up() {
-    if [ -n "$1" ]; then
-        RO_IP=$1
-    else
-        RO_IP=`lxc list RO -c 4|grep eth0 |awk '{print $2}'`
-    fi
-    time=0
-    step=2
-    timelength=20
-    while [ $time -le $timelength ]; do
-        if [[ `curl http://$RO_IP:9090/openmano/ | grep "works" | wc -l` -eq 1 ]]; then
-            echo "RO is up and running"
-            return 0
-        fi
-        sleep $step
-        echo -n "."
-        time=$((time+step))
-    done
-
-    FATAL "OSM Failed to startup. RO failed to startup"
-}
-
-
-function configure_RO(){
-    . $OSM_DEVOPS/installers/export_ips
-    echo -e "       Configuring RO"
-    lxc exec RO -- sed -i -e "s/^\#\?log_socket_host:.*/log_socket_host: $SO_CONTAINER_IP/g" /etc/osm/openmanod.cfg
-    lxc exec RO -- service osm-ro restart
-
-    ro_is_up
-
-    lxc exec RO -- openmano tenant-delete -f osm >/dev/null
-    lxc exec RO -- openmano tenant-create osm > /dev/null
-    lxc exec RO -- sed -i '/export OPENMANO_TENANT=osm/d' .bashrc
-    lxc exec RO -- sed -i '$ i export OPENMANO_TENANT=osm' .bashrc
-    lxc exec RO -- sh -c 'echo "export OPENMANO_TENANT=osm" >> .bashrc'
-}
-
-function configure_VCA(){
-    echo -e "       Configuring VCA"
-    JUJU_PASSWD=$(generate_secret)
-    echo -e "$JUJU_PASSWD\n$JUJU_PASSWD" | lxc exec VCA -- juju change-user-password
-}
-
-function configure_SOUI(){
-    . $OSM_DEVOPS/installers/export_ips
-    JUJU_CONTROLLER_IP=`lxc exec VCA -- lxc list -c 4 |grep eth0 |awk '{print $2}'`
-    RO_TENANT_ID=`lxc exec RO -- openmano tenant-list osm |awk '{print $1}'`
-
-    echo -e " Configuring MON"
-    #Information to be added about SO socket for logging
-
-    echo -e "       Configuring SO"
-    sudo route add -host $JUJU_CONTROLLER_IP gw $VCA_CONTAINER_IP
-    sudo ip route add 10.44.127.0/24 via $VCA_CONTAINER_IP
-    sudo sed -i "$ i route add -host $JUJU_CONTROLLER_IP gw $VCA_CONTAINER_IP" /etc/rc.local
-    sudo sed -i "$ i ip route add 10.44.127.0/24 via $VCA_CONTAINER_IP" /etc/rc.local
-    # make journaling persistent
-    lxc exec SO-ub -- mkdir -p /var/log/journal
-    lxc exec SO-ub -- systemd-tmpfiles --create --prefix /var/log/journal
-    lxc exec SO-ub -- systemctl restart systemd-journald
-
-    echo RIFT_EXTERNAL_ADDRESS=$DEFAULT_IP | lxc exec SO-ub -- tee -a /usr/rift/etc/default/launchpad
-
-    lxc exec SO-ub -- systemctl restart launchpad
-
-    so_is_up $SO_CONTAINER_IP
-
-    #delete existing config agent (could be there on reconfigure)
-    curl -k --request DELETE \
-      --url https://$SO_CONTAINER_IP:8008/api/config/config-agent/account/osmjuju \
-      --header 'accept: application/vnd.yang.data+json' \
-      --header 'authorization: Basic YWRtaW46YWRtaW4=' \
-      --header 'cache-control: no-cache' \
-      --header 'content-type: application/vnd.yang.data+json' &> /dev/null
-
-    result=$(curl -k --request POST \
-      --url https://$SO_CONTAINER_IP:8008/api/config/config-agent \
-      --header 'accept: application/vnd.yang.data+json' \
-      --header 'authorization: Basic YWRtaW46YWRtaW4=' \
-      --header 'cache-control: no-cache' \
-      --header 'content-type: application/vnd.yang.data+json' \
-      --data '{"account": [ { "name": "osmjuju", "account-type": "juju", "juju": { "ip-address": "'$JUJU_CONTROLLER_IP'", "port": "17070", "user": "admin", "secret": "'$JUJU_PASSWD'" }  }  ]}')
-    [[ $result =~ .*success.* ]] || FATAL "Failed config-agent configuration: $result"
-
-    #R1/R2 config line
-    #result=$(curl -k --request PUT \
-    #  --url https://$SO_CONTAINER_IP:8008/api/config/resource-orchestrator \
-    #  --header 'accept: application/vnd.yang.data+json' \
-    #  --header 'authorization: Basic YWRtaW46YWRtaW4=' \
-    #  --header 'cache-control: no-cache' \
-    #  --header 'content-type: application/vnd.yang.data+json' \
-    #  --data '{ "openmano": { "host": "'$RO_CONTAINER_IP'", "port": "9090", "tenant-id": "'$RO_TENANT_ID'" }, "name": "osmopenmano", "account-type": "openmano" }')
-
-    result=$(curl -k --request PUT \
-      --url https://$SO_CONTAINER_IP:8008/api/config/project/default/ro-account/account \
-      --header 'accept: application/vnd.yang.data+json' \
-      --header 'authorization: Basic YWRtaW46YWRtaW4=' \
-      --header 'cache-control: no-cache'   \
-      --header 'content-type: application/vnd.yang.data+json' \
-      --data '{"rw-ro-account:account": [ { "openmano": { "host": "'$RO_CONTAINER_IP'", "port": "9090", "tenant-id": "'$RO_TENANT_ID'"}, "name": "osmopenmano", "ro-account-type": "openmano" }]}')
-    [[ $result =~ .*success.* ]] || FATAL "Failed resource-orchestrator configuration: $result"
-
-    result=$(curl -k --request PATCH \
-      --url https://$SO_CONTAINER_IP:8008/v2/api/config/openidc-provider-config/rw-ui-client/redirect-uri \
-      --header 'accept: application/vnd.yang.data+json' \
-      --header 'authorization: Basic YWRtaW46YWRtaW4=' \
-      --header 'cache-control: no-cache'   \
-      --header 'content-type: application/vnd.yang.data+json' \
-      --data '{"redirect-uri": "https://'$DEFAULT_IP':8443/callback" }')
-    [[ $result =~ .*success.* ]] || FATAL "Failed redirect-uri configuration: $result"
-
-    result=$(curl -k --request PATCH \
-      --url https://$SO_CONTAINER_IP:8008/v2/api/config/openidc-provider-config/rw-ui-client/post-logout-redirect-uri \
-      --header 'accept: application/vnd.yang.data+json' \
-      --header 'authorization: Basic YWRtaW46YWRtaW4=' \
-      --header 'cache-control: no-cache'   \
-      --header 'content-type: application/vnd.yang.data+json' \
-      --data '{"post-logout-redirect-uri": "https://'$DEFAULT_IP':8443/?api_server=https://'$DEFAULT_IP'" }')
-    [[ $result =~ .*success.* ]] || FATAL "Failed post-logout-redirect-uri configuration: $result"
-
-    lxc exec SO-ub -- tee /etc/network/interfaces.d/60-rift.cfg <<EOF
-auto lo:1
-iface lo:1 inet static
-        address  $DEFAULT_IP
-        netmask 255.255.255.255
-EOF
-    lxc exec SO-ub ifup lo:1
-}
-
-#Configure RO, VCA, and SO with the initial configuration:
-#  RO -> tenant:osm, logs to be sent to SO
-#  VCA -> juju-password
-#  SO -> route to Juju Controller, add RO account, add VCA account
-function configure(){
-    #Configure components
-    echo -e "\nConfiguring components"
-    configure_RO
-    configure_VCA
-    configure_SOUI
-}
-
 function install_lxd() {
-    sudo apt-get update
-    sudo apt-get install -y lxd
-    newgrp lxd
-    lxd init --auto
-    lxd waitready
-    lxc network create lxdbr0 ipv4.address=auto ipv4.nat=true ipv6.address=none ipv6.nat=false
-    DEFAULT_INTERFACE=$(route -n | awk '$1~/^0.0.0.0/ {print $8}')
+    # Apply sysctl production values for optimal performance
+    sudo cp /usr/share/osm-devops/installers/60-lxd-production.conf /etc/sysctl.d/60-lxd-production.conf
+    sudo sysctl --system
+
+    # Install LXD snap
+    sudo apt-get remove --purge -y liblxc1 lxc-common lxcfs lxd lxd-client
+    sudo snap install lxd
+    sudo apt-get install zfsutils-linux -y
+
+    # Configure LXD
+    sudo usermod -a -G lxd `whoami`
+    cat /usr/share/osm-devops/installers/lxd-preseed.conf | sed 's/^config: {}/config:\n  core.https_address: '$DEFAULT_IP':8443/' | sg lxd -c "lxd init --preseed"
+    sg lxd -c "lxd waitready"
+    DEFAULT_INTERFACE=$(ip route list|awk '$1=="default" {print $5}')
+    [ -z "$DEFAULT_INTERFACE" ] && DEFAULT_INTERFACE=$(route -n |awk '$1~/^0.0.0.0/ {print $8}')
     DEFAULT_MTU=$(ip addr show $DEFAULT_INTERFACE | perl -ne 'if (/mtu\s(\d+)/) {print $1;}')
-    lxc profile device set default eth0 mtu $DEFAULT_MTU
+    sg lxd -c "lxc profile device set default eth0 mtu $DEFAULT_MTU"
     #sudo systemctl stop lxd-bridge
     #sudo systemctl --system daemon-reload
     #sudo systemctl enable lxd-bridge
@@ -562,19 +286,6 @@ function ask_user(){
         [ "${USER_CONFIRMATION,,}" == "no" ]  || [ "${USER_CONFIRMATION,,}" == "n" ] && return 1
         read -e -p "Please type 'yes' or 'no': " USER_CONFIRMATION
     done
-}
-
-function launch_container_from_lxd(){
-    export OSM_MDG=$1
-    OSM_load_config
-    export OSM_BASE_IMAGE=$2
-    if ! container_exists $OSM_BUILD_CONTAINER; then
-        CONTAINER_OPTS=""
-        [[ "$OSM_BUILD_CONTAINER_PRIVILEGED" == yes ]] && CONTAINER_OPTS="$CONTAINER_OPTS -c security.privileged=true"
-        [[ "$OSM_BUILD_CONTAINER_ALLOW_NESTED" == yes ]] && CONTAINER_OPTS="$CONTAINER_OPTS -c security.nesting=true"
-        create_container $OSM_BASE_IMAGE $OSM_BUILD_CONTAINER $CONTAINER_OPTS
-        wait_container_up $OSM_BUILD_CONTAINER
-    fi
 }
 
 function install_osmclient(){
@@ -620,12 +331,12 @@ function install_prometheus_nodeexporter(){
                 echo "Creating user node_exporter"
                 sudo useradd --no-create-home --shell /bin/false node_exporter
             fi
-            sudo wget -q https://github.com/prometheus/node_exporter/releases/download/v$PROMETHEUS_NODE_EXPORTER_TAG/node_exporter-$PROMETHEUS_NODE_EXPORTER_TAG.linux-amd64.tar.gz  -P /tmp/
+            wget -q https://github.com/prometheus/node_exporter/releases/download/v$PROMETHEUS_NODE_EXPORTER_TAG/node_exporter-$PROMETHEUS_NODE_EXPORTER_TAG.linux-amd64.tar.gz  -P /tmp/
             sudo tar -C /tmp -xf /tmp/node_exporter-$PROMETHEUS_NODE_EXPORTER_TAG.linux-amd64.tar.gz
             sudo cp /tmp/node_exporter-$PROMETHEUS_NODE_EXPORTER_TAG.linux-amd64/node_exporter /usr/local/bin
             sudo chown node_exporter:node_exporter /usr/local/bin/node_exporter
-            sudo rm -rf node_exporter-$PROMETHEUS_NODE_EXPORTER_TAG.linux-amd64*
-            sudo cp ${OSM_DEVOPS}/installers/docker/files/node_exporter.service /etc/systemd/system/node_exporter.service
+            sudo rm -rf /tmp/node_exporter-$PROMETHEUS_NODE_EXPORTER_TAG.linux-amd64*
+            sudo cp ${OSM_DEVOPS}/installers/docker/prometheus/node_exporter.service /etc/systemd/system/node_exporter.service
             sudo systemctl daemon-reload
             sudo systemctl restart node_exporter
             sudo systemctl enable node_exporter
@@ -642,41 +353,6 @@ function uninstall_prometheus_nodeexporter(){
     sudo userdel node_exporter
     sudo rm /usr/local/bin/node_exporter
     return 0
-}
-
-function install_from_lxdimages(){
-    LXD_RELEASE=${RELEASE#"-R "}
-    if [ -n "$LXD_REPOSITORY_PATH" ]; then
-        LXD_IMAGE_DIR="$LXD_REPOSITORY_PATH"
-    else
-        LXD_IMAGE_DIR="$(mktemp -d -q --tmpdir "osmimages.XXXXXX")"
-        trap 'rm -rf "$LXD_IMAGE_DIR"' EXIT
-    fi
-    echo -e "\nDeleting previous lxd images if they exist"
-    lxc image show osm-ro &>/dev/null && lxc image delete osm-ro
-    lxc image show osm-vca &>/dev/null && lxc image delete osm-vca
-    lxc image show osm-soui &>/dev/null && lxc image delete osm-soui
-    echo -e "\nImporting osm-ro"
-    [ -z "$LXD_REPOSITORY_PATH" ] && wget -O $LXD_IMAGE_DIR/osm-ro.tar.gz $LXD_REPOSITORY_BASE/$LXD_RELEASE/osm-ro.tar.gz
-    lxc image import $LXD_IMAGE_DIR/osm-ro.tar.gz --alias osm-ro
-    rm -f $LXD_IMAGE_DIR/osm-ro.tar.gz
-    echo -e "\nImporting osm-vca"
-    [ -z "$LXD_REPOSITORY_PATH" ] && wget -O $LXD_IMAGE_DIR/osm-vca.tar.gz $LXD_REPOSITORY_BASE/$LXD_RELEASE/osm-vca.tar.gz
-    lxc image import $LXD_IMAGE_DIR/osm-vca.tar.gz --alias osm-vca
-    rm -f $LXD_IMAGE_DIR/osm-vca.tar.gz
-    echo -e "\nImporting osm-soui"
-    [ -z "$LXD_REPOSITORY_PATH" ] && wget -O $LXD_IMAGE_DIR/osm-soui.tar.gz $LXD_REPOSITORY_BASE/$LXD_RELEASE/osm-soui.tar.gz
-    lxc image import $LXD_IMAGE_DIR/osm-soui.tar.gz --alias osm-soui
-    rm -f $LXD_IMAGE_DIR/osm-soui.tar.gz
-    launch_container_from_lxd RO osm-ro
-    ro_is_up && track RO
-    launch_container_from_lxd VCA osm-vca
-    vca_is_up && track VCA
-    launch_container_from_lxd MON osm-mon
-    mon_is_up && track MON
-    launch_container_from_lxd SO osm-soui
-    #so_is_up && track SOUI
-    track SOUI
 }
 
 function install_docker_ce() {
@@ -710,7 +386,6 @@ function install_docker_compose() {
 function install_juju() {
     echo "Installing juju"
     sudo snap install juju --classic
-    [ -z "$INSTALL_NOLXD" ] && sudo dpkg-reconfigure -p medium lxd
     [[ ":$PATH": != *":/snap/bin:"* ]] && PATH="/snap/bin:${PATH}"
     echo "Finished installation of juju"
     return 0
@@ -720,15 +395,13 @@ function juju_createcontroller() {
     if ! juju show-controller $OSM_STACK_NAME &> /dev/null; then
         # Not found created, create the controller
         sudo usermod -a -G lxd ${USER}
-        sg lxd -c "juju bootstrap --bootstrap-series=xenial localhost $OSM_STACK_NAME"
+    sg lxd -c "juju bootstrap $OSM_VCA_CLOUDNAME $OSM_STACK_NAME"
     fi
     [ $(juju controllers | awk "/^${OSM_STACK_NAME}[\*| ]/{print $1}"|wc -l) -eq 1 ] || FATAL "Juju installation failed"
 }
 
 function juju_createproxy() {
-    echo -e "\nChecking required packages: iptables-persistent"
-    dpkg -l iptables-persistent &>/dev/null || ! echo -e "    Not installed.\nInstalling iptables-persistent requires root privileges" || \
-    sudo apt-get -yq install iptables-persistent
+    check_install_iptables_persistent
 
     if ! sudo iptables -t nat -C PREROUTING -p tcp -m tcp -d $DEFAULT_IP --dport 17070 -j DNAT --to-destination $OSM_VCA_HOST; then
         sudo iptables -t nat -A PREROUTING -p tcp -m tcp -d $DEFAULT_IP --dport 17070 -j DNAT --to-destination $OSM_VCA_HOST
@@ -791,6 +464,14 @@ function generate_docker_images() {
         git -C ${LWTEMPDIR} clone https://osm.etsi.org/gerrit/osm/POL
         git -C ${LWTEMPDIR}/POL checkout ${COMMIT_ID}
         sg docker -c "docker build ${LWTEMPDIR}/POL -f ${LWTEMPDIR}/POL/docker/Dockerfile -t ${DOCKER_USER}/pol --no-cache" || FATAL "cannot build POL docker image"
+    fi
+
+    if [ -n "$PULL_IMAGES" -a -n "$INSTALL_PLA" ]; then
+        sg docker -c "docker pull ${DOCKER_USER}/pla:${OSM_DOCKER_TAG}" || FATAL "cannot pull PLA docker image"
+    elif [ -z "$TO_REBUILD" -a -n "$INSTALL_PLA" ] || echo $TO_REBUILD | grep -q PLA ; then
+        git -C ${LWTEMPDIR} clone https://osm.etsi.org/gerrit/osm/PLA
+        git -C ${LWTEMPDIR}/PLA checkout ${COMMIT_ID}
+        sg docker -c "docker build ${LWTEMPDIR}/PLA -f ${LWTEMPDIR}/PLA/docker/Dockerfile -t ${DOCKER_USER}/pla --no-cache" || FATAL "cannot build PLA docker image"
     fi
 
     if [ -n "$PULL_IMAGES" ]; then
@@ -871,13 +552,24 @@ function generate_docker_env_files() {
     else
         # Docker-compose
         $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/docker-compose.yaml $OSM_DOCKER_WORK_DIR/docker-compose.yaml
+        if [ -n "$INSTALL_PLA" ]; then
+            $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/osm_pla/docker-compose.yaml $OSM_DOCKER_WORK_DIR/osm_pla/docker-compose.yaml
+        fi
 
-        # Prometheus
-        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/files/prometheus.yml $OSM_DOCKER_WORK_DIR/prometheus.yml
+        # Prometheus files
+        $WORKDIR_SUDO mkdir -p $OSM_DOCKER_WORK_DIR/prometheus
+        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/prometheus/prometheus.yml $OSM_DOCKER_WORK_DIR/prometheus/prometheus.yml
 
-        # Grafana & Prometheus Exporter files
-        $WORKDIR_SUDO mkdir -p $OSM_DOCKER_WORK_DIR/files
-        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/files/* $OSM_DOCKER_WORK_DIR/files/
+        # Grafana files
+        $WORKDIR_SUDO mkdir -p $OSM_DOCKER_WORK_DIR/grafana
+        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/grafana/dashboards-osm.yml $OSM_DOCKER_WORK_DIR/grafana/dashboards-osm.yml
+        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/grafana/datasource-prometheus.yml $OSM_DOCKER_WORK_DIR/grafana/datasource-prometheus.yml
+        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/grafana/osm-sample-dashboard.json $OSM_DOCKER_WORK_DIR/grafana/osm-sample-dashboard.json
+        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/grafana/osm-system-dashboard.json $OSM_DOCKER_WORK_DIR/grafana/osm-system-dashboard.json
+
+        # Prometheus Exporters files
+        $WORKDIR_SUDO mkdir -p $OSM_DOCKER_WORK_DIR/prometheus_exporters
+        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/prometheus_exporters/node_exporter.service $OSM_DOCKER_WORK_DIR/prometheus_exporters/node_exporter.service
     fi
 
     # LCM
@@ -921,6 +613,12 @@ function generate_docker_env_files() {
 
     if ! grep -Fq "OSMLCM_VCA_APTMIRROR" $OSM_DOCKER_WORK_DIR/lcm.env; then
         echo "# OSMLCM_VCA_APTMIRROR=http://archive.ubuntu.com/ubuntu/" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lcm.env
+    fi
+
+    if ! grep -Fq "OSMLCM_VCA_CLOUD" $OSM_DOCKER_WORK_DIR/lcm.env; then
+        echo "OSMLCM_VCA_CLOUD=${OSM_VCA_CLOUDNAME}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lcm.env
+    else
+        $WORKDIR_SUDO sed -i "s|OSMLCM_VCA_CLOUD.*|OSMLCM_VCA_CLOUD=${OSM_VCA_CLOUDNAME}|g" $OSM_DOCKER_WORK_DIR/lcm.env
     fi
 
     # RO
@@ -1054,6 +752,15 @@ function deploy_osm_services() {
     kubectl apply -n $OSM_STACK_NAME -f $OSM_K8S_WORK_DIR
 }
 
+function deploy_osm_pla_service() {
+    # corresponding to parse_yaml
+    [ ! $OSM_DOCKER_TAG == "7" ] && $WORKDIR_SUDO sed -i "s/opensourcemano\/pla:.*/opensourcemano\/pla:$OSM_DOCKER_TAG/g" $OSM_DOCKER_WORK_DIR/osm_pla/pla.yaml
+    # corresponding to namespace_vol
+    $WORKDIR_SUDO  sed -i "s#path: /var/lib/osm#path: $OSM_NAMESPACE_VOL#g" $OSM_DOCKER_WORK_DIR/osm_pla/pla.yaml
+    # corresponding to deploy_osm_services
+    kubectl apply -n $OSM_STACK_NAME -f $OSM_DOCKER_WORK_DIR/osm_pla
+}
+
 function parse_yaml() {
     osm_services="nbi lcm ro pol mon light-ui keystone"
     TAG=$1
@@ -1134,7 +841,11 @@ function deploy_lightweight() {
     echo "export GRAFANA_TAG=${GRAFANA_TAG}" | $WORKDIR_SUDO tee --append $OSM_DOCKER_WORK_DIR/osm_ports.sh
 
     pushd $OSM_DOCKER_WORK_DIR
-    sg docker -c ". ./osm_ports.sh; docker stack deploy -c $OSM_DOCKER_WORK_DIR/docker-compose.yaml $OSM_STACK_NAME"
+    if [ -n "$INSTALL_PLA" ]; then
+        sg docker -c ". ./osm_ports.sh; docker stack deploy -c $OSM_DOCKER_WORK_DIR/docker-compose.yaml -c $OSM_DOCKER_WORK_DIR/osm_pla/docker-compose.yaml $OSM_STACK_NAME"
+    else
+        sg docker -c ". ./osm_ports.sh; docker stack deploy -c $OSM_DOCKER_WORK_DIR/docker-compose.yaml $OSM_STACK_NAME"
+    fi
     popd
 
     echo "Finished deployment of lightweight build"
@@ -1194,6 +905,7 @@ function install_lightweight() {
     [ "${OSM_STACK_NAME}" == "osm" ] || OSM_DOCKER_WORK_DIR="$OSM_WORK_DIR/stack/$OSM_STACK_NAME"
     [ -n "$KUBERNETES" ] && OSM_K8S_WORK_DIR="$OSM_DOCKER_WORK_DIR/osm_pods" && OSM_NAMESPACE_VOL="${OSM_HOST_VOL}/${OSM_STACK_NAME}"
     [ ! -d "$OSM_DOCKER_WORK_DIR" ] && $WORKDIR_SUDO mkdir -p $OSM_DOCKER_WORK_DIR
+    [ ! -d "$OSM_DOCKER_WORK_DIR/osm_pla" -a -n "$INSTALL_PLA" ] && $WORKDIR_SUDO mkdir -p $OSM_DOCKER_WORK_DIR/osm_pla
     [ -n "$KUBERNETES" ] && $WORKDIR_SUDO cp -b $OSM_DEVOPS/installers/docker/cluster-config.yaml $OSM_DOCKER_WORK_DIR/cluster-config.yaml
 
     track checkingroot
@@ -1218,15 +930,16 @@ function install_lightweight() {
     echo "Installing lightweight build of OSM"
     LWTEMPDIR="$(mktemp -d -q --tmpdir "installosmlight.XXXXXX")"
     trap 'rm -rf "${LWTEMPDIR}"' EXIT
-    DEFAULT_IF=`route -n |awk '$1~/^0.0.0.0/ {print $8}'`
+    DEFAULT_IF=$(ip route list|awk '$1=="default" {print $5}')
+    [ -z "$DEFAULT_IF" ] && DEFAULT_IF=$(route -n |awk '$1~/^0.0.0.0/ {print $8}')
     [ -z "$DEFAULT_IF" ] && FATAL "Not possible to determine the interface with the default route 0.0.0.0"
     DEFAULT_IP=`ip -o -4 a |grep ${DEFAULT_IF}|awk '{split($4,a,"/"); print a[1]}'`
     [ -z "$DEFAULT_IP" ] && FATAL "Not possible to determine the IP address of the interface with the default route"
     DEFAULT_MTU=$(ip addr show ${DEFAULT_IF} | perl -ne 'if (/mtu\s(\d+)/) {print $1;}')
 
     # if no host is passed in, we need to install lxd/juju, unless explicilty asked not to
-    if [ -z "$OSM_VCA_HOST" ] && [ -z "$INSTALL_NOLXD" ]; then
-        need_packages_lw="lxd snapd"
+    if [ -z "$OSM_VCA_HOST" ] && [ -z "$INSTALL_NOLXD" ] && [ -z "$LXD_CLOUD_FILE" ]; then
+        need_packages_lw="snapd"
         echo -e "Checking required packages: $need_packages_lw"
         dpkg -l $need_packages_lw &>/dev/null \
           || ! echo -e "One or several required packages are not installed. Updating apt cache requires root privileges." \
@@ -1236,21 +949,70 @@ function install_lightweight() {
           || ! echo -e "Installing $need_packages_lw requires root privileges." \
           || sudo apt-get install -y $need_packages_lw \
           || FATAL "failed to install $need_packages_lw"
+        install_lxd
     fi
+
     track prereqok
 
     [ -z "$INSTALL_NOJUJU" ] && install_juju
     track juju_install
 
     if [ -z "$OSM_VCA_HOST" ]; then
-        juju_createcontroller
-        OSM_VCA_HOST=`sg lxd -c "juju show-controller $OSM_STACK_NAME"|grep api-endpoints|awk -F\' '{print $2}'|awk -F\: '{print $1}'`
+        if [ -z "$CONTROLLER_NAME" ]; then
+            if [ -n "$LXD_CLOUD_FILE" ]; then
+                [ -z "$LXD_CRED_FILE" ] && FATAL "The installer needs the LXD credential yaml if the LXD is external"
+                OSM_VCA_CLOUDNAME="lxd-cloud"
+                juju add-cloud $OSM_VCA_CLOUDNAME $LXD_CLOUD_FILE --force || juju update-cloud $OSM_VCA_CLOUDNAME --client -f $LXD_CLOUD_FILE
+                juju add-credential $OSM_VCA_CLOUDNAME -f $LXD_CRED_FILE || juju update-credential $OSM_VCA_CLOUDNAME lxd-cloud-creds -f $LXD_CRED_FILE
+            fi
+            juju_createcontroller
+        else
+            OSM_VCA_CLOUDNAME="lxd-cloud"
+            if [ -n "$LXD_CLOUD_FILE" ]; then
+                [ -z "$LXD_CRED_FILE" ] && FATAL "The installer needs the LXD credential yaml if the LXD is external"
+                juju add-cloud -c $CONTROLLER_NAME $OSM_VCA_CLOUDNAME $LXD_CLOUD_FILE --force || juju update-cloud lxd-cloud -c $CONTROLLER_NAME -f $LXD_CLOUD_FILE
+                juju add-credential -c $CONTROLLER_NAME $OSM_VCA_CLOUDNAME -f $LXD_CRED_FILE || juju update-credential lxd-cloud -c $CONTROLLER_NAME -f $LXD_CRED_FILE
+            else
+                mkdir -p ~/.osm
+                cat << EOF > ~/.osm/lxd-cloud.yaml
+clouds:
+  lxd-cloud:
+    type: lxd
+    auth-types: [certificate]
+    endpoint: "https://$DEFAULT_IP:8443"
+    config:
+      ssl-hostname-verification: false
+EOF
+                openssl req -nodes -new -x509 -keyout ~/.osm/client.key -out ~/.osm/client.crt -days 365 -subj "/C=FR/ST=Nice/L=Nice/O=ETSI/OU=OSM/CN=osm.etsi.org"
+                local server_cert=`cat /var/snap/lxd/common/lxd/server.crt | sed 's/^/        /'`
+                local client_cert=`cat ~/.osm/client.crt | sed 's/^/        /'`
+                local client_key=`cat ~/.osm/client.key | sed 's/^/        /'`
+                cat << EOF > ~/.osm/lxd-credentials.yaml
+credentials:
+  lxd-cloud:
+    lxd-cloud:
+      auth-type: certificate
+      server-cert: |
+$server_cert
+      client-cert: |
+$client_cert
+      client-key: |
+$client_key
+EOF
+                lxc config trust add local: ~/.osm/client.crt
+                juju add-cloud -c $CONTROLLER_NAME $OSM_VCA_CLOUDNAME ~/.osm/lxd-cloud.yaml --force || juju update-cloud lxd-cloud -c $CONTROLLER_NAME -f ~/.osm/lxd-cloud.yaml
+                juju add-credential -c $CONTROLLER_NAME $OSM_VCA_CLOUDNAME -f ~/.osm/lxd-credentials.yaml || juju update-credential lxd-cloud -c $CONTROLLER_NAME -f ~/.osm/lxd-credentials.yaml
+            fi
+        fi
+        [ -z "$CONTROLLER_NAME" ] && OSM_VCA_HOST=`sg lxd -c "juju show-controller $OSM_STACK_NAME"|grep api-endpoints|awk -F\' '{print $2}'|awk -F\: '{print $1}'`
+        [ -n "$CONTROLLER_NAME" ] && OSM_VCA_HOST=`juju show-controller $CONTROLLER_NAME |grep api-endpoints|awk -F\' '{print $2}'|awk -F\: '{print $1}'`
         [ -z "$OSM_VCA_HOST" ] && FATAL "Cannot obtain juju controller IP address"
     fi
     track juju_controller
 
     if [ -z "$OSM_VCA_SECRET" ]; then
-        OSM_VCA_SECRET=$(parse_juju_password $OSM_STACK_NAME)
+        [ -z "$CONTROLLER_NAME" ] && OSM_VCA_SECRET=$(parse_juju_password $OSM_STACK_NAME)
+        [ -n "$CONTROLLER_NAME" ] && OSM_VCA_SECRET=$(parse_juju_password $CONTROLLER_NAME)
         [ -z "$OSM_VCA_SECRET" ] && FATAL "Cannot obtain juju secret"
     fi
     if [ -z "$OSM_VCA_PUBKEY" ]; then
@@ -1258,7 +1020,8 @@ function install_lightweight() {
         [ -z "$OSM_VCA_PUBKEY" ] && FATAL "Cannot obtain juju public key"
     fi
     if [ -z "$OSM_VCA_CACERT" ]; then
-	OSM_VCA_CACERT=$(juju controllers --format json | jq -r '.controllers["osm"]["ca-cert"]' | base64 | tr -d \\n)
+        [ -z "$CONTROLLER_NAME" ] && OSM_VCA_CACERT=$(juju controllers --format json | jq -r --arg controller $OSM_STACK_NAME '.controllers[$controller]["ca-cert"]' | base64 | tr -d \\n)
+        [ -n "$CONTROLLER_NAME" ] && OSM_VCA_CACERT=$(juju controllers --format json | jq -r --arg controller $CONTROLLER_NAME '.controllers[$controller]["ca-cert"]' | base64 | tr -d \\n)
        [ -z "$OSM_VCA_CACERT" ] && FATAL "Cannot obtain juju CA certificate"
     fi
     if [ -z "$OSM_VCA_APIPROXY" ]; then
@@ -1295,7 +1058,7 @@ function install_lightweight() {
     generate_docker_env_files
 
     if [ -n "$KUBERNETES" ]; then
-        if [ -n "$K8S_MONITOR" ]; then
+        if [ -n "$INSTALL_K8S_MONITOR" ]; then
             # uninstall OSM MONITORING
             uninstall_k8s_monitoring
             track uninstall_k8s_monitoring
@@ -1307,8 +1070,12 @@ function install_lightweight() {
         [ ! $OSM_DOCKER_TAG == "7" ] && parse_yaml $OSM_DOCKER_TAG
         namespace_vol
         deploy_osm_services
+        if [ -n "$INSTALL_PLA"]; then
+            # optional PLA install
+            deploy_osm_pla_service
+        fi
         track deploy_osm_services_k8s
-        if [ -n "$K8S_MONITOR" ]; then
+        if [ -n "$INSTALL_K8S_MONITOR" ]; then
             # install OSM MONITORING
             install_k8s_monitoring
             track install_k8s_monitoring
@@ -1338,6 +1105,8 @@ function install_vimemu() {
     echo "\nInstalling vim-emu"
     EMUTEMPDIR="$(mktemp -d -q --tmpdir "installosmvimemu.XXXXXX")"
     trap 'rm -rf "${EMUTEMPDIR}"' EXIT
+    # install prerequisites (OVS is a must for the emulator to work)
+    sudo apt-get install openvswitch-switch
     # clone vim-emu repository (attention: branch is currently master only)
     echo "Cloning vim-emu repository ..."
     git clone https://osm.etsi.org/gerrit/osm/vim-emu.git $EMUTEMPDIR
@@ -1380,19 +1149,17 @@ function dump_vars(){
     echo "DEVELOP=$DEVELOP"
     echo "INSTALL_FROM_SOURCE=$INSTALL_FROM_SOURCE"
     echo "UNINSTALL=$UNINSTALL"
-    echo "NAT=$NAT"
     echo "UPDATE=$UPDATE"
     echo "RECONFIGURE=$RECONFIGURE"
     echo "TEST_INSTALLER=$TEST_INSTALLER"
     echo "INSTALL_VIMEMU=$INSTALL_VIMEMU"
+    echo "INSTALL_PLA=$INSTALL_PLA"
     echo "INSTALL_LXD=$INSTALL_LXD"
-    echo "INSTALL_FROM_LXDIMAGES=$INSTALL_FROM_LXDIMAGES"
-    echo "LXD_REPOSITORY_BASE=$LXD_REPOSITORY_BASE"
-    echo "LXD_REPOSITORY_PATH=$LXD_REPOSITORY_PATH"
     echo "INSTALL_LIGHTWEIGHT=$INSTALL_LIGHTWEIGHT"
     echo "INSTALL_ONLY=$INSTALL_ONLY"
     echo "INSTALL_ELK=$INSTALL_ELK"
     #echo "INSTALL_PERFMON=$INSTALL_PERFMON"
+    echo "INSTALL_K8S_MONITOR=$INSTALL_K8S_MONITOR"
     echo "TO_REBUILD=$TO_REBUILD"
     echo "INSTALL_NOLXD=$INSTALL_NOLXD"
     echo "INSTALL_NODOCKER=$INSTALL_NODOCKER"
@@ -1401,7 +1168,6 @@ function dump_vars(){
     echo "REPOSITORY=$REPOSITORY"
     echo "REPOSITORY_BASE=$REPOSITORY_BASE"
     echo "REPOSITORY_KEY=$REPOSITORY_KEY"
-    echo "NOCONFIGURE=$NOCONFIGURE"
     echo "OSM_DEVOPS=$OSM_DEVOPS"
     echo "OSM_VCA_HOST=$OSM_VCA_HOST"
     echo "OSM_VCA_SECRET=$OSM_VCA_SECRET"
@@ -1435,7 +1201,6 @@ function track(){
 
 UNINSTALL=""
 DEVELOP=""
-NAT=""
 UPDATE=""
 RECONFIGURE=""
 TEST_INSTALLER=""
@@ -1447,7 +1212,7 @@ INSTALL_FROM_SOURCE=""
 RELEASE="ReleaseSEVEN"
 REPOSITORY="stable"
 INSTALL_VIMEMU=""
-INSTALL_FROM_LXDIMAGES=""
+INSTALL_PLA=""
 LXD_REPOSITORY_BASE="https://osm-download.etsi.org/repository/osm/lxd"
 LXD_REPOSITORY_PATH=""
 INSTALL_LIGHTWEIGHT="y"
@@ -1458,15 +1223,14 @@ INSTALL_NOLXD=""
 INSTALL_NODOCKER=""
 INSTALL_NOJUJU=""
 KUBERNETES=""
-K8S_MONITOR=""
+INSTALL_K8S_MONITOR=""
 INSTALL_NOHOSTCLIENT=""
-NOCONFIGURE=""
-RELEASE_DAILY=""
 SESSION_ID=`date +%s`
 OSM_DEVOPS=
 OSM_VCA_HOST=
 OSM_VCA_SECRET=
 OSM_VCA_PUBKEY=
+OSM_VCA_CLOUDNAME="localhost"
 OSM_STACK_NAME=osm
 NO_HOST_PORTS=""
 DOCKER_NOBUILD=""
@@ -1494,7 +1258,7 @@ POD_NETWORK_CIDR=10.244.0.0/16
 K8S_MANIFEST_DIR="/etc/kubernetes/manifests"
 RE_CHECK='^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
 
-while getopts ":b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
+while getopts ":b:r:c:k:u:R:D:o:m:H:S:s:w:t:U:P:A:l:L:K:-: hy" o; do
     case "${o}" in
         b)
             COMMIT_ID=${OPTARG}
@@ -1522,12 +1286,6 @@ while getopts ":b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
             RELEASE="${OPTARG}"
             REPO_ARGS+=(-R "$RELEASE")
             ;;
-        l)
-            LXD_REPOSITORY_BASE="${OPTARG}"
-            ;;
-        p)
-            LXD_REPOSITORY_PATH="${OPTARG}"
-            ;;
         D)
             OSM_DEVOPS="${OPTARG}"
             ;;
@@ -1535,6 +1293,7 @@ while getopts ":b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
             INSTALL_ONLY="y"
             [ "${OPTARG}" == "vimemu" ] && INSTALL_VIMEMU="y" && continue
             [ "${OPTARG}" == "elk_stack" ] && INSTALL_ELK="y" && continue
+            [ "${OPTARG}" == "k8s_monitor" ] && INSTALL_K8S_MONITOR="y" && continue
             ;;
         m)
             [ "${OPTARG}" == "LW-UI" ] && TO_REBUILD="$TO_REBUILD LW-UI" && continue
@@ -1550,6 +1309,7 @@ while getopts ":b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
             [ "${OPTARG}" == "KEYSTONE-DB" ] && TO_REBUILD="$TO_REBUILD KEYSTONE-DB" && continue
             [ "${OPTARG}" == "GRAFANA" ] && TO_REBUILD="$TO_REBUILD GRAFANA" && continue
             [ "${OPTARG}" == "NONE" ] && TO_REBUILD="$TO_REBUILD NONE" && continue
+            [ "${OPTARG}" == "PLA" ] && TO_REBUILD="$TO_REBUILD PLA" && continue
             ;;
         H)
             OSM_VCA_HOST="${OPTARG}"
@@ -1577,32 +1337,44 @@ while getopts ":b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
         A)
             OSM_VCA_APIPROXY="${OPTARG}"
             ;;
+        l)
+            LXD_CLOUD_FILE="${OPTARG}"
+            ;;
+        L)
+            LXD_CRED_FILE="${OPTARG}"
+            ;;
+        K)
+            CONTROLLER_NAME="${OPTARG}"
+            ;;
         -)
             [ "${OPTARG}" == "help" ] && usage && exit 0
             [ "${OPTARG}" == "source" ] && INSTALL_FROM_SOURCE="y" && PULL_IMAGES="" && continue
             [ "${OPTARG}" == "develop" ] && DEVELOP="y" && continue
             [ "${OPTARG}" == "uninstall" ] && UNINSTALL="y" && continue
-            [ "${OPTARG}" == "nat" ] && NAT="y" && continue
             [ "${OPTARG}" == "update" ] && UPDATE="y" && continue
             [ "${OPTARG}" == "reconfigure" ] && RECONFIGURE="y" && continue
             [ "${OPTARG}" == "test" ] && TEST_INSTALLER="y" && continue
             [ "${OPTARG}" == "lxdinstall" ] && INSTALL_LXD="y" && continue
             [ "${OPTARG}" == "nolxd" ] && INSTALL_NOLXD="y" && continue
             [ "${OPTARG}" == "nodocker" ] && INSTALL_NODOCKER="y" && continue
-            [ "${OPTARG}" == "lxdimages" ] && INSTALL_FROM_LXDIMAGES="y" && continue
             [ "${OPTARG}" == "lightweight" ] && INSTALL_LIGHTWEIGHT="y" && continue
-            [ "${OPTARG}" == "soui" ] && INSTALL_LIGHTWEIGHT="" && RELEASE="-R ReleaseTHREE" && REPOSITORY="-r stable" && continue
             [ "${OPTARG}" == "vimemu" ] && INSTALL_VIMEMU="y" && continue
             [ "${OPTARG}" == "elk_stack" ] && INSTALL_ELK="y" && continue
-            [ "${OPTARG}" == "noconfigure" ] && NOCONFIGURE="y" && continue
             [ "${OPTARG}" == "showopts" ] && SHOWOPTS="y" && continue
-            [ "${OPTARG}" == "daily" ] && RELEASE_DAILY="y" && continue
             [ "${OPTARG}" == "nohostports" ] && NO_HOST_PORTS="y" && continue
             [ "${OPTARG}" == "nojuju" ] && INSTALL_NOJUJU="y" && continue
             [ "${OPTARG}" == "nodockerbuild" ] && DOCKER_NOBUILD="y" && continue
             [ "${OPTARG}" == "nohostclient" ] && INSTALL_NOHOSTCLIENT="y" && continue
             [ "${OPTARG}" == "pullimages" ] && continue
-            [ "${OPTARG}" == "k8s_monitor" ] && K8S_MONITOR="y" && continue
+            [ "${OPTARG}" == "k8s_monitor" ] && INSTALL_K8S_MONITOR="y" && continue
+            [ "${OPTARG}" == "charmed" ] && CHARMED="y" && continue
+            [ "${OPTARG}" == "bundle" ] && continue
+            [ "${OPTARG}" == "kubeconfig" ] && continue
+            [ "${OPTARG}" == "lxdendpoint" ] && continue
+            [ "${OPTARG}" == "lxdcert" ] && continue
+            [ "${OPTARG}" == "microstack" ] && continue
+            [ "${OPTARG}" == "tag" ] && continue
+            [ "${OPTARG}" == "pla" ] && INSTALL_PLA="y" && continue
             echo -e "Invalid option: '--$OPTARG'\n" >&2
             usage && exit 1
             ;;
@@ -1626,26 +1398,44 @@ while getopts ":b:r:c:k:u:R:l:p:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
     esac
 done
 
-[ -n "$INSTALL_FROM_LXDIMAGES" ] && [ -n "$INSTALL_LIGHTWEIGHT" ] && FATAL "Incompatible options: --lxd can only be used with --soui"
-[ -n "$NAT" ] && [ -n "$INSTALL_LIGHTWEIGHT" ] && FATAL "Incompatible options: --nat can only be used with --soui"
-[ -n "$NOCONFIGURE" ] && [ -n "$INSTALL_LIGHTWEIGHT" ] && FATAL "Incompatible options: --noconfigure can only be used with --soui"
-[ -n "$RELEASE_DAILY" ] && [ -n "$INSTALL_LIGHTWEIGHT" ] && FATAL "Incompatible options: --daily can only be used with --soui"
-[ -n "$INSTALL_NOLXD" ] && [ -z "$INSTALL_LIGHTWEIGHT" ] && FATAL "Incompatible option: --nolxd cannot be used with --soui"
-[ -n "$INSTALL_NODOCKER" ] && [ -z "$INSTALL_LIGHTWEIGHT" ] && FATAL "Incompatible option: --nodocker cannot be used with --soui"
-[ -n "$TO_REBUILD" ] && [ -z "$INSTALL_LIGHTWEIGHT" ] && FATAL "Incompatible option: -m cannot be used with --soui"
 [ -n "$TO_REBUILD" ] && [ "$TO_REBUILD" != " NONE" ] && echo $TO_REBUILD | grep -q NONE && FATAL "Incompatible option: -m NONE cannot be used with other -m options"
+[ -n "$TO_REBUILD" ] && [ "$TO_REBUILD" == " PLA" ] && [ -z "$INSTALL_PLA" ] && FATAL "Incompatible option: -m PLA cannot be used without --pla option"
 
 if [ -n "$SHOWOPTS" ]; then
     dump_vars
     exit 0
 fi
 
-[ -n "$RELEASE_DAILY" ] && echo -e "\nInstalling from daily build repo" && RELEASE="-R ReleaseTHREE-daily" && REPOSITORY="-r testing" && COMMIT_ID="master"
+if [ -n "$CHARMED" ]; then
+     if [ -n "$UNINSTALL" ]; then
+        /usr/share/osm-devops/installers/charmed_uninstall.sh -R $RELEASE -r $REPOSITORY -u $REPOSITORY_BASE -D /usr/share/osm-devops -t $DOCKER_TAG "$@"
+     else
+        /usr/share/osm-devops/installers/charmed_install.sh -R $RELEASE -r $REPOSITORY -u $REPOSITORY_BASE -D /usr/share/osm-devops -t $DOCKER_TAG "$@"
+     fi
+
+     echo "Your installation is now complete, follow these steps for configuring the osmclient:"
+     echo
+     echo "1. Get the NBI IP with the following command:"
+     echo
+     echo "juju status --format yaml | yq r - applications.nbi-k8s.address"
+     echo
+     echo "2. Create the OSM_HOSTNAME environment variable with the NBI IP"
+     echo
+     echo "export OSM_HOSTNAME=<NBI-IP>"
+     echo
+     echo "3. Add the previous command to your .bashrc for other Shell sessions"
+     echo
+     echo "export OSM_HOSTNAME=<previous-IP> >> ~/.bashrc"
+     echo
+     echo "DONE"
+
+     exit 0
+fi
 
 # if develop, we force master
 [ -z "$COMMIT_ID" ] && [ -n "$DEVELOP" ] && COMMIT_ID="master"
 
-need_packages="git jq wget curl tar"
+need_packages="git wget curl tar"
 echo -e "Checking required packages: $need_packages"
 dpkg -l $need_packages &>/dev/null \
   || ! echo -e "One or several required packages are not installed. Updating apt cache requires root privileges." \
@@ -1655,7 +1445,7 @@ dpkg -l $need_packages &>/dev/null \
   || ! echo -e "Installing $need_packages requires root privileges." \
   || sudo apt-get install -y $need_packages \
   || FATAL "failed to install $need_packages"
-
+sudo snap install jq
 if [ -z "$OSM_DEVOPS" ]; then
     if [ -n "$TEST_INSTALLER" ]; then
         echo -e "\nUsing local devops repo for OSM installation"
@@ -1684,13 +1474,10 @@ fi
 . $OSM_DEVOPS/common/all_funcs
 
 [ -n "$INSTALL_LIGHTWEIGHT" ] && [ -n "$UNINSTALL" ] && uninstall_lightweight && echo -e "\nDONE" && exit 0
-[ -n "$UNINSTALL" ] && uninstall && echo -e "\nDONE" && exit 0
-[ -n "$NAT" ] && nat && echo -e "\nDONE" && exit 0
-[ -n "$UPDATE" ] && update && echo -e "\nDONE" && exit 0
-[ -n "$RECONFIGURE" ] && configure && echo -e "\nDONE" && exit 0
 [ -n "$INSTALL_ONLY" ] && [ -n "$INSTALL_ELK" ] && deploy_elk
 #[ -n "$INSTALL_ONLY" ] && [ -n "$INSTALL_PERFMON" ] && deploy_perfmon
 [ -n "$INSTALL_ONLY" ] && [ -n "$INSTALL_VIMEMU" ] && install_vimemu
+[ -n "$INSTALL_ONLY" ] && [ -n "$INSTALL_K8S_MONITOR" ] && install_k8s_monitoring
 [ -n "$INSTALL_ONLY" ] && echo -e "\nDONE" && exit 0
 
 #Installation starts here
@@ -1709,43 +1496,8 @@ lxd --version &>/dev/null || FATAL "lxd not present, exiting."
 
 # use local devops for containers
 export OSM_USE_LOCAL_DEVOPS=true
-if [ -n "$INSTALL_FROM_SOURCE" ]; then #install from source
-    echo -e "\nCreating the containers and building from source ..."
-    $OSM_DEVOPS/jenkins/host/start_build RO --notest checkout $COMMIT_ID || FATAL "RO container build failed (refspec: '$COMMIT_ID')"
-    ro_is_up && track RO
-    $OSM_DEVOPS/jenkins/host/start_build VCA || FATAL "VCA container build failed"
-    vca_is_up && track VCA
-    $OSM_DEVOPS/jenkins/host/start_build MON || FATAL "MON install failed"
-    mon_is_up && track MON
-    $OSM_DEVOPS/jenkins/host/start_build SO checkout $COMMIT_ID || FATAL "SO container build failed (refspec: '$COMMIT_ID')"
-    $OSM_DEVOPS/jenkins/host/start_build UI checkout $COMMIT_ID || FATAL "UI container build failed (refspec: '$COMMIT_ID')"
-    #so_is_up && track SOUI
-    track SOUI
-elif [ -n "$INSTALL_FROM_LXDIMAGES" ]; then #install from LXD images stored in OSM repo
-    echo -e "\nInstalling from lxd images ..."
-    install_from_lxdimages
-else #install from binaries
-    echo -e "\nCreating the containers and installing from binaries ..."
-    $OSM_DEVOPS/jenkins/host/install RO ${REPO_ARGS[@]} || FATAL "RO install failed"
-    ro_is_up && track RO
-    $OSM_DEVOPS/jenkins/host/start_build VCA || FATAL "VCA install failed"
-    vca_is_up && track VCA
-    $OSM_DEVOPS/jenkins/host/install MON || FATAL "MON build failed"
-    mon_is_up && track MON
-    $OSM_DEVOPS/jenkins/host/install SO ${REPO_ARGS[@]} || FATAL "SO install failed"
-    $OSM_DEVOPS/jenkins/host/install UI ${REPO_ARGS[@]} || FATAL "UI install failed"
-    #so_is_up && track SOUI
-    track SOUI
-fi
-
-#Install iptables-persistent and configure NAT rules
-[ -z "$NOCONFIGURE" ] && nat
-
-#Configure components
-[ -z "$NOCONFIGURE" ] && configure
 
 #Install osmclient
-[ -z "$NOCONFIGURE" ] && install_osmclient
 
 #Install vim-emu (optional)
 [ -n "$INSTALL_VIMEMU" ] && install_docker_ce && install_vimemu
@@ -1753,3 +1505,4 @@ fi
 wget -q -O- https://osm-download.etsi.org/ftp/osm-7.0-seven/README2.txt &> /dev/null
 track end
 echo -e "\nDONE"
+
