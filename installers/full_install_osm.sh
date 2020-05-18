@@ -395,7 +395,7 @@ function juju_createcontroller() {
     if ! juju show-controller $OSM_STACK_NAME &> /dev/null; then
         # Not found created, create the controller
         sudo usermod -a -G lxd ${USER}
-    sg lxd -c "juju bootstrap $OSM_VCA_CLOUDNAME $OSM_STACK_NAME"
+        sg lxd -c "juju bootstrap --bootstrap-series=xenial $OSM_VCA_CLOUDNAME $OSM_STACK_NAME"
     fi
     [ $(juju controllers | awk "/^${OSM_STACK_NAME}[\*| ]/{print $1}"|wc -l) -eq 1 ] || FATAL "Juju installation failed"
 }
