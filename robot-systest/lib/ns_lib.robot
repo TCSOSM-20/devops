@@ -36,6 +36,7 @@ Create Network Service
     Check For NS Instance For Failure   ${ns_name}
     [Return]  ${ns_id}
 
+
 Instantiate Network Service
     [Arguments]   ${ns_name}   ${nsd}   ${vim_name}   ${ns_extra_args}
 
@@ -43,6 +44,7 @@ Instantiate Network Service
     log   ${stdout}
     Should Be Equal As Integers   ${rc}   ${success_return_code}
     [Return]  ${stdout}
+
 
 Get Vnf Management Ip Address
     [Arguments]   ${ns_id}   ${vnf_member_index}
@@ -54,10 +56,49 @@ Get Vnf Management Ip Address
     Should Be Equal As Integers   ${rc}   ${success_return_code}
     [Return]  ${stdout}
 
-Check For NS Instance To Configured
-    [Arguments]  ${ns_name}
 
-    ${rc}   ${stdout}=   Run and Return RC and Output   osm ns-list --filter name="${ns_name}"
+Get Ns Vnf List
+    [Arguments]   ${ns_id}
+
+    Should Not Be Empty   ${ns_id}
+    @{vnf_list_string}=   Run and Return RC and Output   osm vnf-list | grep ${ns_id} | awk '{print $2}' 2>&1
+    # Returns a String of vnf_id and needs to be converted into a list
+    @{vnf_list} =  Split String    ${vnf_list_string}[1]
+    Log List    ${vnf_list}
+    [Return]  @{vnf_list}
+
+
+Get Ns Ip List
+    [Arguments]   @{vnf_list}
+
+    should not be empty   @{vnf_list}
+    @{temp_list}=    Create List
+    FOR   ${vnf_id}   IN   @{vnf_list}
+        log   ${vnf_id}
+        @{vnf_ip_list}   Get Vnf Ip List   ${vnf_id}
+        @{temp_list}=   Combine Lists   ${temp_list}    ${vnf_ip_list}
+    END
+    should not be empty   ${temp_list}
+    [return]  @{temp_list}
+
+
+Get Vnf Ip List
+    [arguments]   ${vnf_id}
+
+    should not be empty   ${vnf_id}
+    @{vnf_ip_list_string}=   run and return rc and output   osm vnf-show ${vnf_id} --filter vdur --literal | grep -o '[0-9]\\{1,3\\}\\.[0-9]\\{1,3\\}\\.[0-9]\\{1,3\\}\\.[0-9]\\{1,3\\}' | sort -t: -u -k1,1 2>&1
+    # returns a string of ip addresses and needs to be converted into a list
+    should not be empty   ${vnf_ip_list_string}[1]
+    @{vnf_ip_list} =  split string    ${vnf_ip_list_string}[1]
+    log list    ${vnf_ip_list}
+    should not be empty   ${vnf_ip_list}
+    [return]  @{vnf_ip_list}
+
+
+Check For Ns Instance To Configured
+    [arguments]  ${ns_name}
+
+    ${rc}   ${stdout}=   run and return rc and output   osm ns-list --filter name="${ns_name}"
     log   ${stdout}
     Should Be Equal As Integers   ${rc}   ${success_return_code}
     Should Contain Any   ${stdout}   READY   BROKEN

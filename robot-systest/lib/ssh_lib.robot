@@ -40,6 +40,20 @@ Get Remote File Content
     Close All Connections
     [Return]   ${output}
 
+Ping Many
+    [Arguments]  ${host}  ${username}  ${password}  ${privatekey}   @{ip_list}
+
+    Open Connection     ${host}
+    Run Keyword If   '${password}'!='${EMPTY}'  Login  ${username}  ${password}
+    ...   ELSE   Login With Public Key  ${username}  ${privatekey}
+    FOR   ${ip}   IN   @{ip_list}
+        ${result}=   Execute Command   ping -c 5 -W 1 ${ip} > /dev/null && echo OK  shell=True
+        Log     ${result}
+        Should Contain  ${result}  OK
+    END
+    Close All Connections
+
+
 Execute Remote Command Check Rc Return Output
     [Arguments]   ${host}   ${username}   ${password}   ${privatekey}   ${command}
 
@@ -52,3 +66,4 @@ Execute Remote Command Check Rc Return Output
     Close All Connections
     Should Be Equal As Integers   ${rc}   0
     [Return]   ${stdout}
+
