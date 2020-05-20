@@ -46,10 +46,11 @@ function bootstrap_k8s_lxd(){
         cat $KUBECFG | juju add-k8s $K8S_CLOUD_NAME $ADD_K8S_OPTS
         [ -v BOOTSTRAP_NEEDED ] && juju bootstrap $K8S_CLOUD_NAME $CONTROLLER_NAME
     else
+        sg microk8s -c "echo ${DEFAULT_IP}-${DEFAULT_IP} | microk8s.enable metallb"
         sg microk8s -c "microk8s.enable storage dns"
 
         [ ! -v BOOTSTRAP_NEEDED ] && sg microk8s -c "microk8s.config" | juju add-k8s $K8S_CLOUD_NAME $ADD_K8S_OPTS
-        [ -v BOOTSTRAP_NEEDED ] && sg microk8s -c "juju bootstrap microk8s $CONTROLLER_NAME" && K8S_CLOUD_NAME=microk8s
+        [ -v BOOTSTRAP_NEEDED ] && sg microk8s -c "juju bootstrap microk8s $CONTROLLER_NAME --config controller-service-type=loadbalancer" && K8S_CLOUD_NAME=microk8s
     fi
 
     if [ -v LXD_CLOUD ]; then
@@ -222,24 +223,6 @@ function install_osmclient() {
     sudo snap alias osmclient.osm osm
 }
 
-function create_iptables() {
-    check_install_iptables_persistent
-
-    if ! sudo iptables -t nat -C PREROUTING -p tcp -m tcp -d $DEFAULT_IP --dport 17070 -j DNAT --to-destination $OSM_VCA_HOST; then
-        sudo iptables -t nat -A PREROUTING -p tcp -m tcp -d $DEFAULT_IP --dport 17070 -j DNAT --to-destination $OSM_VCA_HOST
-        sudo netfilter-persistent save
-    fi
-}
-
-function check_install_iptables_persistent(){
-    echo -e "\nChecking required packages: iptables-persistent"
-    if ! dpkg -l iptables-persistent &>/dev/null; then
-        echo -e "    Not installed.\nInstalling iptables-persistent requires root privileges"
-        echo iptables-persistent iptables-persistent/autosave_v4 boolean true | sudo debconf-set-selections
-        echo iptables-persistent iptables-persistent/autosave_v6 boolean true | sudo debconf-set-selections
-        sudo apt-get -yq install iptables-persistent
-    fi
-}
 
 function install_microstack() {
     sudo snap install microstack --classic --beta
@@ -276,9 +259,9 @@ DEFAULT_IP=`ip -o -4 a |grep ${DEFAULT_IF}|awk '{split($4,a,"/"); print a[1]}'`
 check_arguments $@
 mkdir -p ~/.osm
 install_snaps
+sleep 5
 bootstrap_k8s_lxd
 deploy_charmed_osm
-[ ! -v CONTROLLER ] && create_iptables
 install_osmclient
 if [ -v MICROSTACK ]; then
     install_microstack
