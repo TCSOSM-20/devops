@@ -156,12 +156,12 @@ function create_overlay() {
     local HOME=/home/$USER
     local vca_user=$(cat $HOME/.local/share/juju/accounts.yaml | yq --arg CONTROLLER_NAME $CONTROLLER_NAME '.controllers[$CONTROLLER_NAME].user')
     local vca_password=$(cat $HOME/.local/share/juju/accounts.yaml | yq --arg CONTROLLER_NAME $CONTROLLER_NAME '.controllers[$CONTROLLER_NAME].password')
-    local vca_host=$(cat $HOME/.local/share/juju/controllers.yaml | yq --arg CONTROLLER_NAME $CONTROLLER_NAME '.controllers[$CONTROLLER_NAME]["api-endpoints"][0]' | cut -d ":" -f 1 | cut -d "\"" -f 2)
-    local vca_port=$(cat $HOME/.local/share/juju/controllers.yaml | yq --arg CONTROLLER_NAME $CONTROLLER_NAME '.controllers[$CONTROLLER_NAME]["api-endpoints"][0]' | cut -d ":" -f 2 | cut -d "\"" -f 1)
+    local vca_host=$(cat $HOME/.local/share/juju/controllers.yaml | yq --arg CONTROLLER_NAME $CONTROLLER_NAME '.controllers[$CONTROLLER_NAME]["api-endpoints"][0]' --raw-output | cut -d ":" -f 1)
+    local vca_port=$(cat $HOME/.local/share/juju/controllers.yaml | yq --arg CONTROLLER_NAME $CONTROLLER_NAME '.controllers[$CONTROLLER_NAME]["api-endpoints"][0]' --raw-output | cut -d ":" -f 2)
     local vca_pubkey=\"$(cat $HOME/.local/share/juju/ssh/juju_id_rsa.pub)\"
     local vca_cloud="lxd-cloud"
     # Get the VCA Certificate
-    local vca_cacert=$(cat $HOME/.local/share/juju/controllers.yaml | yq --arg CONTROLLER_NAME $CONTROLLER_NAME '.controllers[$CONTROLLER_NAME]["ca-cert"]' | base64 | tr -d \\n)
+    local vca_cacert=$(cat $HOME/.local/share/juju/controllers.yaml | yq --arg CONTROLLER_NAME $CONTROLLER_NAME '.controllers[$CONTROLLER_NAME]["ca-cert"]' --raw-output | base64 | tr -d \\n)
 
     # Calculate the default route of this machine
     local DEFAULT_IF=`route -n |awk '$1~/^0.0.0.0/ {print $8}'`
