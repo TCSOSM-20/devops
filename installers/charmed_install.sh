@@ -44,7 +44,7 @@ function bootstrap_k8s_lxd(){
 
     if [ -v KUBECFG ]; then
         cat $KUBECFG | juju add-k8s $K8S_CLOUD_NAME $ADD_K8S_OPTS
-        [ -v BOOTSTRAP_NEEDED ] && juju bootstrap $K8S_CLOUD_NAME $CONTROLLER_NAME
+        [ -v BOOTSTRAP_NEEDED ] && juju bootstrap $K8S_CLOUD_NAME $CONTROLLER_NAME --config controller-service-type=loadbalancer
     else
         sg microk8s -c "echo ${DEFAULT_IP}-${DEFAULT_IP} | microk8s.enable metallb"
         sg microk8s -c "microk8s.enable storage dns"
