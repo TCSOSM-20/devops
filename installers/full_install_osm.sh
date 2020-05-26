@@ -1417,7 +1417,7 @@ if [ -n "$CHARMED" ]; then
      echo
      echo "1. Get the NBI IP with the following command:"
      echo
-     echo "juju status --format yaml | yq r - applications.nbi-k8s.address"
+     echo "juju status --format yaml | yq -r '.applications[\"nbi-k8s\"].address'"
      echo
      echo "2. Create the OSM_HOSTNAME environment variable with the NBI IP"
      echo

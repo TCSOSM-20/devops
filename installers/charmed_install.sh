@@ -236,7 +236,7 @@ function install_microstack() {
     ubuntu1604
     ssh-keygen -t rsa -N "" -f ~/.ssh/microstack
     microstack.openstack keypair create --public-key ~/.ssh/microstack.pub microstack
-    export OSM_HOSTNAME=`juju status --format yaml | yq r - applications.nbi-k8s.address`
+    export OSM_HOSTNAME=`juju status --format yaml | yq -r '.applications["nbi-k8s"].address'`
     osm vim-create --name microstack-site \
     --user admin \
     --password keystone \

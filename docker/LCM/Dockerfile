@@ -47,7 +47,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y git make
     && python3 -m pip install -U pip \
     && python3 -m pip install -U aiokafka lxml six enum34 \
     && python3 -m pip install requests \
-    && python3 -m pip install -U juju \
+    && python3 -m pip install -U "juju==2.8.1" \
     && rm -rf /var/lib/apt/lists/*
 
 # RUN git clone https://osm.etsi.org/gerrit/osm/N2VC.git \
