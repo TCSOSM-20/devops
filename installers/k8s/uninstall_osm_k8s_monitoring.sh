@@ -70,7 +70,8 @@ fi
 
 # remove dashboards
 echo "Deleting dashboards...."
-kubectl -n $NAMESPACE delete configmap osm-monitoring-prometheus-summary-grafana > /dev/null 2>&1
+kubectl -n $NAMESPACE delete configmap osm-monitoring-osm-summary-grafana > /dev/null 2>&1
+kubectl -n $NAMESPACE delete configmap osm-monitoring-osm-nodes-grafana > /dev/null 2>&1
 kubectl -n $NAMESPACE delete configmap osm-monitoring-prometheus-kafka-exporter-grafana > /dev/null 2>&1
 kubectl -n $NAMESPACE delete configmap osm-monitoring-prometheus-mysql-exporter-grafana > /dev/null 2>&1
 kubectl -n $NAMESPACE delete configmap osm-monitoring-prometheus-mongodb-exporter-grafana > /dev/null 2>&1
@@ -98,11 +99,9 @@ echo "Deleting monitoring namespace...."
 kubectl delete namespace $NAMESPACE
 
 if [ -n "$HELM" ] ; then
-    sudo helm reset --force 
-    kubectl delete --namespace kube-system serviceaccount tiller 
-    kubectl delete clusterrolebinding tiller-cluster-rule 
-    sudo rm /usr/local/bin/helm 
+    sudo helm reset --force
+    kubectl delete --namespace kube-system serviceaccount tiller
+    kubectl delete clusterrolebinding tiller-cluster-rule
+    sudo rm /usr/local/bin/helm
     rm -rf $HOME/.helm
 fi
-
-
