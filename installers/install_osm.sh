@@ -30,6 +30,7 @@ function usage(){
     echo -e "                     -b v2.0            (v2.0 branch)"
     echo -e "                     -b tags/v1.1.0     (a specific tag)"
     echo -e "                     ..."
+    echo -e "     -n <ui> install OSM with Next Gen UI. Valid values are <lwui> or <ngui>. If -n is not specified osm will be installed with light-ui. When used with uninstall, osm along with the UI specified will be uninstalled"
     echo -e "     -s <stack name> user defined stack name, default is osm"
     echo -e "     -H <VCA host>   use specific juju host controller IP"
     echo -e "     -S <VCA secret> use VCA/juju secret key"
@@ -109,7 +110,7 @@ if [ $? -eq 0 ]; then
 fi
 }
 
-while getopts ":b:r:c:k:u:R:l:L:K:p:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
+while getopts ":b:r:c:n:k:u:R:l:L:K:p:D:o:m:H:S:s:w:t:U:P:A:-: hy" o; do
     case "${o}" in
         r)
             REPOSITORY="${OPTARG}"
