@@ -38,7 +38,7 @@ function usage(){
     echo -e "     --elk_stack:    additionally deploy an ELK docker stack for event logging"
     echo -e "     --pla:          install the PLA module for placement support"
     echo -e "     -m <MODULE>:    install OSM but only rebuild the specified docker images (LW-UI, NBI, LCM, RO, MON, POL, KAFKA, MONGO, PROMETHEUS, PROMETHEUS-CADVISOR, KEYSTONE-DB, PLA, NONE)"
-    echo -e "     -o <ADDON>:     ONLY (un)installs one of the addons (vimemu, elk_stack)"
+    echo -e "     -o <ADDON>:     ONLY (un)installs one of the addons (vimemu, elk_stack, k8s_monitor)"
     echo -e "     -D <devops path> use local devops installation path"
     echo -e "     -w <work dir>   Location to store runtime installation"
     echo -e "     -t <docker tag> specify osm docker tag (default is latest)"
@@ -55,7 +55,7 @@ function usage(){
     echo -e "     --source:       install OSM from source code using the latest stable tag"
     echo -e "     --develop:      (deprecated, use '-b master') install OSM from source code using the master branch"
     echo -e "     --pullimages:   pull/run osm images from docker.io/opensourcemano"
-    echo -e "     --k8s_monitor:  install the OSM kubernetes moitoring with prometheus and grafana"
+    echo -e "     --k8s_monitor:  install the OSM kubernetes monitoring with prometheus and grafana"
 #    echo -e "     --reconfigure:  reconfigure the modules (DO NOT change NAT rules)"
 #    echo -e "     --update:       update to the latest stable release or to the latest commit if using a specific branch"
     echo -e "     --showopts:     print chosen options and exit (only for debugging)"
@@ -166,6 +166,17 @@ function remove_stack() {
 #removes osm deployments and services
 function remove_k8s_namespace() {
     kubectl delete ns $1
+}
+
+#removes helm only if there is nothing deployed in helm
+function remove_helm() {
+    if [ "$(helm ls -q)" == "" ] ; then
+        sudo helm reset --force
+        kubectl delete --namespace kube-system serviceaccount tiller
+        kubectl delete clusterrolebinding tiller-cluster-rule
+        sudo rm /usr/local/bin/helm
+        rm -rf $HOME/.helm
+    fi
 }
 
 #Uninstall osmclient
@@ -784,6 +795,39 @@ function deploy_osm_pla_service() {
     $WORKDIR_SUDO  sed -i "s#path: /var/lib/osm#path: $OSM_NAMESPACE_VOL#g" $OSM_DOCKER_WORK_DIR/osm_pla/pla.yaml
     # corresponding to deploy_osm_services
     kubectl apply -n $OSM_STACK_NAME -f $OSM_DOCKER_WORK_DIR/osm_pla
+}
+
+#Install helm and tiller
+function install_helm() {
+    helm > /dev/null 2>&1
+    if [ $? != 0 ] ; then
+        # Helm is not installed. Install helm
+        curl https://get.helm.sh/helm-v2.15.2-linux-amd64.tar.gz --output helm-v2.15.2.tar.gz
+        tar -zxvf helm-v2.15.2.tar.gz
+        sudo mv linux-amd64/helm /usr/local/bin/helm
+        rm -r linux-amd64
+        rm helm-v2.15.2.tar.gz
+    fi
+
+    # Checking if tiller has being configured
+    kubectl --namespace kube-system get serviceaccount tiller > /dev/null 2>&1
+    if [ $? == 1 ] ; then
+        # tiller account for kubernetes
+        kubectl --namespace kube-system create serviceaccount tiller
+        kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
+        # HELM initialization
+        helm init --service-account tiller
+
+        # Wait for Tiller to be up and running. If timeout expires, continue installing
+        tiller_timeout=120; counter=0
+        while (( counter < tiller_timeout ))
+        do
+            tiller_status=`kubectl -n kube-system get deployment.apps/tiller-deploy --no-headers |  awk '{print $2'}`
+            ( [ ! -z "$tiller_status" ] && [ $tiller_status == "1/1" ] ) && break
+            num=$((counter + 2))
+            sleep 2
+        done
+    fi
 }
 
 function parse_yaml() {
@@ -1538,4 +1582,5 @@ export OSM_USE_LOCAL_DEVOPS=true
 wget -q -O- https://osm-download.etsi.org/ftp/osm-7.0-seven/README2.txt &> /dev/null
 track end
 echo -e "\nDONE"
+
 
