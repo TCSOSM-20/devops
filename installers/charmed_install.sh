@@ -16,6 +16,7 @@
 # set -eux
 
 K8S_CLOUD_NAME="k8s-cloud"
+KUBECTL="microk8s.kubectl"
 IMAGES_OVERLAY_FILE=~/.osm/images-overlay.yaml
 function check_arguments(){
     while [ $# -gt 0 ] ; do
@@ -36,6 +37,7 @@ function check_arguments(){
 function install_snaps(){
     sudo snap install juju --classic
     [ ! -v KUBECFG ] && sudo snap install microk8s --classic && sudo usermod -a -G microk8s ubuntu && mkdir -p ~/.kube && sudo chown -f -R `whoami` ~/.kube
+    [ -v KUBECFG ] && sudo snap install kubectl --classic && KUBECTL="kubectl --kubeconfig $KUBECFG"
 }
 
 function bootstrap_k8s_lxd(){
@@ -139,9 +141,9 @@ function deploy_charmed_osm(){
 function check_osm_deployed() {
     while true
     do
-        pod_name=`sg microk8s -c "microk8s.kubectl -n osm get pods | grep ui-k8s | grep -v operator" | awk '{print $1}'`
-        if [[ `sg microk8s -c "microk8s.kubectl -n osm wait pod $pod_name --for condition=Ready"` ]]; then
-            if [[ `sg microk8s -c "microk8s.kubectl -n osm wait pod lcm-k8s-0 --for condition=Ready"` ]]; then
+        pod_name=`sg microk8s -c "$KUBECTL -n osm get pods | grep ui-k8s | grep -v operator" | awk '{print $1}'`
+        if [[ `sg microk8s -c "$KUBECTL -n osm wait pod $pod_name --for condition=Ready"` ]]; then
+            if [[ `sg microk8s -c "$KUBECTL -n osm wait pod lcm-k8s-0 --for condition=Ready"` ]]; then
                 break
             fi
         fi
