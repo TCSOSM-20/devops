@@ -22,6 +22,10 @@
 # 1. Feature 7829: Jayant Madavi, Mrityunjay Yadav : MY00514913@techmahindra.com : 06-sep-2019
 ##
 
+*** Settings ***
+Library   String
+
+
 *** Variables ***
 ${success_return_code}   0
 ${delete_max_wait_time}   1min
@@ -42,7 +46,10 @@ Create VNFD
     ${rc}   ${stdout}=   Run and Return RC and Output   osm vnfd-create ${vnfd_pkg}
     log   ${stdout}
     Should Be Equal As Integers   ${rc}   ${success_return_code}
-    [Return]  ${stdout}
+    ${lines}=  Get Line Count  ${stdout}
+    ${last}=  Evaluate  ${lines} - 1
+    ${id}=  Get Line  ${stdout}  ${last}
+    [Return]  ${id}
 
 
 Delete VNFD

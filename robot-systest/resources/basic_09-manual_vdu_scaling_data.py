@@ -14,10 +14,10 @@ from pathlib import Path
 
 # Get ${HOME} from local machine
 home = str(Path.home())
-# NS and VNF descriptor package files
-vnfd_pkg = 'hackfest_basic_metrics_vnf.tar.gz'
-nsd_pkg = 'hackfest_basic_metrics_ns.tar.gz'
-# NS and VNF descriptor names
+# NS and VNF descriptor package folder
+vnfd_pkg = 'hackfest_basic_metrics_vnf'
+nsd_pkg = 'hackfest_basic_metrics_ns'
+# NS and VNF descriptor id
 vnfd_name = 'hackfest_basic_metrics-vnf'
 nsd_name = 'hackfest_basic-ns-metrics'
 # NS instance name

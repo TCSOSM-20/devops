@@ -24,7 +24,7 @@
   - `OS_CLOUD`: Cloud credentialss.
   - `VIM_TARGET`: VIM where tests will be run.
   - `VIM_MGMT_NET`: VIM management network, reachable from robot.
-  - `PACKAGES_FOLDER`: Where descriptor packages are located.
+  - `PACKAGES_FOLDER`: Path where descriptor packages repository are cloned: https://osm.etsi.org/gitlab/vnf-onboarding/osm-packages/
   - `ROBOT_DEVOPS_FOLDER`: Where the devops repository is located.
   - `ROBOT_REPORT_FOLDER`: Where robot outpul will be placed.
 
