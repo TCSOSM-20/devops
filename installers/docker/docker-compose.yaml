@@ -264,10 +264,10 @@ services:
   grafana:
     image: grafana/grafana
     volumes:
-      - ./files/dashboards-osm.yml:/etc/grafana/provisioning/dashboards/dashboards-osm.yml
-      - ./files/osm-sample-dashboard.json:/etc/grafana/provisioning/dashboards/osm-sample-dashboard.json
-      - ./files/osm-system-dashboard.json:/etc/grafana/provisioning/dashboards/osm-system-dashboard.json
-      - ./files/datasource-prometheus.yml:/etc/grafana/provisioning/datasources/datasource-prometheus.yml
+      - ./grafana/dashboards-osm.yml:/etc/grafana/provisioning/dashboards/dashboards-osm.yml
+      - ./grafana/osm-sample-dashboard.json:/etc/grafana/provisioning/dashboards/osm-sample-dashboard.json
+      - ./grafana/osm-system-dashboard.json:/etc/grafana/provisioning/dashboards/osm-system-dashboard.json
+      - ./grafana/datasource-prometheus.yml:/etc/grafana/provisioning/datasources/datasource-prometheus.yml
     hostname: grafana
     ports:
       - "${OSM_GRAFANA_PORTS:-3000:3000}"
