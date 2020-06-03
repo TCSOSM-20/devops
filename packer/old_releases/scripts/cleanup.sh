@@ -1,3 +1,5 @@
+#!/bin/sh
+
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
 #   You may obtain a copy of the License at
@@ -10,26 +12,15 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-output-virtualbox-iso/
-packer_cache/
-builds/
-jujubase*/
-osm-*/
-*.iso
-*.box
-*.ovf
-*.vmdk
-*.vdi
-virtualfloppy.vfd
-packer_cache
-packer.log
-.DS_Store
-/packer-*/
-*.variables.json
-/builds/
-vagrant_tests/.vagrant
-clouds.yaml
-clouds.yml
-openstack.rc
-openrc*
-*.pem
+apt autoremove
+apt update
+
+rm -f /home/vagrant/*.sh
+
+wget --no-check-certificate https://raw.github.com/mitchellh/vagrant/master/keys/vagrant.pub -O /home/vagrant/.ssh/authorized_keys
+chmod 0600 /home/vagrant/.ssh/authorized_keys
+chown -R vagrant:vagrant /home/vagrant/.ssh
+
+dd if=/dev/zero of=/EMPTY bs=1M
+rm -f /EMPTY
+sync

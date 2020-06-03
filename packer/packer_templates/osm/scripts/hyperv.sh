@@ -1,3 +1,5 @@
+#!/bin/sh -eux
+
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
 #   You may obtain a copy of the License at
@@ -10,26 +12,14 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-output-virtualbox-iso/
-packer_cache/
-builds/
-jujubase*/
-osm-*/
-*.iso
-*.box
-*.ovf
-*.vmdk
-*.vdi
-virtualfloppy.vfd
-packer_cache
-packer.log
-.DS_Store
-/packer-*/
-*.variables.json
-/builds/
-vagrant_tests/.vagrant
-clouds.yaml
-clouds.yml
-openstack.rc
-openrc*
-*.pem
+ubuntu_version="`lsb_release -r | awk '{print $2}'`";
+major_version="`echo $ubuntu_version | awk -F. '{print $1}'`";
+
+case "$PACKER_BUILDER_TYPE" in
+hyperv-iso)
+  if [ "$major_version" -eq "16" ]; then
+    apt-get install -y linux-tools-virtual-lts-xenial linux-cloud-tools-virtual-lts-xenial;
+  else
+    apt-get -y install linux-image-virtual linux-tools-virtual linux-cloud-tools-virtual;
+  fi
+esac

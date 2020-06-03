@@ -1,3 +1,5 @@
+#!/bin/sh -eux
+
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
 #   You may obtain a copy of the License at
@@ -10,26 +12,21 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-output-virtualbox-iso/
-packer_cache/
-builds/
-jujubase*/
-osm-*/
-*.iso
-*.box
-*.ovf
-*.vmdk
-*.vdi
-virtualfloppy.vfd
-packer_cache
-packer.log
-.DS_Store
-/packer-*/
-*.variables.json
-/builds/
-vagrant_tests/.vagrant
-clouds.yaml
-clouds.yml
-openstack.rc
-openrc*
-*.pem
+SSHD_CONFIG="/etc/ssh/sshd_config"
+
+# ensure that there is a trailing newline before attempting to concatenate
+sed -i -e '$a\' "$SSHD_CONFIG"
+
+USEDNS="UseDNS no"
+if grep -q -E "^[[:space:]]*UseDNS" "$SSHD_CONFIG"; then
+    sed -i "s/^\s*UseDNS.*/${USEDNS}/" "$SSHD_CONFIG"
+else
+    echo "$USEDNS" >>"$SSHD_CONFIG"
+fi
+
+GSSAPI="GSSAPIAuthentication no"
+if grep -q -E "^[[:space:]]*GSSAPIAuthentication" "$SSHD_CONFIG"; then
+    sed -i "s/^\s*GSSAPIAuthentication.*/${GSSAPI}/" "$SSHD_CONFIG"
+else
+    echo "$GSSAPI" >>"$SSHD_CONFIG"
+fi

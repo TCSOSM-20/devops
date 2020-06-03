@@ -10,26 +10,13 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-output-virtualbox-iso/
-packer_cache/
-builds/
-jujubase*/
-osm-*/
-*.iso
-*.box
-*.ovf
-*.vmdk
-*.vdi
-virtualfloppy.vfd
-packer_cache
-packer.log
-.DS_Store
-/packer-*/
-*.variables.json
-/builds/
-vagrant_tests/.vagrant
-clouds.yaml
-clouds.yml
-openstack.rc
-openrc*
-*.pem
+export OS_CLOUD=nameofmyopenstack
+export VIM_MGMT_NET="internal"  # Internal network to attach the VM
+export VIM_EXT_NET="ext-net"    # External network providing floating IP addresses
+
+# Converts the name of the internal network to UUID, so that Packer can use it
+export NETWORK_ID=`openstack network list -f json | jq -r ".[] | select(.Name == \"${VIM_MGMT_NET}\") | .ID"`
+
+# Other environment variables for Packer
+export FLAVOR_NAME=flavorname
+export SOURCE_IMAGE_NAME=sourceimagename

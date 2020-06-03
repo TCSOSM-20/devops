@@ -1,3 +1,5 @@
+#!/bin/sh -eux
+
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
 #   You may obtain a copy of the License at
@@ -10,26 +12,21 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-output-virtualbox-iso/
-packer_cache/
-builds/
-jujubase*/
-osm-*/
-*.iso
-*.box
-*.ovf
-*.vmdk
-*.vdi
-virtualfloppy.vfd
-packer_cache
-packer.log
-.DS_Store
-/packer-*/
-*.variables.json
-/builds/
-vagrant_tests/.vagrant
-clouds.yaml
-clouds.yml
-openstack.rc
-openrc*
-*.pem
+my_custom_motd='
+This system was built by Telefónica I+D for ETSI Open Source MANO (ETSI OSM)'
+
+if [ -d /etc/update-motd.d ]; then
+    MOTD_CONFIG='/etc/update-motd.d/99-custom'
+
+    cat >> "$MOTD_CONFIG" <<FINAL
+#!/bin/sh
+
+cat <<'EOF'
+$my_custom_motd
+EOF
+FINAL
+
+    chmod 0755 "$MOTD_CONFIG"
+else
+    echo "$my_custom_motd" >> /etc/motd
+fi
