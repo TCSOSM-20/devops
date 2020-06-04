@@ -68,12 +68,15 @@ function usage(){
     #echo -e "     --clean_volumes To clear all the mounted volumes from docker swarm"
     echo -e "     -y:             do not prompt for confirmation, assumes yes"
     echo -e "     -h / --help:    print this help"
-    echo -e "     --charmed:                       install OSM with charms"
-    echo -e "     --bundle <bundle path>:          Specify with which bundle to deploy OSM with charms (--charmed option)"
-    echo -e "     --kubeconfig <kubeconfig path>:  Specify with which kubernetes to deploy OSM with charms (--charmed option)"
-    echo -e "     --controller <name>:             Specifies the name of the controller to use - The controller must be already bootstrapped (--charmed option)" 
-    echo -e "     --lxd-cloud <yaml path>:         Takes a YAML file as a parameter with the LXD Cloud information (--charmed option)" 
-    echo -e "     --lxd-credentials <yaml path>:   Takes a YAML file as a parameter with the LXD Credentials information (--charmed option)"
+    echo -e "     --charmed:                   Deploy and operate OSM with Charms on k8s"
+    echo -e "     [--bundle <bundle path>]:    Specify with which bundle to deploy OSM with charms (--charmed option)"
+    echo -e "     [--k8s <kubeconfig path>]:   Specify with which kubernetes to deploy OSM with charms (--charmed option)"
+    echo -e "     [--vca <name>]:              Specifies the name of the controller to use - The controller must be already bootstrapped (--charmed option)" 
+    echo -e "     [--lxd <yaml path>]:         Takes a YAML file as a parameter with the LXD Cloud information (--charmed option)" 
+    echo -e "     [--lxd-cred <yaml path>]:    Takes a YAML file as a parameter with the LXD Credentials information (--charmed option)"
+    echo -e "     [--microstack]:              Installs microstack as a vim. (--charmed option)"
+    echo -e "     [--tag]:                     Docker image tag"
+
 }
 
 add_repo() {

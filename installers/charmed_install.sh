@@ -21,10 +21,10 @@ function check_arguments(){
     while [ $# -gt 0 ] ; do
         case $1 in
             --bundle) BUNDLE="$2" ;;
-            --kubeconfig) KUBECFG="$2" ;;
-            --controller) CONTROLLER="$2" ;;
-            --lxd-cloud) LXD_CLOUD="$2" ;;
-            --lxd-credentials) LXD_CREDENTIALS="$2" ;;
+            --k8s) KUBECFG="$2" ;;
+            --vca) CONTROLLER="$2" ;;
+            --lxd) LXD_CLOUD="$2" ;;
+            --lxd-cred) LXD_CREDENTIALS="$2" ;;
             --microstack) MICROSTACK=y ;;
             --tag) TAG="$2" ;;
         esac
