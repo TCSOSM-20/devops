@@ -1,3 +1,18 @@
+#
+#   Copyright 2020 ETSI
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
 TOPDIR=$(shell readlink -f .|sed -e 's/\/docker\/.*//')
 MKINCLUDE=$(TOPDIR)/docker/mk
 MKBUILD=$(TOPDIR)/docker/build
@@ -19,7 +34,7 @@ CONTAINER_NAME ?= $(LOWER_MDG)
 CMD_DOCKER_ARGS ?= -q
 DOCKER_ARGS     = $(CMD_DOCKER_ARGS)
 
-DEPS := MON IM LCM RO common osmclient devops NBI policy-module Keystone N2VC lightui
+DEPS := MON IM LCM RO common osmclient devops NBI policy-module Keystone N2VC lightui NG-UI
 
 DEPS_TARGETS = $(addprefix $(MKBUILD)/.dep_, $(DEPS))
 
@@ -54,6 +69,7 @@ build: $(MKBUILD) $(DEPS_TARGETS)
                    --build-arg DEVOPS_VERSION==$(shell cat $(MKBUILD)/.dep_devops) \
                    --build-arg N2VC_VERSION==$(shell cat $(MKBUILD)/.dep_N2VC) \
                    --build-arg LWUI_VERSION==$(shell cat $(MKBUILD)/.dep_lightui) \
+                   --build-arg NGUI_VERSION==$(shell cat $(MKBUILD)/.dep_NG-UI) \
                    $(DOCKER_ARGS) .
 
 clean:

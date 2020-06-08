@@ -1,5 +1,6 @@
 #
 #   Copyright 2017 Sandvine
+#   Copyright 2020 ETSI
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -13,5 +14,5 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
-SUBDIRS = MON NBI osmclient RO LCM light-ui POL Keystone
+SUBDIRS = MON NBI osmclient RO LCM light-ui POL Keystone NG-UI
 include mk/dirs.mk
