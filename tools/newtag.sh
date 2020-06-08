@@ -1,4 +1,19 @@
 #!/bin/bash
+#
+#   Copyright 2020 ETSI
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
 if [ $# -ne 5 ]; then
     echo "Usage $0 <repo> <branch> <tag> <user> <release_name>"
     echo "Example: $0 all master v4.0.2 garciadeblas FOUR"
@@ -13,7 +28,7 @@ RELEASE_NAME="$5"
 tag_header="OSM Release $RELEASE_NAME:"
 tag_message="$tag_header version $TAG"
 
-modules="common devops IM LCM LW-UI MON N2VC NBI openvim osmclient RO vim-emu POL"
+modules="common devops IM LCM LW-UI MON N2VC NBI openvim osmclient RO vim-emu POL NG-UI"
 list=""
 for i in $modules; do
     if [ "$1" == "$i" -o "$1" == "all" ]; then
