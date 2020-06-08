@@ -27,6 +27,7 @@ function usage(){
     echo -e "                     -b tags/v1.1.0     (a specific tag)"
     echo -e "                     ..."
     echo -e "     -c <orchestrator> deploy osm services using container <orchestrator>. Valid values are <k8s> or <swarm>.  If -c is not used then osm will be deployed using default orchestrator. When used with --uninstall, osm services deployed by the orchestrator will be uninstalled"
+    echo -e "     -n <ui> install OSM with Next Gen UI. Valid values are <lwui> or <ngui>. If -n is not specified osm will be installed with light-ui. When used with uninstall, osm along with the UI specified will be uninstalled"
     echo -e "     -s <stack name> or <namespace>  user defined stack name when installed using swarm or namespace when installed using k8s, default is osm"
     echo -e "     -H <VCA host>   use specific juju host controller IP"
     echo -e "     -S <VCA secret> use VCA/juju secret key"
@@ -221,6 +222,16 @@ function uninstall_lightweight() {
         docker image rm ${DOCKER_USER}/pla:${OSM_DOCKER_TAG}
         docker image rm ${DOCKER_USER}/osmclient:${OSM_DOCKER_TAG}
 EONG
+
+        if [ -n "$NGUI" ]; then
+            newgrp docker << EONG
+            docker image rm ${DOCKER_USER}/ng-ui:${OSM_DOCKER_TAG}
+EONG
+        else
+            newgrp docker << EONG
+            docker image rm ${DOCKER_USER}/light-ui:${OSM_DOCKER_TAG}
+EONG
+         fi
 
         if [ -n "$KUBERNETES" ]; then
             OSM_NAMESPACE_VOL="${OSM_HOST_VOL}/${OSM_STACK_NAME}"
@@ -516,13 +527,23 @@ function generate_docker_images() {
         sg docker -c "docker build ${LWTEMPDIR}/LCM -f ${LWTEMPDIR}/LCM/Dockerfile.local -t ${DOCKER_USER}/lcm --no-cache" || FATAL "cannot build LCM docker image"
     fi
 
-    if [ -n "$PULL_IMAGES" ]; then
-        sg docker -c "docker pull ${DOCKER_USER}/light-ui:${OSM_DOCKER_TAG}" || FATAL "cannot pull light-ui docker image"
-    elif [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q LW-UI ; then
-        git -C ${LWTEMPDIR} clone https://osm.etsi.org/gerrit/osm/LW-UI
-        git -C ${LWTEMPDIR}/LW-UI checkout ${COMMIT_ID}
-        sg docker -c "docker build ${LWTEMPDIR}/LW-UI -f ${LWTEMPDIR}/LW-UI/docker/Dockerfile -t ${DOCKER_USER}/light-ui --no-cache" || FATAL "cannot build LW-UI docker image"
-    fi
+    if [ -n "$NGUI" ]; then
+        if [ -n "$PULL_IMAGES" ]; then
+            sg docker -c "docker pull ${DOCKER_USER}/ng-ui:${OSM_DOCKER_TAG}" || FATAL "cannot pull ng-ui docker image"
+        elif [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q NG-UI ; then
+            git -C ${LWTEMPDIR} clone https://osm.etsi.org/gerrit/osm/NG-UI
+            git -C ${LWTEMPDIR}/NG-UI checkout ${COMMIT_ID}
+            sg docker -c "docker build ${LWTEMPDIR}/NG-UI -f ${LWTEMPDIR}/NG-UI/docker/Dockerfile -t ${DOCKER_USER}/ng-ui --no-cache" || FATAL "cannot build NG-UI docker image"
+        fi
+    else
+        if [ -n "$PULL_IMAGES" ]; then
+            sg docker -c "docker pull ${DOCKER_USER}/light-ui:${OSM_DOCKER_TAG}" || FATAL "cannot pull light-ui docker image"
+        elif [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q LW-UI ; then
+            git -C ${LWTEMPDIR} clone https://osm.etsi.org/gerrit/osm/LW-UI
+            git -C ${LWTEMPDIR}/LW-UI checkout ${COMMIT_ID}
+            sg docker -c "docker build ${LWTEMPDIR}/LW-UI -f ${LWTEMPDIR}/LW-UI/docker/Dockerfile -t ${DOCKER_USER}/light-ui --no-cache" || FATAL "cannot build LW-UI docker image"
+        fi
+     fi
 
     if [ -n "$PULL_IMAGES" ]; then
         sg docker -c "docker pull ${DOCKER_USER}/osmclient:${OSM_DOCKER_TAG}" || FATAL "cannot pull osmclient docker image"
@@ -565,9 +586,15 @@ function generate_docker_env_files() {
     if [ -n "$KUBERNETES" ]; then
         #Kubernetes resources
         $WORKDIR_SUDO cp -bR ${OSM_DEVOPS}/installers/docker/osm_pods $OSM_DOCKER_WORK_DIR
+        [ -n "$NGUI" ] && $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/osm_pods/ng-ui.yaml $OSM_K8S_WORK_DIR/ng-ui.yaml && $WORKDIR_SUDO rm $OSM_K8S_WORK_DIR/light-ui.yaml
     else
-        # Docker-compose
-        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/docker-compose.yaml $OSM_DOCKER_WORK_DIR/docker-compose.yaml
+        if [ -n "$NGUI" ]; then
+            # For NG-UI
+            $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/docker-compose-ngui.yaml $OSM_DOCKER_WORK_DIR/docker-compose.yaml
+        else
+            # Docker-compose
+            $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/docker-compose.yaml $OSM_DOCKER_WORK_DIR/docker-compose.yaml
+        fi
         if [ -n "$INSTALL_PLA" ]; then
             $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/osm_pla/docker-compose.yaml $OSM_DOCKER_WORK_DIR/osm_pla/docker-compose.yaml
         fi
@@ -811,10 +838,10 @@ function install_helm() {
 }
 
 function parse_yaml() {
-    osm_services="nbi lcm ro pol mon light-ui keystone"
+    osm_services="nbi lcm ro pol mon light-ui ng-ui keystone"
     TAG=$1
     for osm in $osm_services; do
-        $WORKDIR_SUDO sed -i "s/opensourcemano\/$osm:.*/opensourcemano\/$osm:$TAG/g" $OSM_K8S_WORK_DIR/$osm.yaml
+        $WORKDIR_SUDO sed -i "s/opensourcemano\/$osm:.*/$DOCKER_USER\/$osm:$TAG/g" $OSM_K8S_WORK_DIR/$osm.yaml
     done
 }
 
@@ -1264,6 +1291,7 @@ function dump_vars(){
     echo "OSM_STACK_NAME=$OSM_STACK_NAME"
     echo "PULL_IMAGES=$PULL_IMAGES"
     echo "KUBERNETES=$KUBERNETES"
+    echo "NGUI=$NGUI"
     echo "SHOWOPTS=$SHOWOPTS"
     echo "Install from specific refspec (-b): $COMMIT_ID"
 }
@@ -1310,6 +1338,7 @@ INSTALL_NOLXD=""
 INSTALL_NODOCKER=""
 INSTALL_NOJUJU=""
 KUBERNETES=""
+NGUI=""
 INSTALL_K8S_MONITOR=""
 INSTALL_NOHOSTCLIENT=""
 SESSION_ID=`date +%s`
@@ -1345,7 +1374,7 @@ POD_NETWORK_CIDR=10.244.0.0/16
 K8S_MANIFEST_DIR="/etc/kubernetes/manifests"
 RE_CHECK='^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
 
-while getopts ":b:r:c:k:u:R:D:o:O:m:N:H:S:s:w:t:U:P:A:l:L:K:-: hy" o; do
+while getopts ":b:r:c:n:k:u:R:D:o:O:m:N:H:S:s:w:t:U:P:A:l:L:K:-: hy" o; do
     case "${o}" in
         b)
             COMMIT_ID=${OPTARG}
@@ -1359,6 +1388,12 @@ while getopts ":b:r:c:k:u:R:D:o:O:m:N:H:S:s:w:t:U:P:A:l:L:K:-: hy" o; do
             [ "${OPTARG}" == "swarm" ] && continue
             [ "${OPTARG}" == "k8s" ] && KUBERNETES="y" && continue
             echo -e "Invalid argument for -i : ' $OPTARG'\n" >&2
+            usage && exit 1
+            ;;
+        n)
+            [ "${OPTARG}" == "lwui" ] && continue
+            [ "${OPTARG}" == "ngui" ] && NGUI="y" && continue
+            echo -e "Invalid argument for -n : ' $OPTARG'\n" >&2
             usage && exit 1
             ;;
         k)
