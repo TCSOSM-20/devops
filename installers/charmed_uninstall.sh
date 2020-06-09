@@ -14,7 +14,7 @@
 #
 
 
-juju destroy-model osm --destroy-storage
-juju destroy-model test --destroy-storage
+juju destroy-model osm --destroy-storage -y
+juju destroy-model test --destroy-storage -y
 sudo snap unalias osm
 sudo snap remove osmclient

@@ -75,6 +75,7 @@ function usage(){
     echo -e "     [--lxd <yaml path>]:         Takes a YAML file as a parameter with the LXD Cloud information (--charmed option)" 
     echo -e "     [--lxd-cred <yaml path>]:    Takes a YAML file as a parameter with the LXD Credentials information (--charmed option)"
     echo -e "     [--microstack]:              Installs microstack as a vim. (--charmed option)"
+    echo -e "     [--ha]:                      Installs High Availability bundle. (--charmed option)"
     echo -e "     [--tag]:                     Docker image tag"
 
 }
