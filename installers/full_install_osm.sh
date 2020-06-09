@@ -63,10 +63,11 @@ function usage(){
     echo -e "     --charmed:                   Deploy and operate OSM with Charms on k8s"
     echo -e "     [--bundle <bundle path>]:    Specify with which bundle to deploy OSM with charms (--charmed option)"
     echo -e "     [--k8s <kubeconfig path>]:   Specify with which kubernetes to deploy OSM with charms (--charmed option)"
-    echo -e "     [--vca <name>]:              Specifies the name of the controller to use - The controller must be already bootstrapped (--charmed option)" 
-    echo -e "     [--lxd <yaml path>]:         Takes a YAML file as a parameter with the LXD Cloud information (--charmed option)" 
+    echo -e "     [--vca <name>]:              Specifies the name of the controller to use - The controller must be already bootstrapped (--charmed option)"
+    echo -e "     [--lxd <yaml path>]:         Takes a YAML file as a parameter with the LXD Cloud information (--charmed option)"
     echo -e "     [--lxd-cred <yaml path>]:    Takes a YAML file as a parameter with the LXD Credentials information (--charmed option)"
     echo -e "     [--microstack]:              Installs microstack as a vim. (--charmed option)"
+    echo -e "     [--ha]:                      Installs High Availability bundle. (--charmed option)"
     echo -e "     [--tag]:                     Docker image tag"
 
 }
@@ -250,7 +251,7 @@ function check_install_iptables_persistent(){
 #Configure NAT rules, based on the current IP addresses of containers
 function nat(){
     check_install_iptables_persistent
-    
+
     echo -e "\nConfiguring NAT rules"
     echo -e "   Required root privileges"
     sudo $OSM_DEVOPS/installers/nat_osm
@@ -396,7 +397,7 @@ function install_docker_compose() {
 
 function install_juju() {
     echo "Installing juju"
-    sudo snap install juju --classic
+    sudo snap install juju --classic --channel=2.7/stable
     [[ ":$PATH": != *":/snap/bin:"* ]] && PATH="/snap/bin:${PATH}"
     echo "Finished installation of juju"
     return 0
@@ -527,7 +528,7 @@ function generate_docker_images() {
 
     if [ -z "$TO_REBUILD" ] || echo $TO_REBUILD | grep -q PROMETHEUS ; then
         sg docker -c "docker pull google/cadvisor:${PROMETHEUS_CADVISOR_TAG}" || FATAL "cannot get prometheus cadvisor docker image"
-    fi    
+    fi
 
     echo "Finished generation of docker images"
 }
@@ -1417,6 +1418,7 @@ while getopts ":b:r:c:k:u:R:D:o:m:H:S:s:w:t:U:P:A:l:L:K:-: hy" o; do
             [ "${OPTARG}" == "lxd" ] && continue
             [ "${OPTARG}" == "lxd-cred" ] && continue
             [ "${OPTARG}" == "microstack" ] && continue
+            [ "${OPTARG}" == "ha" ] && continue
             [ "${OPTARG}" == "tag" ] && continue
             [ "${OPTARG}" == "pla" ] && INSTALL_PLA="y" && continue
             echo -e "Invalid option: '--$OPTARG'\n" >&2
@@ -1455,23 +1457,23 @@ if [ -n "$CHARMED" ]; then
         /usr/share/osm-devops/installers/charmed_uninstall.sh -R $RELEASE -r $REPOSITORY -u $REPOSITORY_BASE -D /usr/share/osm-devops -t $DOCKER_TAG "$@"
      else
         /usr/share/osm-devops/installers/charmed_install.sh -R $RELEASE -r $REPOSITORY -u $REPOSITORY_BASE -D /usr/share/osm-devops -t $DOCKER_TAG "$@"
-     fi
 
-     echo "Your installation is now complete, follow these steps for configuring the osmclient:"
-     echo
-     echo "1. Get the NBI IP with the following command:"
-     echo
-     echo "juju status --format yaml | yq r - applications.nbi-k8s.address"
-     echo
-     echo "2. Create the OSM_HOSTNAME environment variable with the NBI IP"
-     echo
-     echo "export OSM_HOSTNAME=<NBI-IP>"
-     echo
-     echo "3. Add the previous command to your .bashrc for other Shell sessions"
-     echo
-     echo "export OSM_HOSTNAME=<previous-IP> >> ~/.bashrc"
-     echo
-     echo "DONE"
+        echo "Your installation is now complete, follow these steps for configuring the osmclient:"
+        echo
+        echo "1. Get the NBI IP with the following command:"
+        echo
+        echo NBI_IP='`juju status --format json | jq -rc '"'"'.applications."nbi-k8s".address'"'"'`'
+        echo
+        echo "2. Create the OSM_HOSTNAME environment variable with the NBI IP"
+        echo
+        echo "export OSM_HOSTNAME=\$NBI_IP"
+        echo
+        echo "3. Add the previous command to your .bashrc for other Shell sessions"
+        echo
+        echo "echo \"export OSM_HOSTNAME=\$NBI_IP\" >> ~/.bashrc"
+        echo
+        echo "DONE"
+     fi
 
      exit 0
 fi

@@ -26,6 +26,7 @@ function check_arguments(){
             --lxd) LXD_CLOUD="$2" ;;
             --lxd-cred) LXD_CREDENTIALS="$2" ;;
             --microstack) MICROSTACK=y ;;
+            --ha) BUNDLE="osm-ha" ;;
             --tag) TAG="$2" ;;
         esac
         shift
@@ -34,8 +35,8 @@ function check_arguments(){
     # echo $BUNDLE $KUBECONFIG $LXDENDPOINT
 }
 function install_snaps(){
-    sudo snap install juju --classic
-    [ ! -v KUBECFG ] && sudo snap install microk8s --classic && sudo usermod -a -G microk8s ubuntu && mkdir -p ~/.kube && sudo chown -f -R `whoami` ~/.kube
+    sudo snap install juju --classic --channel=2.7/stable
+    [ ! -v KUBECFG ] && sudo snap install microk8s --classic && sudo usermod -a -G microk8s `whoami` && mkdir -p ~/.kube && sudo chown -f -R `whoami` ~/.kube
 }
 
 function bootstrap_k8s_lxd(){
@@ -47,6 +48,14 @@ function bootstrap_k8s_lxd(){
         [ -v BOOTSTRAP_NEEDED ] && juju bootstrap $K8S_CLOUD_NAME $CONTROLLER_NAME
     else
         sg microk8s -c "microk8s.enable storage dns"
+        while true
+        do
+            sg microk8s -c "microk8s.status" | grep 'storage: enabled'
+            if [ $? -eq 0 ]; then
+                break
+            fi
+            sleep 1
+        done
 
         [ ! -v BOOTSTRAP_NEEDED ] && sg microk8s -c "microk8s.config" | juju add-k8s $K8S_CLOUD_NAME $ADD_K8S_OPTS
         [ -v BOOTSTRAP_NEEDED ] && sg microk8s -c "juju bootstrap microk8s $CONTROLLER_NAME" && K8S_CLOUD_NAME=microk8s
@@ -138,7 +147,8 @@ function deploy_charmed_osm(){
 function check_osm_deployed() {
     while true
     do
-        pod_name=`sg microk8s -c "microk8s.kubectl -n osm get pods | grep ui-k8s | grep -v operator" | awk '{print $1}'`
+        pod_name=`sg microk8s -c "microk8s.kubectl -n osm get pods | grep ui-k8s | grep -v operator" | awk '{print $1; exit}'`
+
         if [[ `sg microk8s -c "microk8s.kubectl -n osm wait pod $pod_name --for condition=Ready"` ]]; then
             if [[ `sg microk8s -c "microk8s.kubectl -n osm wait pod lcm-k8s-0 --for condition=Ready"` ]]; then
                 break
@@ -164,7 +174,7 @@ function create_overlay() {
     local vca_cacert=$(cat $HOME/.local/share/juju/controllers.yaml | yq --arg CONTROLLER_NAME $CONTROLLER_NAME '.controllers[$CONTROLLER_NAME]["ca-cert"]' | base64 | tr -d \\n)
 
     # Calculate the default route of this machine
-    local DEFAULT_IF=`route -n |awk '$1~/^0.0.0.0/ {print $8}'`
+    local DEFAULT_IF=`ip route list match 0.0.0.0 | awk '{print $5}'`
     local vca_apiproxy=`ip -o -4 a |grep ${DEFAULT_IF}|awk '{split($4,a,"/"); print a[1]}'`
 
     # Generate a new overlay.yaml, overriding any existing one
@@ -253,7 +263,7 @@ function install_microstack() {
     ubuntu1604
     ssh-keygen -t rsa -N "" -f ~/.ssh/microstack
     microstack.openstack keypair create --public-key ~/.ssh/microstack.pub microstack
-    export OSM_HOSTNAME=`juju status --format yaml | yq r - applications.nbi-k8s.address`
+    export OSM_HOSTNAME=`juju status --format json | jq -rc '.applications."nbi-k8s".address'`
     osm vim-create --name microstack-site \
     --user admin \
     --password keystone \
@@ -270,7 +280,7 @@ function install_microstack() {
     version: 3}'
 }
 
-DEFAULT_IF=`route -n |awk '$1~/^0.0.0.0/ {print $8}'`
+DEFAULT_IF=`ip route list match 0.0.0.0 | awk '{print $5}'`
 DEFAULT_IP=`ip -o -4 a |grep ${DEFAULT_IF}|awk '{split($4,a,"/"); print a[1]}'`
 
 check_arguments $@

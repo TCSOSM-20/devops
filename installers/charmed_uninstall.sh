@@ -33,7 +33,7 @@ function remove_iptables() {
 }
 
 remove_iptables
-juju destroy-model osm-on-k8s --destroy-storage
-juju destroy-model test --destroy-storage
+juju destroy-model osm --destroy-storage -y
+juju destroy-model test --destroy-storage -y
 sudo snap unalias osm
 sudo snap remove osmclient
