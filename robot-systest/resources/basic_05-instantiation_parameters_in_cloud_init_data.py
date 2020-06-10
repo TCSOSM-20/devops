@@ -14,11 +14,11 @@ from pathlib import Path
 
 # Get ${HOME} from local machine
 home = str(Path.home())
-# NS and VNF descriptor package files
-vnfd_pkg = 'ubuntu-cloudinit_vnfd.tar.gz'
-nsd_pkg = 'ubuntu-cloudinit_nsd.tar.gz'
-# NS and VNF descriptor names
-vnfd_name = 'ubuntu-cloudinit_vnfd'
-nsd_name = 'ubuntu-cloudinit_nsd'
+# NS and VNF descriptor package folder
+vnfd_pkg = 'ubuntu_cloudinit_vnf'
+nsd_pkg = 'ubuntu_cloudinit_ns'
+# NS and VNF descriptor id
+vnfd_name = 'ubuntu_cloudinit-vnf'
+nsd_name = 'ubuntu_cloudinit-ns'
 # NS instance name
 ns_name = 'basic_05_instantiation_params_cloud_init'

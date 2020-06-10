@@ -14,11 +14,11 @@ from pathlib import Path
 
 # Get ${HOME} from local machine
 home = str(Path.home())
-# NS and VNF descriptor package files
-vnfd_pkg = 'simple_nopasswd_vnf.tar.gz'
-nsd_pkg = 'simple_nopasswd_ns.tar.gz'
-# NS and VNF descriptor names
-vnfd_name = 'simple-nopasswd-vnf'
-nsd_name = 'simple-nopasswd-ns'
+# NS and VNF descriptor package folder
+vnfd_pkg = 'simple_nopasswd_vnf'
+nsd_pkg = 'simple_nopasswd_ns'
+# NS and VNF descriptor id
+vnfd_name = 'simple_nopasswd-vnf'
+nsd_name = 'simple_nopasswd-ns'
 # NS instance name
 ns_name = 'basic_07_secure_key_management'
