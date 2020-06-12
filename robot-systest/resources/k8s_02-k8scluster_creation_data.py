@@ -1,3 +1,5 @@
+# Copyright 2020 Canonical Ltd.
+#
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
 #   You may obtain a copy of the License at
@@ -10,12 +12,13 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-echo "Please set your environment variables."
-# export OSM_HOSTNAME=<OSM_HOSTNAME>
-# export OS_CLOUD=<OS_CLOUD>
-# export VIM_TARGET=<VIM_TARGET>
-# export VIM_MGMT_NET=<VIM_MGMT_NET>
-# export PACKAGES_FOLDER=<PACKAGES_FOLDER=>
-# export ROBOT_DEVOPS_FOLDER=<ROBOT_DEVOPS_FOLDER>
-# export ROBOT_REPORT_FOLDER=<ROBOT_REPORT_FOLDER>
-# export K8S_CREDENTIALS=<KUBECONFIG.yaml>
+from pathlib import Path
+
+# Get ${HOME} from local machine
+home = str(Path.home())
+# K8s cluster name
+k8scluster_name = 'k8s-test'
+k8scluster_version = 'v1'
+# SSH keys to be used
+publickey = home + '/.ssh/id_rsa.pub'
+privatekey = home + '/.ssh/id_rsa'
