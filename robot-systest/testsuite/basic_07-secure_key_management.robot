@@ -34,6 +34,7 @@ ${action_name}   touch
 ${vnf_member_index}   1
 ${day_1_file_name}   /home/ubuntu/first-touch
 ${day_2_file_name}   /home/ubuntu/mytouch1
+${ns_timeout}   15min
 
 
 *** Test Cases ***
@@ -52,7 +53,7 @@ Create Nopasswd Charm NS Descriptor
 Instantiate Nopasswd Charm Network Service
     [Tags]  nopasswd
 
-    ${id}=  Create Network Service  ${nsd_name}  %{VIM_TARGET}  ${ns_name}  ${ns_config}  ${EMPTY}
+    ${id}=  Create Network Service  ${nsd_name}  %{VIM_TARGET}  ${ns_name}  ${ns_config}  ${EMPTY}  ${ns_timeout}
     Set Suite Variable  ${ns_id}  ${id}
 
 

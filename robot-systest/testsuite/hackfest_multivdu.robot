@@ -35,6 +35,7 @@ ${password}   osm4u
 ${vnf_member_index}   1
 ${vnf_ip_addr}   ${EMPTY}
 ${ns_config}   {vld: [ {name: mgmtnet, vim-network-name: %{VIM_MGMT_NET}} ] }
+${wait_guard_for_vm_boot}   50s
 # ${ns_config}   ${EMPTY}
 
 *** Test Cases ***
@@ -56,7 +57,7 @@ Network Service Instance Test
         Run Keyword If   "${status}" == "FAIL"   Set Global Variable   ${publickey}   ${EMPTY}
     ${id}=   Create Network Service   ${nsd_name}   %{VIM_TARGET}   ${ns_name}   ${ns_config}   ${publickey}
     Set Suite Variable   ${ns_id}   ${id}
-
+    Sleep   ${wait_guard_for_vm_boot}  Waiting for VM's daemons to be up and running
 
 Get Vnf Ip Address
     [Tags]   hackfest_multivdu
@@ -71,7 +72,6 @@ Test Ping
 
 Test SSH Access
     [Tags]   hackfest_multivdu
-    Sleep   30s   Waiting ssh daemon to be up
     ${status}   ${message}=   Run Keyword And Ignore Error  Variable Should Exist   ${privatekey}
         Run Keyword If   "${status}" == "FAIL"   Set Global Variable   ${privatekey}   ${EMPTY}
     Test SSH Connection   ${vnf_ip_addr}  ${username}  ${password}  ${privatekey} 

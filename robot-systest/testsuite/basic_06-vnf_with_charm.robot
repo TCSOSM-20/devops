@@ -36,6 +36,7 @@ ${vnf_member_index_2}   2
 ${day_1_file_name}   /home/ubuntu/first-touch
 ${day_2_file_name_1}   /home/ubuntu/mytouch1
 ${day_2_file_name_2}   /home/ubuntu/mytouch2
+${ns_timeout}   15min
 
 
 *** Test Cases ***
@@ -54,7 +55,7 @@ Create Charm NS Descriptor
 Instantiate Charm Network Service
     [Tags]  charm
 
-    ${id}=  Create Network Service  ${nsd_name}  %{VIM_TARGET}  ${ns_name}  ${ns_config}  ${publickey}
+    ${id}=  Create Network Service  ${nsd_name}  %{VIM_TARGET}  ${ns_name}  ${ns_config}  ${publickey}  ${ns_timeout}
     Set Suite Variable  ${ns_id}  ${id}
 
 

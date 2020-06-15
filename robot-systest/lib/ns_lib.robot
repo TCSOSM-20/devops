@@ -12,7 +12,6 @@
 
 *** Variables ***
 ${success_return_code}   0
-${ns_launch_max_wait_time}   5min
 ${ns_launch_pol_time}   30sec
 ${ns_delete_max_wait_time}   1min
 ${ns_delete_pol_time}   15sec
@@ -24,7 +23,7 @@ ${vnf_scale_pol_time}   30sec
 
 *** Keywords ***
 Create Network Service
-    [Arguments]   ${nsd}   ${vim_name}   ${ns_name}   ${ns_config}   ${publickey}
+    [Arguments]   ${nsd}   ${vim_name}   ${ns_name}   ${ns_config}   ${publickey}   ${ns_launch_max_wait_time}=5min
 
     ${config_attr}   Set Variable If   '${ns_config}'!='${EMPTY}'   --config '${ns_config}'   \
     ${sshkeys_attr}   Set Variable If   '${publickey}'!='${EMPTY}'   --ssh_keys ${publickey}   \
