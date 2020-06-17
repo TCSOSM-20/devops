@@ -40,10 +40,10 @@ services:
     networks:
       - netOSM
     healthcheck:
-      test: echo stat | nc localhost 2181
-      interval: 10s
+      test: echo ruok | nc -w 2 localhost 2181
+      interval: 20s
       timeout: 10s
-      retries: 3
+      retries: 5
     logging:
       driver: "json-file"
       options:
@@ -70,7 +70,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:
-      test: zookeeper-shell.sh zookeeper:2181 ls /brokers/ids 2>&1 | grep "Node does not exist" && exit 1 || exit 0
+      test: echo ruok | nc -w 2 zookeeper 2181
       interval: 20s
       timeout: 10s
       retries: 5
