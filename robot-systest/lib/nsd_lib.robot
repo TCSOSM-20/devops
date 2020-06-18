@@ -55,6 +55,7 @@ Delete NSD
     [Arguments]   ${nsd_id}
 
     ${rc}   ${stdout}=   Run Keyword And Continue On Failure   Run and Return RC and Output   osm nsd-delete ${nsd_id}
+    Should Be Equal As Integers   ${rc}   ${success_return_code}
     log   ${stdout}
     WAIT UNTIL KEYWORD SUCCEEDS   ${delete_max_wait_time}   ${delete_pol_time}   Check For NSD   ${nsd_id}
 
