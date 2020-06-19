@@ -38,7 +38,7 @@ properties([
         string(defaultValue: 'OSMETSI', description: '', name: 'GPG_KEY_NAME'),
         string(defaultValue: 'artifactory-osm', description: '', name: 'ARTIFACTORY_SERVER'),
         string(defaultValue: 'osm-stage_4', description: '', name: 'DOWNSTREAM_STAGE_NAME'),
-        string(defaultValue: 'releaseseven-daily', description: '', name: 'DOCKER_TAG'),
+        string(defaultValue: 'testing-daily', description: '', name: 'DOCKER_TAG'),
         booleanParam(defaultValue: true, description: '', name: 'SAVE_CONTAINER_ON_FAIL'),
         booleanParam(defaultValue: false, description: '', name: 'SAVE_CONTAINER_ON_PASS'),
         booleanParam(defaultValue: true, description: '', name: 'SAVE_ARTIFACTS_ON_SMOKE_SUCCESS'),
