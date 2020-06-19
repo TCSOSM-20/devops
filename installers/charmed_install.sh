@@ -85,6 +85,7 @@ function bootstrap_k8s_lxd(){
         sg lxd -c "lxd waitready"
         DEFAULT_MTU=$(ip addr show $DEFAULT_IF | perl -ne 'if (/mtu\s(\d+)/) {print $1;}')
         sg lxd -c "lxc profile device set default eth0 mtu $DEFAULT_MTU"
+        sg lxd -c "lxc network set lxdbr0 bridge.mtu $DEFAULT_MTU"
 
         cat << EOF > $LXD_CLOUD
 clouds:

@@ -280,6 +280,7 @@ function install_lxd() {
     [ -z "$DEFAULT_INTERFACE" ] && DEFAULT_INTERFACE=$(route -n |awk '$1~/^0.0.0.0/ {print $8; exit}')
     DEFAULT_MTU=$(ip addr show $DEFAULT_INTERFACE | perl -ne 'if (/mtu\s(\d+)/) {print $1;}')
     sg lxd -c "lxc profile device set default eth0 mtu $DEFAULT_MTU"
+    sg lxd -c "lxc network set lxdbr0 bridge.mtu $DEFAULT_MTU"
     #sudo systemctl stop lxd-bridge
     #sudo systemctl --system daemon-reload
     #sudo systemctl enable lxd-bridge
