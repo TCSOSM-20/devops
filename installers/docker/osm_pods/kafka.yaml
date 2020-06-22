@@ -68,7 +68,7 @@ spec:
            value: "1"
          - name: KAFKA_ADVERTISED_LISTENERS
            value: "PLAINTEXT://:9092"
-         - name: KAFKA_LISTENERS:
+         - name: KAFKA_LISTENERS
            value: "PLAINTEXT://:9092"
          - name: KAFKA_INTER_BROKER_LISTENER_NAME
            value: "PLAINTEXT"
@@ -76,7 +76,7 @@ spec:
            value: "1"
          - name: KAFKA_AUTO_CREATE_TOPICS_ENABLE
            value: "false"
-         - name: KAFKA_CREATE_TOPICS:
+         - name: KAFKA_CREATE_TOPICS
            value: "admin:1:1,users:1:1,projects:1:1,vim_account:1:1,wim_account:1:1,sdn:1:1,k8scluster:1:1,k8srepo:1:1,osmrepos:1:1,vnfd:1:1,nsd:1:1,nst:1:1,pdu:1:1,ns:1:1,nsi:1:1,alarm_request:1:1,alarm_response:1:1"
         volumeMounts:
         - name: socket
