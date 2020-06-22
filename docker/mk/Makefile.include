@@ -34,7 +34,7 @@ CONTAINER_NAME ?= $(LOWER_MDG)
 CMD_DOCKER_ARGS ?= -q
 DOCKER_ARGS     = $(CMD_DOCKER_ARGS)
 
-DEPS := MON IM LCM RO common osmclient devops NBI policy-module Keystone N2VC lightui NG-UI PLA
+DEPS := MON IM LCM RO common osmclient devops NBI policy-module Keystone N2VC lightui ngui PLA
 
 DEPS_TARGETS = $(addprefix $(MKBUILD)/.dep_, $(DEPS))
 
@@ -48,6 +48,9 @@ $(MKBUILD)/.dep_policy-module:
 
 $(MKBUILD)/.dep_lightui:
 	$Q$(MKINCLUDE)/get_version.sh -r $(REPOSITORY) -R $(RELEASE) -k $(REPOSITORY_KEY) -u $(REPOSITORY_BASE) -m LW-UI -p lightui > $@
+
+$(MKBUILD)/.dep_ngui:
+	$Q$(MKINCLUDE)/get_version.sh -r $(REPOSITORY) -R $(RELEASE) -k $(REPOSITORY_KEY) -u $(REPOSITORY_BASE) -m NG-UI -p ngui > $@
 
 $(MKBUILD)/.dep_%:
 	$Q$(MKINCLUDE)/get_version.sh -r $(REPOSITORY) -R $(RELEASE) -k $(REPOSITORY_KEY) -u $(REPOSITORY_BASE) -m $* > $@
@@ -70,7 +73,7 @@ build: $(MKBUILD) $(DEPS_TARGETS)
                    --build-arg DEVOPS_VERSION==$(shell cat $(MKBUILD)/.dep_devops) \
                    --build-arg N2VC_VERSION==$(shell cat $(MKBUILD)/.dep_N2VC) \
                    --build-arg LWUI_VERSION==$(shell cat $(MKBUILD)/.dep_lightui) \
-                   --build-arg NGUI_VERSION==$(shell cat $(MKBUILD)/.dep_NG-UI) \
+                   --build-arg NGUI_VERSION==$(shell cat $(MKBUILD)/.dep_ngui) \
                    $(DOCKER_ARGS) .
 
 clean:
