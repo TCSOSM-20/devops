@@ -37,10 +37,16 @@ RUN apt-get install -y osm-ngui${NGUI_VERSION} && \
 
 WORKDIR /usr/share/osm-ngui
 RUN npm install
+
 # Building app.
 RUN npm run build
-RUN cp /usr/share/osm-ngui/nginx.conf /etc/nginx/sites-available/default
-#RUN cp /usr/share/osm-ngui/supervisor-app.conf /etc/supervisor/conf.d/
+RUN cp /usr/share/osm-ngui/nginx/nginx.conf /etc/nginx/sites-available/default
+
+# Removing the Nginx default page.
+RUN rm -rf /usr/share/nginx/html/*
+
+# Copying angular build to Nginx default page.
+RUN cp -r /usr/share/osm-ngui/dist/osm/* /usr/share/nginx/html
 
 EXPOSE 80
 
