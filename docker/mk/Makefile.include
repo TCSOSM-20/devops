@@ -34,7 +34,7 @@ CONTAINER_NAME ?= $(LOWER_MDG)
 CMD_DOCKER_ARGS ?= -q
 DOCKER_ARGS     = $(CMD_DOCKER_ARGS)
 
-DEPS := MON IM LCM RO common osmclient devops NBI policy-module Keystone N2VC lightui ngui PLA
+DEPS := MON IM LCM RO common osmclient devops NBI policy-module Keystone N2VC lightui ngui PLA tests
 
 DEPS_TARGETS = $(addprefix $(MKBUILD)/.dep_, $(DEPS))
 
@@ -74,6 +74,7 @@ build: $(MKBUILD) $(DEPS_TARGETS)
                    --build-arg N2VC_VERSION==$(shell cat $(MKBUILD)/.dep_N2VC) \
                    --build-arg LWUI_VERSION==$(shell cat $(MKBUILD)/.dep_lightui) \
                    --build-arg NGUI_VERSION==$(shell cat $(MKBUILD)/.dep_ngui) \
+                   --build-arg TESTS_VERSION==$(shell cat $(MKBUILD)/.dep_tests) \
                    $(DOCKER_ARGS) .
 
 clean:
