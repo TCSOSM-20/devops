@@ -50,8 +50,10 @@ properties([
         booleanParam(defaultValue: false, description: '', name: 'SAVE_ARTIFACTS_OVERRIDE'),
         string(defaultValue: '/home/jenkins/hive/openstack-etsi.rc', description: '', name: 'HIVE_VIM_1'),
         booleanParam(defaultValue: false, description: '', name: 'DO_ROBOT'),
-        string(defaultValue: 'sanity', description: 'smoke/vim/sanity/comprehensive are the options', name: 'TEST_NAME'),
+        string(defaultValue: 'sanity', description: 'sanity/regression are the options', name: 'TEST_NAME'),
         string(defaultValue: '/home/jenkins/hive/robot-systest.cfg', description: '', name: 'ROBOT_VIM'),
+        string(defaultValue: '/home/jenkins/hive/kubeconfig.yaml', description: '', name: 'KUBECONFIG'),
+        string(defaultValue: '/home/jenkins/hive/clouds.yaml', description: '', name: 'CLOUDS'),
     ])
 ])
 
@@ -75,14 +77,14 @@ def run_systest(stackName,tagName,testName,envfile=null) {
     junit  '*.xml'
 }
 
-def run_robot_systest(stackName,tagName,testName,envfile=null) {
+def run_robot_systest(stackName,tagName,testName,envfile=null,kubeconfig=null,clouds=null) {
     tempdir = sh(returnStdout: true, script: "mktemp -d").trim()
     if ( !envfile )
     {
         sh(script: "touch ${tempdir}/env")
         envfile="${tempdir}/env"
     }
-    sh "docker run --network net${stackName} --env-file ${envfile} -v ${tempdir}:/usr/share/osm-devops/robot-systest/reports opensourcemano/osmclient:${tagName} bash -C /usr/share/osm-devops/robot-systest/run_test.sh --do_install -t ${testName}"
+    sh "docker run --network net${stackName} --env-file ${envfile} -v ${clouds}:/etc/openstack/clouds.yaml -v ${kubeconfig}:/root/.kube/config -v ${tempdir}:/reports opensourcemano/tests:${tagName} -c -t ${testName}"
     sh "cp ${tempdir}/* ."
     outputDirectory = sh(returnStdout: true, script: "pwd").trim()
     println ("Present Directory is : ${outputDirectory}")
@@ -309,7 +311,7 @@ node("${params.NODE}") {
                 stage_archive = false
                 stage("System Integration Test") {
                     if ( params.DO_ROBOT ) {
-                        run_robot_systest(container_name,container_name,params.TEST_NAME,params.ROBOT_VIM)
+                        run_robot_systest(container_name,container_name,params.TEST_NAME,params.ROBOT_VIM,params.KUBECONFIG,params.CLOUDS)
                     } //else {
                     run_systest(container_name,container_name,"openstack_stage_4",params.HIVE_VIM_1)
                     //}
