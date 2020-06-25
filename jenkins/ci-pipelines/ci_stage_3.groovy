@@ -1,7 +1,7 @@
 /* Copyright 2017 Sandvine
  *
  * All Rights Reserved.
- * 
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License"); you may
  *   not use this file except in compliance with the License. You may obtain
  *   a copy of the License at
@@ -14,10 +14,10 @@
  *   License for the specific language governing permissions and limitations
  *   under the License.
  */
- 
+
 /* Change log:
- * 1. Bug 745 : Jayant Madavi, Mrityunjay Yadav : JM00553988@techmahindra.com : 23-july-2019 : Improvement to the code, typically we have 2 *    or more branches whose build gets triggered, ex master & release branch, the previous code was removing any/all docker. 
- *	  Now removing previous docker of the same branch, so that the other branch failed docker should not be removed. It also 
+ * 1. Bug 745 : Jayant Madavi, Mrityunjay Yadav : JM00553988@techmahindra.com : 23-july-2019 : Improvement to the code, typically we have 2 *    or more branches whose build gets triggered, ex master & release branch, the previous code was removing any/all docker.
+ *	  Now removing previous docker of the same branch, so that the other branch failed docker should not be removed. It also
  *    acts as clean-up for previous docker remove failure.
  * 2. Feature 7829 : Mrityunjay Yadav, Jayant Madavi: MY00514913@techmahindra.com : 19-Aug-2019 : Added a parameters & function to invoke Robot test.
  */
@@ -178,7 +178,7 @@ node("${params.NODE}") {
 
                     sh "rm -rf dists"
                 }
-                
+
                 // sign all the components
                 for (component in list) {
                     sh "dpkg-sig --sign builder -k ${GPG_KEY_NAME} pool/${component}/*"
@@ -225,7 +225,7 @@ node("${params.NODE}") {
         if ( params.DO_BUILD ) {
             stage("Build") {
                 sh "make -C docker clean"
-                sh "make -C docker Q= CMD_DOCKER_ARGS= TAG=${container_name} RELEASE=${params.RELEASE} REPOSITORY_BASE=${repo_base_url} REPOSITORY_KEY=${params.REPO_KEY_NAME} REPOSITORY=${params.REPO_DISTRO}"
+                sh "make -C -j `nproc` docker Q= CMD_DOCKER_ARGS= TAG=${container_name} RELEASE=${params.RELEASE} REPOSITORY_BASE=${repo_base_url} REPOSITORY_KEY=${params.REPO_KEY_NAME} REPOSITORY=${params.REPO_DISTRO}"
             }
         }
 
@@ -260,7 +260,7 @@ node("${params.NODE}") {
                     {
                         release = "-R ${params.RELEASE}"
                     }
-             
+
                     if ( params.REPOSITORY_BASE )
                     {
                         repo_base_url = "-u ${params.REPOSITORY_BASE}"
