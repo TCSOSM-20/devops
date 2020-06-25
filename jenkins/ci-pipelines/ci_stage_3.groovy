@@ -84,7 +84,7 @@ def run_robot_systest(stackName,tagName,testName,envfile=null,kubeconfig=null,cl
         sh(script: "touch ${tempdir}/env")
         envfile="${tempdir}/env"
     }
-    sh "docker run --network net${stackName} --env OSM_HOSTNAME=osm${stackName}_nbi --env-file ${envfile} -v ${clouds}:/etc/openstack/clouds.yaml -v ${kubeconfig}:/root/.kube/config -v ${tempdir}:/robot-systest/reports opensourcemano/tests:${tagName} -c -t ${testName}"
+    sh "docker run --network net${stackName} --env OSM_HOSTNAME=${stackName}_nbi --env-file ${envfile} -v ${clouds}:/etc/openstack/clouds.yaml -v ${kubeconfig}:/root/.kube/config -v ${tempdir}:/robot-systest/reports opensourcemano/tests:${tagName} -c -t ${testName}"
     sh "cp ${tempdir}/* ."
     outputDirectory = sh(returnStdout: true, script: "pwd").trim()
     println ("Present Directory is : ${outputDirectory}")
