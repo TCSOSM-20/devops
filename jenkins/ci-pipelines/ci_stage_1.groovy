@@ -75,6 +75,7 @@ node("${params.NODE}") {
             string(name: 'PROJECT_URL_PREFIX', value: params.PROJECT_URL_PREFIX),
             string(name: 'DOCKER_TAG', value: params.DOCKER_TAG),
             booleanParam(name: 'TEST_INSTALL', value: params.TEST_INSTALL),
+            booleanParam(name: 'DO_ROBOT', value: params.DO_ROBOT),
             booleanParam(name: 'DO_STAGE_4', value: do_stage_4),
         ]
      
