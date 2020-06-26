@@ -101,6 +101,13 @@ def run_robot_systest(stackName,tagName,testName,envfile=null,kubeconfig=null,cl
     ])
 }
 
+def archive_logs(stackName) {
+    sh """
+       docker service ls | grep ${stackname} | awk '{print $2}' | xargs -i% docker service logs "%" --timestamps > containers_logs.txt 2>&1
+       """
+    archiveArtifacts artifacts: 'containers_logs.txt'
+}
+
 node("${params.NODE}") {
 
     sh 'env'
@@ -315,7 +322,8 @@ node("${params.NODE}") {
                     } //else {
                     run_systest(container_name,container_name,"openstack_stage_4",params.HIVE_VIM_1)
                     //}
-
+                    // Archive logs to containers_logs.txt
+                    archive_logs(container_name)
                     if ( ! currentBuild.result.equals('UNSTABLE') && ! currentBuild.result.equals('FAILURE')) {
                         stage_archive = keep_artifacts
                     } else {
