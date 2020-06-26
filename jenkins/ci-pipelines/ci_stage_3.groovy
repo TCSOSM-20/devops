@@ -102,7 +102,7 @@ def run_robot_systest(stackName,tagName,testName,envfile=null,kubeconfig=null,cl
 }
 
 def archive_logs(stackName) {
-    sh "docker service ls |grep \"${stackName}\"| awk '{print \$2}' | xargs -iy docker ps -af name=y  --format \"{{.ID}} {{.Names}}\" --no-trunc | awk '{ print \"sudo cp /var/lib/docker/containers/\"\$1\"/\"\$1\"-json.log \"\$2\".log\"}' | xargs -iy bash y "
+    sh "docker service ls |grep \"${stackName}\"| awk '{print \$2}' | xargs -iy docker ps -af name=y  --format \"{{.ID}} {{.Names}}\" --no-trunc | awk '{ print \"sudo cp /var/lib/docker/containers/\"\$1\"/\"\$1\"-json.log \"\$2\".log\"}' | xargs -iy bash -c y"
     sh "sudo chown jenkins: osm*.log"
     archiveArtifacts artifacts: '*.log'
 }
