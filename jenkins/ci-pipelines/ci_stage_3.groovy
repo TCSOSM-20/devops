@@ -1,7 +1,7 @@
 /* Copyright 2017 Sandvine
  *
  * All Rights Reserved.
- * 
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License"); you may
  *   not use this file except in compliance with the License. You may obtain
  *   a copy of the License at
@@ -14,10 +14,10 @@
  *   License for the specific language governing permissions and limitations
  *   under the License.
  */
- 
+
 /* Change log:
- * 1. Bug 745 : Jayant Madavi, Mrityunjay Yadav : JM00553988@techmahindra.com : 23-july-2019 : Improvement to the code, typically we have 2 *    or more branches whose build gets triggered, ex master & release branch, the previous code was removing any/all docker. 
- *	  Now removing previous docker of the same branch, so that the other branch failed docker should not be removed. It also 
+ * 1. Bug 745 : Jayant Madavi, Mrityunjay Yadav : JM00553988@techmahindra.com : 23-july-2019 : Improvement to the code, typically we have 2 *    or more branches whose build gets triggered, ex master & release branch, the previous code was removing any/all docker.
+ *	  Now removing previous docker of the same branch, so that the other branch failed docker should not be removed. It also
  *    acts as clean-up for previous docker remove failure.
  * 2. Feature 7829 : Mrityunjay Yadav, Jayant Madavi: MY00514913@techmahindra.com : 19-Aug-2019 : Added a parameters & function to invoke Robot test.
  */
@@ -50,8 +50,10 @@ properties([
         booleanParam(defaultValue: false, description: '', name: 'SAVE_ARTIFACTS_OVERRIDE'),
         string(defaultValue: '/home/jenkins/hive/openstack-etsi.rc', description: '', name: 'HIVE_VIM_1'),
         booleanParam(defaultValue: false, description: '', name: 'DO_ROBOT'),
-        string(defaultValue: 'sanity', description: 'smoke/vim/sanity/comprehensive are the options', name: 'TEST_NAME'),
+        string(defaultValue: 'sanity', description: 'sanity/regression are the options', name: 'TEST_NAME'),
         string(defaultValue: '/home/jenkins/hive/robot-systest.cfg', description: '', name: 'ROBOT_VIM'),
+        string(defaultValue: '/home/jenkins/hive/kubeconfig.yaml', description: '', name: 'KUBECONFIG'),
+        string(defaultValue: '/home/jenkins/hive/clouds.yaml', description: '', name: 'CLOUDS'),
     ])
 ])
 
@@ -75,14 +77,14 @@ def run_systest(stackName,tagName,testName,envfile=null) {
     junit  '*.xml'
 }
 
-def run_robot_systest(stackName,tagName,testName,envfile=null) {
+def run_robot_systest(stackName,tagName,testName,envfile=null,kubeconfig=null,clouds=null) {
     tempdir = sh(returnStdout: true, script: "mktemp -d").trim()
     if ( !envfile )
     {
         sh(script: "touch ${tempdir}/env")
         envfile="${tempdir}/env"
     }
-    sh "docker run --network net${stackName} --env-file ${envfile} -v ${tempdir}:/usr/share/osm-devops/robot-systest/reports opensourcemano/osmclient:${tagName} bash -C /usr/share/osm-devops/robot-systest/run_test.sh --do_install -t ${testName}"
+    sh "docker run --network net${stackName} --env OSM_HOSTNAME=${stackName}_nbi --env PROMETHEUS_HOSTNAME=${stackName}_prometheus --env-file ${envfile} -v ${clouds}:/etc/openstack/clouds.yaml -v ${kubeconfig}:/root/.kube/config -v ${tempdir}:/robot-systest/reports opensourcemano/tests:${tagName} -c -t ${testName}"
     sh "cp ${tempdir}/* ."
     outputDirectory = sh(returnStdout: true, script: "pwd").trim()
     println ("Present Directory is : ${outputDirectory}")
@@ -97,6 +99,11 @@ def run_robot_systest(stackName,tagName,testName,envfile=null) {
         unstableThreshold: 0,
         otherFiles : "*.png",
     ])
+}
+
+def archive_logs(stackName) {
+    sh "docker service ls |grep \"${stackName}\"| awk '{print \$2}'| xargs -iy docker service logs y --timestamps > containers_logs.txt 2>&1"
+    archiveArtifacts artifacts: 'containers_logs.txt'
 }
 
 node("${params.NODE}") {
@@ -176,7 +183,7 @@ node("${params.NODE}") {
 
                     sh "rm -rf dists"
                 }
-                
+
                 // sign all the components
                 for (component in list) {
                     sh "dpkg-sig --sign builder -k ${GPG_KEY_NAME} pool/${component}/*"
@@ -223,7 +230,7 @@ node("${params.NODE}") {
         if ( params.DO_BUILD ) {
             stage("Build") {
                 sh "make -C docker clean"
-                sh "make -C docker Q= CMD_DOCKER_ARGS= TAG=${container_name} RELEASE=${params.RELEASE} REPOSITORY_BASE=${repo_base_url} REPOSITORY_KEY=${params.REPO_KEY_NAME} REPOSITORY=${params.REPO_DISTRO}"
+                sh "make -C docker -j `nproc` Q= CMD_DOCKER_ARGS= TAG=${container_name} RELEASE=${params.RELEASE} REPOSITORY_BASE=${repo_base_url} REPOSITORY_KEY=${params.REPO_KEY_NAME} REPOSITORY=${params.REPO_DISTRO}"
             }
         }
 
@@ -258,7 +265,7 @@ node("${params.NODE}") {
                     {
                         release = "-R ${params.RELEASE}"
                     }
-             
+
                     if ( params.REPOSITORY_BASE )
                     {
                         repo_base_url = "-u ${params.REPOSITORY_BASE}"
@@ -309,11 +316,12 @@ node("${params.NODE}") {
                 stage_archive = false
                 stage("System Integration Test") {
                     if ( params.DO_ROBOT ) {
-                        run_robot_systest(container_name,container_name,params.TEST_NAME,params.ROBOT_VIM)
+                        run_robot_systest(container_name,container_name,params.TEST_NAME,params.ROBOT_VIM,params.KUBECONFIG,params.CLOUDS)
                     } //else {
                     run_systest(container_name,container_name,"openstack_stage_4",params.HIVE_VIM_1)
                     //}
-
+                    // Archive logs to containers_logs.txt
+                    archive_logs(container_name)
                     if ( ! currentBuild.result.equals('UNSTABLE') && ! currentBuild.result.equals('FAILURE')) {
                         stage_archive = keep_artifacts
                     } else {
