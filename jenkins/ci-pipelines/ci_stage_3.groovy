@@ -102,7 +102,7 @@ def run_robot_systest(stackName,tagName,testName,envfile=null,kubeconfig=null,cl
 }
 
 def archive_logs(stackName) {
-    sh "docker service ls |grep \"${stackname}\"| awk '{print \$2}'| xargs -iy docker service logs y --timestamps > containers_logs.txt 2>&1"
+    sh "docker service ls |grep \"${stackName}\"| awk '{print \$2}'| xargs -iy docker service logs y --timestamps > containers_logs.txt 2>&1"
     archiveArtifacts artifacts: 'containers_logs.txt'
 }
 
