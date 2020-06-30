@@ -28,7 +28,7 @@ import time
 arg_parser=argparse.ArgumentParser(description="Tool to retrieve the latest build from the artifactory server")
 arg_parser.add_argument('--branch',default=None)
 arg_parser.add_argument('repo')
-arg_parser.add_argument('--url',default='http://osm1.etsi.org:8081/')
+arg_parser.add_argument('--url',default='https://artifactory-osm.etsi.org/)
 arg_parser.add_argument('--keep',default=5)
 arg_parser.add_argument('--password',default='')
 arg_parser.add_argument('--debug',default=None)
