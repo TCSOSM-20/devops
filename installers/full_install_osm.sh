@@ -363,7 +363,7 @@ function install_prometheus_nodeexporter(){
             sudo cp /tmp/node_exporter-$PROMETHEUS_NODE_EXPORTER_TAG.linux-amd64/node_exporter /usr/local/bin
             sudo chown node_exporter:node_exporter /usr/local/bin/node_exporter
             sudo rm -rf /tmp/node_exporter-$PROMETHEUS_NODE_EXPORTER_TAG.linux-amd64*
-            sudo cp ${OSM_DEVOPS}/installers/docker/prometheus/node_exporter.service /etc/systemd/system/node_exporter.service
+            sudo cp ${OSM_DEVOPS}/installers/docker/prometheus_exporters/node_exporter.service /etc/systemd/system/node_exporter.service
             sudo systemctl daemon-reload
             sudo systemctl restart node_exporter
             sudo systemctl enable node_exporter
