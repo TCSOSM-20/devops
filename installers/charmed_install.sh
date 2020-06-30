@@ -35,8 +35,8 @@ function check_arguments(){
     # echo $BUNDLE $KUBECONFIG $LXDENDPOINT
 }
 function install_snaps(){
-    sudo snap install juju --classic --channel=2.7/stable
     [ ! -v KUBECFG ] && sudo snap install microk8s --classic && sudo usermod -a -G microk8s `whoami` && mkdir -p ~/.kube && sudo chown -f -R `whoami` ~/.kube
+    sudo snap install juju --classic --channel=2.8/stable
 }
 
 function bootstrap_k8s_lxd(){
@@ -118,6 +118,7 @@ EOF
     juju add-credential -c $CONTROLLER_NAME lxd-cloud -f $LXD_CREDENTIALS
     sg lxd -c "lxd waitready"
     juju add-model test lxd-cloud || true
+    juju controller-config features=[k8s-operators]
 }
 
 function deploy_charmed_osm(){
@@ -191,6 +192,7 @@ applications:
       vca_cacert: $vca_cacert
       vca_apiproxy: $vca_apiproxy
       vca_cloud: $vca_cloud
+      vca_k8s_cloud: $K8S_CLOUD_NAME
   mon-k8s:
     options:
       vca_user: $vca_user

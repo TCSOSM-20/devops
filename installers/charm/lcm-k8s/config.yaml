@@ -44,6 +44,10 @@ options:
     type: string
     description: "The VCA lxd cloud name"
     default: "localhost"
+  vca_k8s_cloud:
+    type: string
+    description: "The VCA K8s cloud name"
+    default: "k8scloud"
   advertised-hostname:
     description: LCM Hostname
     type: string

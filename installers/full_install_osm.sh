@@ -412,7 +412,7 @@ function install_docker_compose() {
 
 function install_juju() {
     echo "Installing juju"
-    sudo snap install juju --classic --channel=2.7/stable
+    sudo snap install juju --classic --channel=2.8/stable
     [[ ":$PATH": != *":/snap/bin:"* ]] && PATH="/snap/bin:${PATH}"
     echo "Finished installation of juju"
     return 0
@@ -425,6 +425,11 @@ function juju_createcontroller() {
         sg lxd -c "juju bootstrap --bootstrap-series=xenial $OSM_VCA_CLOUDNAME $OSM_STACK_NAME"
     fi
     [ $(juju controllers | awk "/^${OSM_STACK_NAME}[\*| ]/{print $1}"|wc -l) -eq 1 ] || FATAL "Juju installation failed"
+
+    if [ -n "$KUBERNETES" ]; then
+        cat .kube/config | juju add-k8s $OSM_VCA_K8S_CLOUDNAME --controller $OSM_STACK_NAME
+    fi
+    juju controller-config features=[k8s-operators]
 }
 
 function juju_createproxy() {
@@ -664,6 +669,12 @@ function generate_docker_env_files() {
         $WORKDIR_SUDO sed -i "s|OSMLCM_VCA_CLOUD.*|OSMLCM_VCA_CLOUD=${OSM_VCA_CLOUDNAME}|g" $OSM_DOCKER_WORK_DIR/lcm.env
     fi
 
+    if ! grep -Fq "OSMLCM_VCA_K8S_CLOUD" $OSM_DOCKER_WORK_DIR/lcm.env; then
+        echo "OSMLCM_VCA_K8S_CLOUD=${OSM_VCA_K8S_CLOUDNAME}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lcm.env
+    else
+        $WORKDIR_SUDO sed -i "s|OSMLCM_VCA_K8S_CLOUD.*|OSMLCM_VCA_K8S_CLOUD=${OSM_VCA_K8S_CLOUDNAME}|g" $OSM_DOCKER_WORK_DIR/lcm.env
+    fi
+
     # RO
     MYSQL_ROOT_PASSWORD=$(generate_secret)
     if [ ! -f $OSM_DOCKER_WORK_DIR/ro-db.env ]; then
@@ -763,6 +774,11 @@ function kube_config_dir() {
     mkdir -p $HOME/.kube
     sudo cp /etc/kubernetes/admin.conf $HOME/.kube/config
     sudo chown $(id -u):$(id -g) $HOME/.kube/config
+}
+
+function install_k8s_storageclass() {
+    kubectl apply -f https://openebs.github.io/charts/openebs-operator-1.6.0.yaml
+    kubectl patch storageclass openebs-hostpath -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
 }
 
 #deploys flannel as daemonsets
@@ -1121,6 +1137,7 @@ EOF
         track install_k8s
         init_kubeadm $OSM_DOCKER_WORK_DIR/cluster-config.yaml
         kube_config_dir
+	install_k8s_storage_class
         track init_k8s
     else
         #install_docker_compose
@@ -1347,6 +1364,7 @@ OSM_VCA_HOST=
 OSM_VCA_SECRET=
 OSM_VCA_PUBKEY=
 OSM_VCA_CLOUDNAME="localhost"
+OSM_VCA_K8S_CLOUDNAME="k8scloud"
 OSM_STACK_NAME=osm
 NO_HOST_PORTS=""
 DOCKER_NOBUILD=""
