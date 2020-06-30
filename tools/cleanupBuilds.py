@@ -25,12 +25,12 @@ from dateutil.tz import tzutc
 from datetime import datetime
 import time
 
-arg_parser=argparse.ArgumentParser(description="Tool to retrieve the latest build from the artifactory server")
+arg_parser = argparse.ArgumentParser(description="Tool to retrieve the latest build from the artifactory server")
 arg_parser.add_argument('branch')
-arg_parser.add_argument('--project',default='osm-stage_3')
-arg_parser.add_argument('--url',default='http://osm1.etsi.org:8081/')
-arg_parser.add_argument('--keep',default=5)
-arg_parser.add_argument('--password',default='')
+arg_parser.add_argument('--project', default='osm-stage_3')
+arg_parser.add_argument('--url', default='https://artifactory-osm.etsi.org/')
+arg_parser.add_argument('--keep', default=5)
+arg_parser.add_argument('--password', default='')
 args = arg_parser.parse_args()
 
 url = args.url + 'artifactory/api/build/' + args.project + " :: " + args.branch
@@ -42,7 +42,7 @@ if 'buildsNumbers' not in jsonData:
     exit(1)
 
 # first entry is the latest build
-buildlist = sorted(jsonData['buildsNumbers'], key=lambda x: int(x['uri'][1:]),reverse=True)
+buildlist = sorted(jsonData['buildsNumbers'], key=lambda x: int(x['uri'][1:]), reverse=True)
 print("total builds is {}".format(len(buildlist)))
 pprint.pprint(buildlist)
 
@@ -50,15 +50,17 @@ if len(buildlist) < args.keep:
     print("nothing to cleanup")
     exit(0)
 
-def convert_to_ms(datetime):
-    #get the millisecond from the date/time
-    ms=datetime.split('.')[1].split('+')[0]
-    parser_out=parser.parse(datetime)
-    timeval=parser_out
-    tuple=int(time.mktime(timeval.timetuple()))
-    return (tuple*1000+int(ms)-(time.timezone*1000))
 
-def buildPost(dateInMS,buildNumber):
+def convert_to_ms(datetime):
+    # get the millisecond from the date/time
+    ms = datetime.split('.')[1].split('+')[0]
+    parser_out = parser.parse(datetime)
+    timeval = parser_out
+    tuple = int(time.mktime(timeval.timetuple()))
+    return (tuple * 1000 + int(ms) - (time.timezone * 1000))
+
+
+def buildPost(dateInMS, buildNumber):
     build = {}
     data = {}
     build['buildName'] = args.project + " :: " + args.branch
@@ -68,14 +70,15 @@ def buildPost(dateInMS,buildNumber):
     data['buildsCoordinates'] = list()
     data['buildsCoordinates'].append(build)
     return data
-    
+
+
 delete_url = args.url + 'artifactory/ui/builds/buildsDelete'
 headers = {'Content-Type': 'application/json'}
 
 for entry in buildlist[int(args.keep):]:
-   ms = convert_to_ms(entry['started'])
-   buildNumber = entry['uri'].split('/')[1]
-   print("deleting build {} ms {}".format(args.project + " :: " + args.branch + '/' + buildNumber,ms))
-   postData = buildPost(ms,entry['uri'].split('/')[1])
+    ms = convert_to_ms(entry['started'])
+    buildNumber = entry['uri'].split('/')[1]
+    print("deleting build {} ms {}".format(args.project + " :: " + args.branch + '/' + buildNumber, ms))
+    postData = buildPost(ms, entry['uri'].split('/')[1])
 
-   requests.post(delete_url,data=json.dumps(postData),headers=headers,auth=('admin',args.password))
+    requests.post(delete_url, data=json.dumps(postData), headers=headers, auth=('admin', args.password))

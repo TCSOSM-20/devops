@@ -20,10 +20,10 @@ import json
 import pprint
 import argparse
 
-parser=argparse.ArgumentParser(description="Tool to retrieve the latest build from the artifactory server")
+parser = argparse.ArgumentParser(description="Tool to retrieve the latest build from the artifactory server")
 parser.add_argument('branch')
-parser.add_argument('--project',default='osm-stage_3')
-parser.add_argument('--url',default='http://osm1.etsi.org:8081/artifactory/api/build/')
+parser.add_argument('--project', default='osm-stage_3')
+parser.add_argument('--url', default='https://artifactory-osm.etsi.org/artifactory/api/build/')
 args = parser.parse_args()
 
 url = args.url + args.project + " :: " + args.branch
@@ -36,6 +36,6 @@ if 'buildsNumbers' not in jsonData:
     exit(1)
 
 # first entry is the latest build
-build = sorted(jsonData['buildsNumbers'], key=lambda x: int(x['uri'][1:]),reverse=True)[0]
+build = sorted(jsonData['buildsNumbers'], key=lambda x: int(x['uri'][1:]), reverse=True)[0]
 
-print "{} :: {}{}".format(args.project,args.branch,build['uri'])
+print "{} :: {}{}".format(args.project, args.branch, build['uri'])
