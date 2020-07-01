@@ -81,6 +81,14 @@ spec:
       labels:
         app: prometheus
     spec:
+      initContainers:
+      - name: prometheus-init-config
+        image: busybox
+        command: ["/bin/sh", "-c"]
+        args: ["printf \"global:\\n  scrape_interval:     15s\\n  evaluation_interval: 15s\\nscrape_configs:\\n  - job_name: 'prometheus'\\n    static_configs:\\n    - targets: ['mon:8000']\" > /etc/prometheus/prometheus.yml"]
+        volumeMounts:
+          - name: prom-config
+            mountPath: /etc/prometheus
       containers:
       - name: prometheus
         image: prom/prometheus:v2.4.3
@@ -92,13 +100,12 @@ spec:
           protocol: TCP
         volumeMounts:
         - name: prom-config
-          mountPath: /etc/prometheus/
+          mountPath: /etc/prometheus
         - name: prom-db
           mountPath: /prometheus
       volumes:
-      - configMap:
-          defaultMode: 420
-          name: prom
-        name: prom-config
       - emptyDir: {}
         name: prom-db
+      - name: prom-config
+        hostPath:
+          path: /var/lib/osm/prometheus
