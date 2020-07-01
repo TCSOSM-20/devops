@@ -50,7 +50,12 @@ spec:
         volumeMounts:
         - name: osm-packages
           mountPath: /app/storage
+        - name: prometheus-config
+          mountPath: /etc/prometheus
       volumes:
       - name: osm-packages
         hostPath:
          path: /var/lib/osm/osm_osm_packages/_data
+      - name: prometheus-config
+        hostPath:
+          path: /var/lib/osm/prometheus
