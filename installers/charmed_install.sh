@@ -16,6 +16,7 @@
 # set -eux
 
 K8S_CLOUD_NAME="k8s-cloud"
+KUBECTL="microk8s.kubectl"
 IMAGES_OVERLAY_FILE=~/.osm/images-overlay.yaml
 function check_arguments(){
     while [ $# -gt 0 ] ; do
@@ -45,8 +46,9 @@ function bootstrap_k8s_lxd(){
 
     if [ -v KUBECFG ]; then
         cat $KUBECFG | juju add-k8s $K8S_CLOUD_NAME $ADD_K8S_OPTS
-        [ -v BOOTSTRAP_NEEDED ] && juju bootstrap $K8S_CLOUD_NAME $CONTROLLER_NAME
+        [ -v BOOTSTRAP_NEEDED ] && juju bootstrap $K8S_CLOUD_NAME $CONTROLLER_NAME --config controller-service-type=loadbalancer
     else
+        sg microk8s -c "echo ${DEFAULT_IP}-${DEFAULT_IP} | microk8s.enable metallb"
         sg microk8s -c "microk8s.enable storage dns"
         while true
         do
@@ -58,7 +60,7 @@ function bootstrap_k8s_lxd(){
         done
 
         [ ! -v BOOTSTRAP_NEEDED ] && sg microk8s -c "microk8s.config" | juju add-k8s $K8S_CLOUD_NAME $ADD_K8S_OPTS
-        [ -v BOOTSTRAP_NEEDED ] && sg microk8s -c "juju bootstrap microk8s $CONTROLLER_NAME" && K8S_CLOUD_NAME=microk8s
+        [ -v BOOTSTRAP_NEEDED ] && sg microk8s -c "juju bootstrap microk8s $CONTROLLER_NAME --config controller-service-type=loadbalancer" && K8S_CLOUD_NAME=microk8s
     fi
 
     if [ -v LXD_CLOUD ]; then
@@ -167,12 +169,12 @@ function create_overlay() {
     local HOME=/home/$USER
     local vca_user=$(cat $HOME/.local/share/juju/accounts.yaml | yq --arg CONTROLLER_NAME $CONTROLLER_NAME '.controllers[$CONTROLLER_NAME].user')
     local vca_password=$(cat $HOME/.local/share/juju/accounts.yaml | yq --arg CONTROLLER_NAME $CONTROLLER_NAME '.controllers[$CONTROLLER_NAME].password')
-    local vca_host=$(cat $HOME/.local/share/juju/controllers.yaml | yq --arg CONTROLLER_NAME $CONTROLLER_NAME '.controllers[$CONTROLLER_NAME]["api-endpoints"][0]' | cut -d ":" -f 1 | cut -d "\"" -f 2)
-    local vca_port=$(cat $HOME/.local/share/juju/controllers.yaml | yq --arg CONTROLLER_NAME $CONTROLLER_NAME '.controllers[$CONTROLLER_NAME]["api-endpoints"][0]' | cut -d ":" -f 2 | cut -d "\"" -f 1)
+    local vca_host=$(cat $HOME/.local/share/juju/controllers.yaml | yq --arg CONTROLLER_NAME $CONTROLLER_NAME '.controllers[$CONTROLLER_NAME]["api-endpoints"][0]' --raw-output | cut -d ":" -f 1)
+    local vca_port=$(cat $HOME/.local/share/juju/controllers.yaml | yq --arg CONTROLLER_NAME $CONTROLLER_NAME '.controllers[$CONTROLLER_NAME]["api-endpoints"][0]' --raw-output | cut -d ":" -f 2)
     local vca_pubkey=\"$(cat $HOME/.local/share/juju/ssh/juju_id_rsa.pub)\"
     local vca_cloud="lxd-cloud"
     # Get the VCA Certificate
-    local vca_cacert=$(cat $HOME/.local/share/juju/controllers.yaml | yq --arg CONTROLLER_NAME $CONTROLLER_NAME '.controllers[$CONTROLLER_NAME]["ca-cert"]' | base64 | tr -d \\n)
+    local vca_cacert=$(cat $HOME/.local/share/juju/controllers.yaml | yq --arg CONTROLLER_NAME $CONTROLLER_NAME '.controllers[$CONTROLLER_NAME]["ca-cert"]' --raw-output | base64 | tr -d \\n)
 
     # Calculate the default route of this machine
     local DEFAULT_IF=`ip route list match 0.0.0.0 | awk '{print $5}'`
@@ -233,24 +235,6 @@ function install_osmclient() {
     sudo snap alias osmclient.osm osm
 }
 
-function create_iptables() {
-    check_install_iptables_persistent
-
-    if ! sudo iptables -t nat -C PREROUTING -p tcp -m tcp -d $DEFAULT_IP --dport 17070 -j DNAT --to-destination $OSM_VCA_HOST; then
-        sudo iptables -t nat -A PREROUTING -p tcp -m tcp -d $DEFAULT_IP --dport 17070 -j DNAT --to-destination $OSM_VCA_HOST
-        sudo netfilter-persistent save
-    fi
-}
-
-function check_install_iptables_persistent(){
-    echo -e "\nChecking required packages: iptables-persistent"
-    if ! dpkg -l iptables-persistent &>/dev/null; then
-        echo -e "    Not installed.\nInstalling iptables-persistent requires root privileges"
-        echo iptables-persistent iptables-persistent/autosave_v4 boolean true | sudo debconf-set-selections
-        echo iptables-persistent iptables-persistent/autosave_v6 boolean true | sudo debconf-set-selections
-        sudo apt-get -yq install iptables-persistent
-    fi
-}
 
 function install_microstack() {
     sudo snap install microstack --classic --beta
@@ -287,9 +271,9 @@ DEFAULT_IP=`ip -o -4 a |grep ${DEFAULT_IF}|awk '{split($4,a,"/"); print a[1]}'`
 check_arguments $@
 mkdir -p ~/.osm
 install_snaps
+sleep 5
 bootstrap_k8s_lxd
 deploy_charmed_osm
-[ ! -v CONTROLLER ] && create_iptables
 install_osmclient
 if [ -v MICROSTACK ]; then
     install_microstack
