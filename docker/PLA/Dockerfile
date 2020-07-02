@@ -37,6 +37,17 @@ RUN apt-get --yes update  && apt-get -y install python3-osm-common${COMMON_VERSI
 
 COPY scripts/ scripts/
 
+ADD https://github.com/MiniZinc/MiniZincIDE/releases/download/2.4.2/MiniZincIDE-2.4.2-bundle-linux-x86_64.tgz /minizinc.tgz
+
+RUN tar -zxf /minizinc.tgz && \
+    mv /MiniZincIDE-2.4.2-bundle-linux /minizinc
+
+RUN mkdir /entry_data \
+    && mkdir /entry_data/mzn-lib \
+    && ln -s /entry_data/mzn-lib /minizinc/share/minizinc/exec
+
+RUN mkdir /placement
+
 ENV OSMPLA_MESSAGE_DRIVER kafka
 ENV OSMPLA_MESSAGE_HOST kafka
 ENV OSMPLA_MESSAGE_PORT 9092
