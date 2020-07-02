@@ -11,9 +11,22 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-[submodule "installers/charm/pla/mod/operator"]
-	path = installers/charm/pla/mod/operator
-	url = https://github.com/canonical/operator
-[submodule "installers/charm/ng-ui/mod/operator"]
-	path = installers/charm/ng-ui/mod/operator
-	url = https://github.com/canonical/operator
+
+
+server {
+    listen       $port;
+    server_name  $server_name;
+    root   /usr/share/nginx/html;
+    index  index.html index.htm;
+    client_max_body_size $client_max_body_size;
+
+    location /osm {
+        proxy_pass http://$nbi_hostname:$nbi_port;
+        proxy_next_upstream error timeout invalid_header http_500 http_502 http_503 http_504;
+        proxy_set_header Accept-Encoding "";
+    }
+
+    location / {
+        try_files $$uri $$uri/ /index.html;
+    }
+}

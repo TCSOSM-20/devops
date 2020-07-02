@@ -43,7 +43,8 @@ The "layers" folder include one common layer for all the osm charms (osm-common)
 ├── nbi-k8s
 ├── pol-k8s
 ├── ro-k8s
-└── ui-k8s
+├── ui-k8s
+└── ng-ui --> new operator framework
 
 ```
 

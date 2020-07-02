@@ -11,9 +11,16 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-[submodule "installers/charm/pla/mod/operator"]
-	path = installers/charm/pla/mod/operator
-	url = https://github.com/canonical/operator
-[submodule "installers/charm/ng-ui/mod/operator"]
-	path = installers/charm/ng-ui/mod/operator
-	url = https://github.com/canonical/operator
+name: ng-ui
+summary: A Next Generation UI charm for Opensource MANO
+description: |
+  New UI for OSM
+series:
+  - kubernetes
+min-juju-version: 2.7.0
+deployment:
+  type: stateless
+  service: cluster
+provides:
+  nbi:
+    interface: osm-nbi
