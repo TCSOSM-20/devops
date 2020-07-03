@@ -61,4 +61,4 @@ options:
   image:
     type: string
     description: OCI image
-    default: opensourcemano/lcm:7
+    default: opensourcemano/lcm:8

@@ -31,4 +31,4 @@ options:
   image:
     type: string
     description: OCI image
-    default: opensourcemano/ro:7
+    default: opensourcemano/ro:8

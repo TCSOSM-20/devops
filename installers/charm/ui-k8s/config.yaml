@@ -27,4 +27,4 @@ options:
   image:
     type: string
     description: OCI image
-    default: opensourcemano/light-ui:7
+    default: opensourcemano/light-ui:8

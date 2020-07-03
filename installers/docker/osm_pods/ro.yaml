@@ -50,7 +50,7 @@ spec:
         command: ["sh", "-c", "until nc -zvw1 mysql 3306; do  sleep 3 ; done; exit 0"]
       containers:
       - name: ro
-        image: opensourcemano/ro:7
+        image: opensourcemano/ro:8
         ports:
         - containerPort: 9090
           protocol: TCP

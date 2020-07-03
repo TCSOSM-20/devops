@@ -46,7 +46,7 @@ spec:
     spec:
       containers:
       - name: keystone
-        image: opensourcemano/keystone:7
+        image: opensourcemano/keystone:8
         ports:
         - containerPort: 5000
           protocol: TCP

@@ -44,7 +44,7 @@ It is important to note that Grafana is not installed with this chart because we
 
 ## Install procedure
 
-There are two ways to install the monitoring component based on the OSM global installer (<https://osm-download.etsi.org/ftp/osm-7.0-seven/install_osm.sh>)
+There are two ways to install the monitoring component based on the OSM global installer (<https://osm-download.etsi.org/ftp/osm-8.0-eight/install_osm.sh>)
 
 * Using the --k8s_monitor switch in the OSM installation:
 

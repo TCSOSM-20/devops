@@ -46,7 +46,7 @@ spec:
     spec:
       containers:
       - name: ng-ui
-        image: opensourcemano/ng-ui:7
+        image: opensourcemano/ng-ui:8
         ports:
         - containerPort: 80
           protocol: TCP
