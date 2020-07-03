@@ -993,6 +993,23 @@ function deploy_elk() {
     return 0
 }
 
+function add_local_k8scluster() {
+    /usr/bin/osm --all-projects vim-create \
+      --name _system-osm-vim \
+      --account_type dummy \
+      --auth_url http://dummy \
+      --user osm --password osm --tenant osm \
+      --description "dummy" \
+      --config '{management_network_name: mgmt}'
+    /usr/bin/osm --all-projects k8scluster-add \
+      --creds ${HOME}/.kube/config \
+      --vim _system-osm-vim \
+      --k8s-nets '{"net1": null}' \
+      --version '1.15' \
+      --description "OSM Internal Cluster" \
+      _system-osm-k8s
+}
+
 function install_lightweight() {
     [ "${OSM_STACK_NAME}" == "osm" ] || OSM_DOCKER_WORK_DIR="$OSM_WORK_DIR/stack/$OSM_STACK_NAME"
     [ -n "$KUBERNETES" ] && OSM_K8S_WORK_DIR="$OSM_DOCKER_WORK_DIR/osm_pods" && OSM_NAMESPACE_VOL="${OSM_HOST_VOL}/${OSM_STACK_NAME}"
@@ -1202,6 +1219,9 @@ EOF
         track osm_unhealthy
     fi
     track after_healthcheck
+
+    [ -n "$KUBERNETES" ] && add_local_k8scluster
+    track add_local_k8scluster
 
     wget -q -O- https://osm-download.etsi.org/ftp/osm-8.0-eight/README2.txt &> /dev/null
     track end
