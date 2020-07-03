@@ -67,4 +67,4 @@ options:
   image:
     type: string
     description: OCI image
-    default: opensourcemano/mon:7
+    default: opensourcemano/mon:8

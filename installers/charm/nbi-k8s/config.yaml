@@ -31,7 +31,7 @@ options:
   image:
     type: string
     description: OCI image
-    default: opensourcemano/nbi:7
+    default: opensourcemano/nbi:8
   auth-backend:
     type: string
     description: Authentication backend ('internal' or 'keystone')

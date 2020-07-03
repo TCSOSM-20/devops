@@ -1189,7 +1189,7 @@ EOF
     [ -z "$INSTALL_NOHOSTCLIENT" ] && install_osmclient
     track osmclient
 
-    wget -q -O- https://osm-download.etsi.org/ftp/osm-7.0-seven/README2.txt &> /dev/null
+    wget -q -O- https://osm-download.etsi.org/ftp/osm-8.0-eight/README2.txt &> /dev/null
     track end
     return 0
 }
@@ -1337,7 +1337,7 @@ SHOWOPTS=""
 COMMIT_ID=""
 ASSUME_YES=""
 INSTALL_FROM_SOURCE=""
-RELEASE="ReleaseSEVEN"
+RELEASE="ReleaseEIGHT"
 REPOSITORY="stable"
 INSTALL_VIMEMU=""
 INSTALL_PLA=""
@@ -1639,7 +1639,7 @@ fi
 [ -n "$INSTALL_ONLY" ] && echo -e "\nDONE" && exit 0
 
 #Installation starts here
-wget -q -O- https://osm-download.etsi.org/ftp/osm-7.0-seven/README.txt &> /dev/null
+wget -q -O- https://osm-download.etsi.org/ftp/osm-8.0-eight/README.txt &> /dev/null
 track start
 
 [ -n "$INSTALL_LIGHTWEIGHT" ] && install_lightweight && echo -e "\nDONE" && exit 0
@@ -1660,7 +1660,7 @@ export OSM_USE_LOCAL_DEVOPS=true
 #Install vim-emu (optional)
 [ -n "$INSTALL_VIMEMU" ] && install_docker_ce && install_vimemu
 
-wget -q -O- https://osm-download.etsi.org/ftp/osm-7.0-seven/README2.txt &> /dev/null
+wget -q -O- https://osm-download.etsi.org/ftp/osm-8.0-eight/README2.txt &> /dev/null
 track end
 echo -e "\nDONE"
 

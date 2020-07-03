@@ -46,7 +46,7 @@ spec:
     spec:
       containers:
       - name: light-ui
-        image: opensourcemano/light-ui:7
+        image: opensourcemano/light-ui:8
         envFrom:
         - secretRef:
             name: lwui-secret

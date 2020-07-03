@@ -23,4 +23,4 @@ options:
   image:
     type: string
     description: OCI image
-    default: opensourcemano/pol:7
+    default: opensourcemano/pol:8
