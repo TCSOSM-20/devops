@@ -848,7 +848,7 @@ function parse_yaml() {
 function namespace_vol() {
     osm_services="nbi lcm ro pol mon kafka mongo mysql"
     for osm in $osm_services; do
-          $WORKDIR_SUDO  sed -i "s#path: /var/lib/osm#path: $OSM_NAMESPACE_VOL#g" $OSM_K8S_WORK_DIR/$osm.yaml
+        $WORKDIR_SUDO  sed -i "s#path: /var/lib/osm#path: $OSM_NAMESPACE_VOL#g" $OSM_K8S_WORK_DIR/$osm.yaml
     done
 }
 
@@ -1171,6 +1171,20 @@ EOF
 
     [ -z "$INSTALL_NOHOSTCLIENT" ] && install_osmclient
     track osmclient
+    
+    echo -e "Checking OSM health state..."
+    if [ -n "$KUBERNETES" ]; then
+        $OSM_DEVOPS/installers/osm_health.sh -s ${OSM_STACK_NAME} -k || \
+        echo -e "OSM is not healthy, but will probably converge to a healthy state soon." && \
+        echo -e "Check OSM status with: kubectl -n ${OSM_STACK_NAME} get all" && \
+        track osm_unhealthy
+    else
+        $OSM_DEVOPS/installers/osm_health.sh -s ${OSM_STACK_NAME} || \
+        echo -e "OSM is not healthy, but will probably converge to a healthy state soon." && \
+        echo -e "Check OSM status with: docker service ls; docker stack ps ${OSM_STACK_NAME}" && \
+        track osm_unhealthy
+    fi
+    track after_healthcheck
 
     wget -q -O- https://osm-download.etsi.org/ftp/osm-8.0-eight/README2.txt &> /dev/null
     track end
