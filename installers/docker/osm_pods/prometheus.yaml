@@ -85,10 +85,12 @@ spec:
       - name: prometheus-init-config
         image: busybox
         command: ["/bin/sh", "-c"]
-        args: ["printf \"global:\\n  scrape_interval:     15s\\n  evaluation_interval: 15s\\nscrape_configs:\\n  - job_name: 'prometheus'\\n    static_configs:\\n    - targets: ['mon:8000']\" > /etc/prometheus/prometheus.yml"]
+        args: ['if [ ! -f "/etc/prometheus/prometheus.yml" ]; then cp /etc/prometheus_init/prometheus.yml /etc/prometheus; fi']
         volumeMounts:
           - name: prom-config
             mountPath: /etc/prometheus
+          - name: init-prom-config
+            mountPath: /etc/prometheus_init
       containers:
       - name: prometheus
         image: prom/prometheus:v2.4.3
@@ -109,3 +111,6 @@ spec:
       - name: prom-config
         hostPath:
           path: /var/lib/osm/prometheus
+      - name: init-prom-config
+        configMap:
+          name: prom
