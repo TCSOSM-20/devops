@@ -19,9 +19,12 @@ server {
     root   /usr/share/nginx/html;
     index  index.html index.htm;
     client_max_body_size $client_max_body_size;
-
+    $ssl_crt
+    $ssl_crt_key
+    ssl_protocols       TLSv1 TLSv1.1 TLSv1.2;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
     location /osm {
-        proxy_pass http://$nbi_hostname:$nbi_port;
+        proxy_pass https://$nbi_host:$nbi_port;
         proxy_next_upstream error timeout invalid_header http_500 http_502 http_503 http_504;
         proxy_set_header Accept-Encoding "";
     }

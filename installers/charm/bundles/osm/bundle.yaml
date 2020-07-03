@@ -29,25 +29,25 @@ applications:
     annotations:
       gui-x: 0
       gui-y: 1100
-  mariadb-k8s:
-    charm: 'cs:~charmed-osm/mariadb-k8s'
-    channel: 'stable'
-    scale: 1
-    series: kubernetes
-    storage:
-      database: 50M
-    options:
-      password: manopw
-      root_password: osm4u
-      user: mano
-      database: database
-      mysql_port: "3306"
-      query-cache-type: "OFF"
-      query-cache-size: 0
-      ha-mode: false
-    annotations:
-      gui-x: -500
-      gui-y: -400
+  # mariadb-k8s:
+  #   charm: 'cs:~charmed-osm/mariadb-k8s'
+  #   channel: 'stable'
+  #   scale: 1
+  #   series: kubernetes
+  #   storage:
+  #     database: 50M
+  #   options:
+  #     password: manopw
+  #     root_password: osm4u
+  #     user: mano
+  #     database: database
+  #     mysql_port: "3306"
+  #     query-cache-type: "OFF"
+  #     query-cache-size: 0
+  #     ha-mode: false
+  #   annotations:
+  #     gui-x: -500
+  #     gui-y: -400
   kafka-k8s:
     charm: 'cs:~charmed-osm/kafka-k8s'
     channel: 'stable'
@@ -118,6 +118,15 @@ applications:
     annotations:
       gui-x: 500
       gui-y: -400
+  ng-ui:
+    charm: '%(prefix)s/ng-ui%(suffix)s'
+    channel: '%(channel)s'
+    scale: 1
+    series: kubernetes
+    options:
+      port: 80
+      server_name: localhost
+      client_max_body_size: 15M
   lcm-k8s:
     charm: '%(prefix)s/lcm-k8s%(suffix)s'
     channel: '%(channel)s'

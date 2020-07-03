@@ -32,11 +32,3 @@ options:
     description: Client maximum body size
     type: string
     default: 15M
-  nbi_hostname:
-    description: NBI hostname
-    type: string
-    default: nbi-k8s
-  nbi_port:
-    description: NBI Port
-    type: int
-    default: 9999

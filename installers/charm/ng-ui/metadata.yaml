@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+
 name: ng-ui
 summary: A Next Generation UI charm for Opensource MANO
 description: |
@@ -21,6 +22,13 @@ min-juju-version: 2.7.0
 deployment:
   type: stateless
   service: cluster
-provides:
+requires:
   nbi:
     interface: osm-nbi
+resources:
+  ssl_certificate:
+    type: file
+    filename: ssl_certificate.crt
+  ssl_certificate_key:
+    type: file
+    filename: ssl_certificate.key
