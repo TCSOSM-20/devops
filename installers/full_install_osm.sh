@@ -278,7 +278,7 @@ function FATAL(){
 
 function install_lxd() {
     # Apply sysctl production values for optimal performance
-    sudo cp /usr/share/osm-devops/installers/60-lxd-production.conf /etc/sysctl.d/60-lxd-production.conf
+    sudo cp ${OSM_DEVOPS}/installers/60-lxd-production.conf /etc/sysctl.d/60-lxd-production.conf
     sudo sysctl --system
 
     # Install LXD snap
@@ -288,7 +288,7 @@ function install_lxd() {
 
     # Configure LXD
     sudo usermod -a -G lxd `whoami`
-    cat /usr/share/osm-devops/installers/lxd-preseed.conf | sed 's/^config: {}/config:\n  core.https_address: '$DEFAULT_IP':8443/' | sg lxd -c "lxd init --preseed"
+    cat ${OSM_DEVOPS}/installers/lxd-preseed.conf | sed 's/^config: {}/config:\n  core.https_address: '$DEFAULT_IP':8443/' | sg lxd -c "lxd init --preseed"
     sg lxd -c "lxd waitready"
     DEFAULT_INTERFACE=$(ip route list|awk '$1=="default" {print $5; exit}')
     [ -z "$DEFAULT_INTERFACE" ] && DEFAULT_INTERFACE=$(route -n |awk '$1~/^0.0.0.0/ {print $8; exit}')
@@ -1580,9 +1580,9 @@ fi
 
 if [ -n "$CHARMED" ]; then
      if [ -n "$UNINSTALL" ]; then
-        /usr/share/osm-devops/installers/charmed_uninstall.sh -R $RELEASE -r $REPOSITORY -u $REPOSITORY_BASE -D /usr/share/osm-devops -t $DOCKER_TAG "$@"
+        ${OSM_DEVOPS}/installers/charmed_uninstall.sh -R $RELEASE -r $REPOSITORY -u $REPOSITORY_BASE -D /usr/share/osm-devops -t $DOCKER_TAG "$@"
      else
-        /usr/share/osm-devops/installers/charmed_install.sh -R $RELEASE -r $REPOSITORY -u $REPOSITORY_BASE -D /usr/share/osm-devops -t $DOCKER_TAG "$@"
+        ${OSM_DEVOPS}/installers/charmed_install.sh -R $RELEASE -r $REPOSITORY -u $REPOSITORY_BASE -D /usr/share/osm-devops -t $DOCKER_TAG "$@"
 
         echo "Your installation is now complete, follow these steps for configuring the osmclient:"
         echo
