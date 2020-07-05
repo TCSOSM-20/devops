@@ -79,6 +79,8 @@ RUN add-apt-repository -y "deb ${REPOSITORY_BASE}/${RELEASE} ${REPOSITORY} LCM N
 
 RUN python3 -m pip install -U "cffi==1.13.2"
 
+RUN python3 -m pip install grpcio-tools grpclib
+
 ARG LCM_VERSION
 ARG COMMON_VERSION
 ARG N2VC_VERSION
@@ -87,8 +89,6 @@ RUN apt-get update && apt-get install -y python3-osm-lcm${LCM_VERSION} \
                                          python3-osm-common${COMMON_VERSION} \
                                          python3-n2vc${N2VC_VERSION} \
                                          && rm -rf /var/lib/apt/lists/*
-
-EXPOSE 9999
 
 LABEL Maintainer="alfonso.tiernosepulveda@telefonica.com" \
       Description="This implements life cycle management engine for OSM" \
