@@ -29,7 +29,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -y install wget pyt
 RUN python3 -m pip install -U pip && python3 -m pip install pyyaml python-magic pyangbind pytest==4.6.3 verboselogs
 
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
-ARG RELEASE=ReleaseSEVEN-daily
+ARG RELEASE=ReleaseEIGHT-daily
 ARG REPOSITORY_KEY=OSM%20ETSI%20Release%20Key.gpg
 ARG REPOSITORY=testing
 

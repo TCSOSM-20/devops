@@ -29,7 +29,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y git pyth
     && mkdir -p /app/storage/kafka && mkdir -p /app/log
 
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
-ARG RELEASE=ReleaseFOUR-daily
+ARG RELEASE=ReleaseEIGHT-daily
 ARG REPOSITORY_KEY=OSM%20ETSI%20Release%20Key.gpg
 ARG REPOSITORY=testing
 

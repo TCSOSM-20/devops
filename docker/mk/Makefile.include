@@ -22,7 +22,7 @@ all: build
 TAG ?= 6
 
 REPOSITORY_BASE ?= http://osm-download.etsi.org/repository/osm/debian
-RELEASE         ?= ReleaseFOUR-daily
+RELEASE         ?= ReleaseEIGHT-daily
 REPOSITORY_KEY  ?= OSM%20ETSI%20Release%20Key.gpg
 REPOSITORY      ?= testing
 NO_CACHE        ?= --no-cache

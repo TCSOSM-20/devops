@@ -20,7 +20,7 @@ RUN ln -s /usr/bin/nodejs /usr/bin/node
 RUN echo "daemon off;" >> /etc/nginx/nginx.conf
 
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
-ARG RELEASE=ReleaseFOUR-daily
+ARG RELEASE=ReleaseEIGHT-daily
 ARG REPOSITORY_KEY=OSM%20ETSI%20Release%20Key.gpg
 ARG REPOSITORY=testing
 ARG LWUI_VERSION

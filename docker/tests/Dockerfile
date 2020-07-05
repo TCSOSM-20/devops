@@ -24,7 +24,7 @@ RUN python3 -m pip install haikunator requests robotframework robotframework-sel
     git+https://osm.etsi.org/gerrit/osm/IM.git git+https://osm.etsi.org/gerrit/osm/osmclient.git
 
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
-ARG RELEASE=ReleaseSEVEN-daily
+ARG RELEASE=ReleaseEIGHT-daily
 ARG REPOSITORY_KEY=OSM%20ETSI%20Release%20Key.gpg
 ARG REPOSITORY=testing
 ARG TESTS_VERSION

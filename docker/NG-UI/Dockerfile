@@ -24,7 +24,7 @@ RUN apt-get update && apt-get install -y curl xz-utils gnupg2 \
     && apt-get install -y nginx
 
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
-ARG RELEASE=ReleaseSEVEN-daily
+ARG RELEASE=ReleaseEIGHT-daily
 ARG REPOSITORY_KEY=OSM%20ETSI%20Release%20Key.gpg
 ARG REPOSITORY=testing
 ARG NGUI_VERSION

@@ -70,7 +70,7 @@ RUN curl -L https://launchpad.net/juju/2.7/2.7.6/+download/juju-2.7.6-k8s.tar.xz
     && mv juju /usr/local/bin/juju
 
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
-ARG RELEASE=ReleaseSEVEN-daily
+ARG RELEASE=ReleaseEIGHT-daily
 ARG REPOSITORY_KEY=OSM%20ETSI%20Release%20Key.gpg
 ARG REPOSITORY=testing
 
