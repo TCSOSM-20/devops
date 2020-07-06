@@ -425,11 +425,11 @@ function juju_createcontroller() {
         sg lxd -c "juju bootstrap --bootstrap-series=xenial $OSM_VCA_CLOUDNAME $OSM_STACK_NAME"
     fi
     [ $(juju controllers | awk "/^${OSM_STACK_NAME}[\*| ]/{print $1}"|wc -l) -eq 1 ] || FATAL "Juju installation failed"
-
-    if [ -n "$KUBERNETES" ]; then
-        cat .kube/config | juju add-k8s $OSM_VCA_K8S_CLOUDNAME --controller $OSM_STACK_NAME
-    fi
     juju controller-config features=[k8s-operators]
+}
+
+function juju_addk8s() {
+    cat .kube/config | juju add-k8s $OSM_VCA_K8S_CLOUDNAME --controller $OSM_STACK_NAME
 }
 
 function juju_createproxy() {
@@ -1160,6 +1160,11 @@ EOF
         #install_docker_compose
         [ -n "$INSTALL_NODOCKER" ] || init_docker_swarm
         track docker_swarm
+    fi
+
+    if [ -n "$KUBERNETES" ]; then
+        juju_addk8s
+        track juju_addk8s
     fi
 
     [ -z "$DOCKER_NOBUILD" ] && generate_docker_images
