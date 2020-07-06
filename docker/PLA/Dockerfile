@@ -20,7 +20,8 @@ LABEL authors="Lars-Göran Magnusson"
 RUN apt-get --yes update \
  && apt-get --yes install git python python-pip python3 python3-pip libmysqlclient-dev libssl-dev libffi-dev \
  && apt-get --yes install mysql-client curl software-properties-common libgl1-mesa-glx \
- && pip3 install pip==9.0.3
+ && python3 -m pip install -U pip \
+ && python3 -m pip install pymzn==0.18.3
 
 ARG REPOSITORY_BASE=http://osm-download.etsi.org/repository/osm/debian
 ARG RELEASE=ReleaseEIGHT-daily
