@@ -1165,6 +1165,10 @@ EOF
     if [ -n "$KUBERNETES" ]; then
         juju_addk8s
         track juju_addk8s
+        install_helm
+        track install_helm
+        install_k8s_storageclass
+        track install_k8s_storageclass
     fi
 
     [ -z "$DOCKER_NOBUILD" ] && generate_docker_images
