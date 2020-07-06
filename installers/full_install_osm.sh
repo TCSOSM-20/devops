@@ -254,7 +254,7 @@ EONG
 #Safe unattended install of iptables-persistent
 function check_install_iptables_persistent(){
     echo -e "\nChecking required packages: iptables-persistent"
-    if dpkg -l iptables-persistent &>/dev/null; then
+    if ! dpkg -l iptables-persistent &>/dev/null; then
         echo -e "    Not installed.\nInstalling iptables-persistent requires root privileges"
         echo iptables-persistent iptables-persistent/autosave_v4 boolean true | sudo debconf-set-selections
         echo iptables-persistent iptables-persistent/autosave_v6 boolean true | sudo debconf-set-selections
