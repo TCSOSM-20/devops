@@ -15,6 +15,7 @@
 
 import sys
 import logging
+import base64
 
 sys.path.append("lib")
 
@@ -26,6 +27,7 @@ from ops.model import (
     MaintenanceStatus,
     BlockedStatus,
     ModelError,
+    WaitingStatus,
 )
 
 from glob import glob
@@ -54,8 +56,8 @@ class NGUICharm(CharmBase):
 
         # SSL Certificate path
         self.ssl_folder = "/certs"
-        self.ssl_crt = "{}/ssl_certificate.crt".format(self.ssl_folder)
-        self.ssl_key = "{}/ssl_certificate.key".format(self.ssl_folder)
+        self.ssl_crt_name = "ssl_certificate.crt"
+        self.ssl_key_name = "ssl_certificate.key"
 
     def _apply_spec(self):
         # Only apply the spec if this unit is a leader.
@@ -64,7 +66,7 @@ class NGUICharm(CharmBase):
             unit.status = ActiveStatus("Ready")
             return
         if not self.state.nbi_host or not self.state.nbi_port:
-            unit.status = MaintenanceStatus("Waiting for NBI")
+            unit.status = WaitingStatus("Waiting for NBI")
             return
         unit.status = MaintenanceStatus("Applying new pod spec")
 
@@ -79,34 +81,9 @@ class NGUICharm(CharmBase):
     def make_pod_spec(self):
         config = self.framework.model.config
 
-        ports = [
-            {"name": "port", "containerPort": config["port"], "protocol": "TCP",},
-        ]
-
-        kubernetes = {
-            "readinessProbe": {
-                "tcpSocket": {"port": config["port"]},
-                "timeoutSeconds": 5,
-                "periodSeconds": 5,
-                "initialDelaySeconds": 10,
-            },
-            "livenessProbe": {
-                "tcpSocket": {"port": config["port"]},
-                "timeoutSeconds": 5,
-                "initialDelaySeconds": 45,
-            },
-        }
-
-        ssl_certificate = None
-        ssl_certificate_key = None
-        try:
-            ssl_certificate = self.model.resources.fetch("ssl_certificate")
-            ssl_certificate_key = self.model.resources.fetch("ssl_certificate_key")
-        except ModelError as e:
-            logger.info(e)
-
         config_spec = {
-            "port": config["port"],
+            "http_port": config["port"],
+            "https_port": config["https_port"],
             "server_name": config["server_name"],
             "client_max_body_size": config["client_max_body_size"],
             "nbi_host": self.state.nbi_host or config["nbi_host"],
@@ -115,10 +92,28 @@ class NGUICharm(CharmBase):
             "ssl_crt_key": "",
         }
 
-        if ssl_certificate and ssl_certificate_key:
-            config_spec["ssl_crt"] = "ssl_certificate {};".format(self.ssl_crt)
-            config_spec["ssl_crt_key"] = "ssl_certificate_key {};".format(self.ssl_key)
-            config_spec["port"] = "{} ssl".format(config_spec["port"])
+        ssl_certificate = None
+        ssl_certificate_key = None
+        ssl_enabled = False
+
+        if "ssl_certificate" in config and "ssl_certificate_key" in config:
+            # Get bytes of cert and key
+            cert_b = base64.b64decode(config["ssl_certificate"])
+            key_b = base64.b64decode(config["ssl_certificate_key"])
+            # Decode key and cert
+            ssl_certificate = cert_b.decode("utf-8")
+            ssl_certificate_key = key_b.decode("utf-8")
+            # Get paths
+            cert_path = "{}/{}".format(self.ssl_folder, self.ssl_crt_name)
+            key_path = "{}/{}".format(self.ssl_folder, self.ssl_key_name)
+
+            config_spec["port"] = "{} ssl".format(config["https_port"])
+            config_spec["ssl_crt"] = "ssl_certificate {};".format(cert_path)
+            config_spec["ssl_crt_key"] = "ssl_certificate_key {};".format(key_path)
+            ssl_enabled = True
+        else:
+            config_spec["ssl_crt"] = ""
+            config_spec["ssl_crt_key"] = ""
 
         files = [
             {
@@ -132,6 +127,24 @@ class NGUICharm(CharmBase):
                 },
             }
         ]
+        port = config["https_port"] if ssl_enabled else config["port"]
+        ports = [
+            {"name": "port", "containerPort": port, "protocol": "TCP",},
+        ]
+
+        kubernetes = {
+            "readinessProbe": {
+                "tcpSocket": {"port": port},
+                "timeoutSeconds": 5,
+                "periodSeconds": 5,
+                "initialDelaySeconds": 10,
+            },
+            "livenessProbe": {
+                "tcpSocket": {"port": port},
+                "timeoutSeconds": 5,
+                "initialDelaySeconds": 45,
+            },
+        }
 
         if ssl_certificate and ssl_certificate_key:
             files.append(
@@ -139,10 +152,8 @@ class NGUICharm(CharmBase):
                     "name": "ssl",
                     "mountPath": self.ssl_folder,
                     "files": {
-                        Path(filename)
-                        .name: Template(Path(filename).read_text())
-                        .substitute(config_spec)
-                        for filename in [ssl_certificate, ssl_certificate_key]
+                        self.ssl_crt_name: ssl_certificate,
+                        self.ssl_key_name: ssl_certificate_key,
                     },
                 }
             )
@@ -183,13 +194,6 @@ class NGUICharm(CharmBase):
         self.state.nbi_host = event.relation.data[event.unit].get("host")
         self.state.nbi_port = event.relation.data[event.unit].get("port")
         self._apply_spec()
-
-    def resource_get(self, resource_name: str) -> Path:
-        from pathlib import Path
-        from subprocess import run
-
-        result = run(["resource-get", resource_name], output=True, text=True)
-        return Path(result.stdout.strip())
 
 
 if __name__ == "__main__":

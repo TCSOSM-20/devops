@@ -25,10 +25,3 @@ deployment:
 requires:
   nbi:
     interface: osm-nbi
-resources:
-  ssl_certificate:
-    type: file
-    filename: ssl_certificate.crt
-  ssl_certificate_key:
-    type: file
-    filename: ssl_certificate.key

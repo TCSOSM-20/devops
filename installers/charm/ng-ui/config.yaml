@@ -24,6 +24,10 @@ options:
     description: Port number
     type: int
     default: 80
+  https_port:
+    description: Port number
+    type: int
+    default: 443
   server_name:
     description: Server name
     type: string
@@ -32,3 +36,9 @@ options:
     description: Client maximum body size
     type: string
     default: 15M
+  ssl_certificate:
+    description: Base64 encoded ssl certificate
+    type: string
+  ssl_certificate_key:
+    description: Base64 encoded ssl certificate key
+    type: string

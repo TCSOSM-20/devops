@@ -21,6 +21,15 @@ juju deploy . # cs:~charmed-osm/ng-ui --channel edge
 juju relate ng-ui nbi-k8s
 ```
 
+## How to expose the NG-UI through ingress
+
+```bash
+juju config ng-ui juju-external-hostname=ng.<k8s_worker_ip>.xip.io
+juju expose ng-ui
+```
+
+> Note: The <k8s_worker_ip> is the IP of the K8s worker node. With microk8s, you can see the IP with `microk8s.config`. It is usually the IP of your host machine.
+
 ## How to scale
 
 ```bash
@@ -34,9 +43,8 @@ Generate your own certificate if you don't have one already:
 ```bash
 sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ssl_certificate.key -out ssl_certificate.crt
 sudo chown $USER:$USER ssl_certificate.key
-juju attach-resource ng-ui ssl_certificate=ssl_certificate.crt
-juju attach-resource ng-ui ssl_certificate_key=ssl_certificate.key
-juju config ng-ui port 443
+juju config ng-ui ssl_certificate=`cat ssl_certificate.crt | base64 -w 0`
+juju config ng-ui ssl_certificate_key=`cat ssl_certificate.key | base64 -w 0`
 ```
 
 ## Config Examples

@@ -13,8 +13,10 @@
 #   limitations under the License.
 
 
+
 server {
-    listen       $port;
+    listen $http_port;
+    listen $https_port default ssl;
     server_name  $server_name;
     root   /usr/share/nginx/html;
     index  index.html index.htm;
@@ -22,7 +24,7 @@ server {
     $ssl_crt
     $ssl_crt_key
     ssl_protocols       TLSv1 TLSv1.1 TLSv1.2;
-    ssl_ciphers         HIGH:!aNULL:!MD5;
+    ssl_ciphers EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH;
     location /osm {
         proxy_pass https://$nbi_host:$nbi_port;
         proxy_next_upstream error timeout invalid_header http_500 http_502 http_503 http_504;

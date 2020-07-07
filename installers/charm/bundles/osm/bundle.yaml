@@ -125,8 +125,12 @@ applications:
     series: kubernetes
     options:
       port: 80
+      https_port: 443
       server_name: localhost
       client_max_body_size: 15M
+    annotations:
+      gui-x: 500
+      gui-y: 100
   lcm-k8s:
     charm: "%(prefix)s/lcm-k8s%(suffix)s"
     channel: "%(channel)s"
@@ -251,3 +255,5 @@ relations:
     - "mongodb-k8s:mongo"
   - - "pla:mysql"
     - "mariadb-k8s:mysql"
+  - - 'ng-ui:nbi'
+    - 'nbi-k8s:nbi'

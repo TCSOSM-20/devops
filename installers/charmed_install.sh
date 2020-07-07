@@ -234,6 +234,9 @@ applications:
   pla:
     options:
       image: opensourcemano/pla:$TAG
+  ng-ui:
+    options:
+      image: opensourcemano/ng-ui:$TAG
 
 EOF
     mv /tmp/images-overlay.yaml $IMAGES_OVERLAY_FILE
