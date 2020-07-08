@@ -803,11 +803,15 @@ function kube_secrets(){
     kubectl create secret generic pol-secret -n $OSM_STACK_NAME --from-env-file=$OSM_DOCKER_WORK_DIR/pol.env
 }
 
-#deploys osm pods and services
-function deploy_osm_services() {
+#taints K8s master node
+function taint_master_node() {
     K8S_MASTER=$(kubectl get nodes | awk '$3~/master/'| awk '{print $1}')
     kubectl taint node $K8S_MASTER node-role.kubernetes.io/master:NoSchedule-
     sleep 5
+}
+
+#deploys osm pods and services
+function deploy_osm_services() {
     kubectl apply -n $OSM_STACK_NAME -f $OSM_K8S_WORK_DIR
 }
 
@@ -1182,6 +1186,7 @@ EOF
         kube_secrets
         [ ! $OSM_DOCKER_TAG == "7" ] && parse_yaml $OSM_DOCKER_TAG
         namespace_vol
+        taint_master_node
         deploy_osm_services
         if [ -n "$INSTALL_PLA"]; then
             # optional PLA install
