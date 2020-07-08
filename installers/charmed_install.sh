@@ -133,11 +133,11 @@ function deploy_charmed_osm(){
     fi
     echo "Deploying OSM with charms"
     # echo $BUNDLE
+    images_overlay=""
+    [ -v TAG ] && generate_images_overlay && images_overlay="--overlay $IMAGES_OVERLAY_FILE"
     if [ -v BUNDLE ]; then
-        juju deploy $BUNDLE --overlay ~/.osm/vca-overlay.yaml
+        juju deploy $BUNDLE --overlay ~/.osm/vca-overlay.yaml $images_overlay
     else
-        images_overlay=""
-        [ -v TAG ] && generate_images_overlay && images_overlay="--overlay $IMAGES_OVERLAY_FILE"
         juju deploy osm --overlay ~/.osm/vca-overlay.yaml $images_overlay
     fi
     echo "Waiting for deployment to finish..."
