@@ -1,5 +1,5 @@
 ##
-# Copyright 2019-2020 ETSI
+# Copyright 2019 ETSI
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
@@ -25,10 +25,16 @@ networks:
     #driver_opts:
     #  com.docker.network.driver.mtu: "1446"
 services:
-  ng-ui:
-    image: ${DOCKER_USER:-opensourcemano}/ng-ui:${TAG:-8}
+  light-ui:
+    image: ${DOCKER_USER:-opensourcemano}/light-ui:${TAG:-8}
     networks:
       - netOSM
+    environment:
+      OSM_SERVER: nbi
+    #depends_on:
+    #  - nbi
+    env_file:
+      - ./lwui.env
     ports:
       - "${OSM_UI_PORTS:-80:80}"
     logging:

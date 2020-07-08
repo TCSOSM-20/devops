@@ -17,9 +17,16 @@
 ########################################################################
 
 version: '3'
+networks:
+  netOSM:
+    external:
+      name: ${OSM_NETWORK:-netosm}
+    #driver: overlay
+    #driver_opts:
+    #  com.docker.network.driver.mtu: "1446"
 services:
   pla:
-    image: ${DOCKER_USER:-opensourcemano}/pla:${TAG:-7}
+    image: ${DOCKER_USER:-opensourcemano}/pla:${TAG:-8}
     networks:
       - netOSM
     logging:

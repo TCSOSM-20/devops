@@ -569,6 +569,48 @@ function cmp_overwrite() {
     fi
 }
 
+function generate_docker_compose_files() {
+    $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/docker-compose.yaml $OSM_DOCKER_WORK_DIR/docker-compose.yaml
+    if [ -n "$NGUI" ]; then
+        # For NG-UI
+        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/docker-compose-ngui.yaml $OSM_DOCKER_WORK_DIR/docker-compose-ui.yaml
+    else
+        # Docker-compose
+        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/docker-compose-lightui.yaml $OSM_DOCKER_WORK_DIR/docker-compose-ui.yaml
+    fi
+    if [ -n "$INSTALL_PLA" ]; then
+        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/osm_pla/docker-compose.yaml $OSM_DOCKER_WORK_DIR/osm_pla/docker-compose.yaml
+    fi
+}
+
+function generate_k8s_manifest_files() {
+    #Kubernetes resources
+    $WORKDIR_SUDO cp -bR ${OSM_DEVOPS}/installers/docker/osm_pods $OSM_DOCKER_WORK_DIR
+    if [ -n "$NGUI" ]; then
+        $WORKDIR_SUDO rm -f $OSM_K8S_WORK_DIR/light-ui.yaml
+    else
+        $WORKDIR_SUDO rm -f $OSM_K8S_WORK_DIR/ng-ui.yaml
+    fi
+}
+
+function generate_prometheus_grafana_files() {
+    [ -n "$KUBERNETES" ] && return
+    # Prometheus files
+    $WORKDIR_SUDO mkdir -p $OSM_DOCKER_WORK_DIR/prometheus
+    $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/prometheus/prometheus.yml $OSM_DOCKER_WORK_DIR/prometheus/prometheus.yml
+
+    # Grafana files
+    $WORKDIR_SUDO mkdir -p $OSM_DOCKER_WORK_DIR/grafana
+    $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/grafana/dashboards-osm.yml $OSM_DOCKER_WORK_DIR/grafana/dashboards-osm.yml
+    $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/grafana/datasource-prometheus.yml $OSM_DOCKER_WORK_DIR/grafana/datasource-prometheus.yml
+    $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/grafana/osm-sample-dashboard.json $OSM_DOCKER_WORK_DIR/grafana/osm-sample-dashboard.json
+    $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/grafana/osm-system-dashboard.json $OSM_DOCKER_WORK_DIR/grafana/osm-system-dashboard.json
+
+    # Prometheus Exporters files
+    $WORKDIR_SUDO mkdir -p $OSM_DOCKER_WORK_DIR/prometheus_exporters
+    $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/prometheus_exporters/node_exporter.service $OSM_DOCKER_WORK_DIR/prometheus_exporters/node_exporter.service
+}
+
 function generate_docker_env_files() {
     echo "Doing a backup of existing env files"
     $WORKDIR_SUDO cp $OSM_DOCKER_WORK_DIR/keystone-db.env{,~}
@@ -582,38 +624,6 @@ function generate_docker_env_files() {
     $WORKDIR_SUDO cp $OSM_DOCKER_WORK_DIR/ro.env{,~}
 
     echo "Generating docker env files"
-    if [ -n "$KUBERNETES" ]; then
-        #Kubernetes resources
-        $WORKDIR_SUDO cp -bR ${OSM_DEVOPS}/installers/docker/osm_pods $OSM_DOCKER_WORK_DIR
-        [ -n "$NGUI" ] && $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/osm_pods/ng-ui.yaml $OSM_K8S_WORK_DIR/ng-ui.yaml && $WORKDIR_SUDO rm $OSM_K8S_WORK_DIR/light-ui.yaml
-    else
-        if [ -n "$NGUI" ]; then
-            # For NG-UI
-            $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/docker-compose-ngui.yaml $OSM_DOCKER_WORK_DIR/docker-compose.yaml
-        else
-            # Docker-compose
-            $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/docker-compose.yaml $OSM_DOCKER_WORK_DIR/docker-compose.yaml
-        fi
-        if [ -n "$INSTALL_PLA" ]; then
-            $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/osm_pla/docker-compose.yaml $OSM_DOCKER_WORK_DIR/osm_pla/docker-compose.yaml
-        fi
-
-        # Prometheus files
-        $WORKDIR_SUDO mkdir -p $OSM_DOCKER_WORK_DIR/prometheus
-        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/prometheus/prometheus.yml $OSM_DOCKER_WORK_DIR/prometheus/prometheus.yml
-
-        # Grafana files
-        $WORKDIR_SUDO mkdir -p $OSM_DOCKER_WORK_DIR/grafana
-        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/grafana/dashboards-osm.yml $OSM_DOCKER_WORK_DIR/grafana/dashboards-osm.yml
-        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/grafana/datasource-prometheus.yml $OSM_DOCKER_WORK_DIR/grafana/datasource-prometheus.yml
-        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/grafana/osm-sample-dashboard.json $OSM_DOCKER_WORK_DIR/grafana/osm-sample-dashboard.json
-        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/grafana/osm-system-dashboard.json $OSM_DOCKER_WORK_DIR/grafana/osm-system-dashboard.json
-
-        # Prometheus Exporters files
-        $WORKDIR_SUDO mkdir -p $OSM_DOCKER_WORK_DIR/prometheus_exporters
-        $WORKDIR_SUDO cp -b ${OSM_DEVOPS}/installers/docker/prometheus_exporters/node_exporter.service $OSM_DOCKER_WORK_DIR/prometheus_exporters/node_exporter.service
-    fi
-
     # LCM
     if [ ! -f $OSM_DOCKER_WORK_DIR/lcm.env ]; then
         echo "OSMLCM_DATABASE_COMMONKEY=${OSM_DATABASE_COMMONKEY}" | $WORKDIR_SUDO tee -a $OSM_DOCKER_WORK_DIR/lcm.env
@@ -810,8 +820,6 @@ function deploy_osm_services() {
 }
 
 function deploy_osm_pla_service() {
-    # corresponding to parse_yaml
-    [ ! $OSM_DOCKER_TAG == "7" ] && $WORKDIR_SUDO sed -i "s/opensourcemano\/pla:.*/opensourcemano\/pla:$OSM_DOCKER_TAG/g" $OSM_DOCKER_WORK_DIR/osm_pla/pla.yaml
     # corresponding to namespace_vol
     $WORKDIR_SUDO  sed -i "s#path: /var/lib/osm#path: $OSM_NAMESPACE_VOL#g" $OSM_DOCKER_WORK_DIR/osm_pla/pla.yaml
     # corresponding to deploy_osm_services
@@ -861,6 +869,7 @@ function parse_yaml() {
     for osm in $osm_services; do
         $WORKDIR_SUDO sed -i "s/opensourcemano\/$osm:.*/$DOCKER_USER\/$osm:$TAG/g" $OSM_K8S_WORK_DIR/$osm.yaml
     done
+    $WORKDIR_SUDO sed -i "s/opensourcemano\/pla:.*/$DOCKER_USER\/\/pla:$OSM_DOCKER_TAG/g" $OSM_DOCKER_WORK_DIR/osm_pla/pla.yaml
 }
 
 function namespace_vol() {
@@ -936,9 +945,10 @@ function deploy_lightweight() {
 
     pushd $OSM_DOCKER_WORK_DIR
     if [ -n "$INSTALL_PLA" ]; then
-        sg docker -c ". ./osm_ports.sh; docker stack deploy -c $OSM_DOCKER_WORK_DIR/docker-compose.yaml -c $OSM_DOCKER_WORK_DIR/osm_pla/docker-compose.yaml $OSM_STACK_NAME"
+        track deploy_osm_pla
+        sg docker -c ". ./osm_ports.sh; docker stack deploy -c $OSM_DOCKER_WORK_DIR/docker-compose.yaml -c $OSM_DOCKER_WORK_DIR/docker-compose-ui.yaml -c $OSM_DOCKER_WORK_DIR/osm_pla/docker-compose.yaml $OSM_STACK_NAME"
     else
-        sg docker -c ". ./osm_ports.sh; docker stack deploy -c $OSM_DOCKER_WORK_DIR/docker-compose.yaml $OSM_STACK_NAME"
+        sg docker -c ". ./osm_ports.sh; docker stack deploy -c $OSM_DOCKER_WORK_DIR/docker-compose.yaml -c $OSM_DOCKER_WORK_DIR/docker-compose-ui.yaml $OSM_STACK_NAME"
     fi
     popd
 
@@ -1165,7 +1175,15 @@ EOF
     [ -z "$DOCKER_NOBUILD" ] && generate_docker_images
     track docker_build
 
+    if [ -n "$KUBERNETES" ]; then
+        generate_k8s_manifest_files
+    else
+        generate_docker_compose_files
+    fi
+    track manifest_files
+    generate_prometheus_grafana_files
     generate_docker_env_files
+    track env_files
 
     if [ -n "$KUBERNETES" ]; then
         if [ -n "$INSTALL_K8S_MONITOR" ]; then
@@ -1177,13 +1195,14 @@ EOF
         remove_k8s_namespace $OSM_STACK_NAME
         deploy_cni_provider
         kube_secrets
-        [ ! $OSM_DOCKER_TAG == "7" ] && parse_yaml $OSM_DOCKER_TAG
+        [ ! $OSM_DOCKER_TAG == "8" ] && parse_yaml $OSM_DOCKER_TAG
         namespace_vol
         taint_master_node
         deploy_osm_services
         if [ -n "$INSTALL_PLA"]; then
             # optional PLA install
             deploy_osm_pla_service
+            track deploy_osm_pla
         fi
         track deploy_osm_services_k8s
         install_k8s_storageclass
