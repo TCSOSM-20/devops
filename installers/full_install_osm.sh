@@ -1158,19 +1158,11 @@ EOF
         track install_k8s
         init_kubeadm $OSM_DOCKER_WORK_DIR/cluster-config.yaml
         kube_config_dir
-        install_k8s_storageclass
         track init_k8s
     else
         #install_docker_compose
         [ -n "$INSTALL_NODOCKER" ] || init_docker_swarm
         track docker_swarm
-    fi
-
-    if [ -n "$KUBERNETES" ]; then
-        juju_addk8s
-        track juju_addk8s
-        install_helm
-        track install_helm
     fi
 
     [ -z "$DOCKER_NOBUILD" ] && generate_docker_images
@@ -1196,6 +1188,12 @@ EOF
             deploy_osm_pla_service
         fi
         track deploy_osm_services_k8s
+        install_k8s_storageclass
+        track k8s_storageclass
+        juju_addk8s
+        track juju_addk8s
+        install_helm
+        track install_helm
         if [ -n "$INSTALL_K8S_MONITOR" ]; then
             # install OSM MONITORING
             install_k8s_monitoring
