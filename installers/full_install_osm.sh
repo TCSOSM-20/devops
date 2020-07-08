@@ -429,7 +429,7 @@ function juju_createcontroller() {
 }
 
 function juju_addk8s() {
-    cat .kube/config | juju add-k8s $OSM_VCA_K8S_CLOUDNAME --controller $OSM_STACK_NAME
+    cat .kube/config | juju add-k8s $OSM_VCA_K8S_CLOUDNAME --controller $OSM_STACK_NAME --storage openebs-hostpath
 }
 
 function juju_createproxy() {
@@ -1154,7 +1154,7 @@ EOF
         track install_k8s
         init_kubeadm $OSM_DOCKER_WORK_DIR/cluster-config.yaml
         kube_config_dir
-	install_k8s_storage_class
+        install_k8s_storageclass
         track init_k8s
     else
         #install_docker_compose
@@ -1167,8 +1167,6 @@ EOF
         track juju_addk8s
         install_helm
         track install_helm
-        install_k8s_storageclass
-        track install_k8s_storageclass
     fi
 
     [ -z "$DOCKER_NOBUILD" ] && generate_docker_images
