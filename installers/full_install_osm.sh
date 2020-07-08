@@ -825,6 +825,7 @@ function install_helm() {
     helm > /dev/null 2>&1
     if [ $? != 0 ] ; then
         # Helm is not installed. Install helm
+        echo "Helm is not installed, installing ..."
         curl https://get.helm.sh/helm-v2.15.2-linux-amd64.tar.gz --output helm-v2.15.2.tar.gz
         tar -zxvf helm-v2.15.2.tar.gz
         sudo mv linux-amd64/helm /usr/local/bin/helm
@@ -842,14 +843,17 @@ function install_helm() {
         helm init --service-account tiller
 
         # Wait for Tiller to be up and running. If timeout expires, continue installing
-        tiller_timeout=120; counter=0
+        tiller_timeout=120;
+        counter=0;
+        tiller_status=""
         while (( counter < tiller_timeout ))
         do
             tiller_status=`kubectl -n kube-system get deployment.apps/tiller-deploy --no-headers |  awk '{print $2'}`
-            ( [ ! -z "$tiller_status" ] && [ $tiller_status == "1/1" ] ) && break
-            num=$((counter + 2))
-            sleep 2
+            ( [ ! -z "$tiller_status" ] && [ $tiller_status == "1/1" ] ) && echo "Tiller ready" && break
+            counter=$((counter + 5))
+            sleep 5
         done
+        [ "$tiller_status" != "1/1" ] && echo "Tiller is NOT READY YET. Installation will continue"
     fi
 }
 
