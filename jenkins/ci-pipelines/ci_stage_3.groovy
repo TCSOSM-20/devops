@@ -362,15 +362,15 @@ node("${params.NODE}") {
                 if (error) {
                     if ( !params.SAVE_CONTAINER_ON_FAIL ) {
                         uninstall_osm container_name
-                        sh "docker stop ${http_server_name}"
-                        sh "docker rm ${http_server_name}"
+                        sh "docker stop ${http_server_name} || true"
+                        sh "docker rm ${http_server_name} || true"
                     }
                 }
                 else {
                     if ( !params.SAVE_CONTAINER_ON_PASS ) {
                         uninstall_osm container_name
-                        sh "docker stop ${http_server_name}"
-                        sh "docker rm ${http_server_name}"
+                        sh "docker stop ${http_server_name} || true"
+                        sh "docker rm ${http_server_name} || true"
                     }
                 }
             }

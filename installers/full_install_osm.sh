@@ -206,7 +206,6 @@ function uninstall_lightweight() {
             fi
             remove_k8s_namespace $OSM_STACK_NAME
         else
-
             remove_stack $OSM_STACK_NAME
             remove_stack osm_elk
         fi
@@ -214,7 +213,6 @@ function uninstall_lightweight() {
         newgrp docker << EONG
         docker image rm ${DOCKER_USER}/ro:${OSM_DOCKER_TAG}
         docker image rm ${DOCKER_USER}/lcm:${OSM_DOCKER_TAG}
-        docker image rm ${DOCKER_USER}/light-ui:${OSM_DOCKER_TAG}
         docker image rm ${DOCKER_USER}/keystone:${OSM_DOCKER_TAG}
         docker image rm ${DOCKER_USER}/nbi:${OSM_DOCKER_TAG}
         docker image rm ${DOCKER_USER}/mon:${OSM_DOCKER_TAG}
@@ -224,14 +222,10 @@ function uninstall_lightweight() {
 EONG
 
         if [ -n "$NGUI" ]; then
-            newgrp docker << EONG
-            docker image rm ${DOCKER_USER}/ng-ui:${OSM_DOCKER_TAG}
-EONG
+            sg docker -c "docker image rm ${DOCKER_USER}/ng-ui:${OSM_DOCKER_TAG}"
         else
-            newgrp docker << EONG
-            docker image rm ${DOCKER_USER}/light-ui:${OSM_DOCKER_TAG}
-EONG
-         fi
+            sg docker -c "docker image rm ${DOCKER_USER}/light-ui:${OSM_DOCKER_TAG}"
+        fi
 
         if [ -n "$KUBERNETES" ]; then
             OSM_NAMESPACE_VOL="${OSM_HOST_VOL}/${OSM_STACK_NAME}"
@@ -245,7 +239,7 @@ EONG
         $WORKDIR_SUDO rm -rf $OSM_DOCKER_WORK_DIR
         [ -z "$CONTROLLER_NAME" ] && sg lxd -c "juju destroy-controller --destroy-all-models --yes $OSM_STACK_NAME"
     fi
-    uninstall_osmclient
+    [ -z "$INSTALL_NOHOSTCLIENT" ] && uninstall_osmclient
     echo "Some docker images will be kept in case they are used by other docker stacks"
     echo "To remove them, just run 'docker image prune' in a terminal"
     return 0
@@ -1019,12 +1013,6 @@ function add_local_k8scluster() {
 }
 
 function install_lightweight() {
-    [ "${OSM_STACK_NAME}" == "osm" ] || OSM_DOCKER_WORK_DIR="$OSM_WORK_DIR/stack/$OSM_STACK_NAME"
-    [ -n "$KUBERNETES" ] && OSM_K8S_WORK_DIR="$OSM_DOCKER_WORK_DIR/osm_pods" && OSM_NAMESPACE_VOL="${OSM_HOST_VOL}/${OSM_STACK_NAME}"
-    [ ! -d "$OSM_DOCKER_WORK_DIR" ] && $WORKDIR_SUDO mkdir -p $OSM_DOCKER_WORK_DIR
-    [ ! -d "$OSM_DOCKER_WORK_DIR/osm_pla" -a -n "$INSTALL_PLA" ] && $WORKDIR_SUDO mkdir -p $OSM_DOCKER_WORK_DIR/osm_pla
-    [ -n "$KUBERNETES" ] && $WORKDIR_SUDO cp -b $OSM_DEVOPS/installers/docker/cluster-config.yaml $OSM_DOCKER_WORK_DIR/cluster-config.yaml
-
     track checkingroot
     [ "$USER" == "root" ] && FATAL "You are running the installer as root. The installer is prepared to be executed as a normal user with sudo privileges."
     track noroot
@@ -1155,6 +1143,11 @@ EOF
 
     [ -n "$INSTALL_NODOCKER" ] || install_docker_ce
     track docker_ce
+
+    echo "Creating folders for installation"
+    [ ! -d "$OSM_DOCKER_WORK_DIR" ] && $WORKDIR_SUDO mkdir -p $OSM_DOCKER_WORK_DIR
+    [ ! -d "$OSM_DOCKER_WORK_DIR/osm_pla" -a -n "$INSTALL_PLA" ] && $WORKDIR_SUDO mkdir -p $OSM_DOCKER_WORK_DIR/osm_pla
+    [ -n "$KUBERNETES" ] && $WORKDIR_SUDO cp -b $OSM_DEVOPS/installers/docker/cluster-config.yaml $OSM_DOCKER_WORK_DIR/cluster-config.yaml
 
     #Installs Kubernetes and deploys osm services
     if [ -n "$KUBERNETES" ]; then
@@ -1679,6 +1672,8 @@ fi
 
 . $OSM_DEVOPS/common/all_funcs
 
+[ "${OSM_STACK_NAME}" == "osm" ] || OSM_DOCKER_WORK_DIR="$OSM_WORK_DIR/stack/$OSM_STACK_NAME"
+[ -n "$KUBERNETES" ] && OSM_K8S_WORK_DIR="$OSM_DOCKER_WORK_DIR/osm_pods" && OSM_NAMESPACE_VOL="${OSM_HOST_VOL}/${OSM_STACK_NAME}"
 [ -n "$INSTALL_LIGHTWEIGHT" ] && [ -n "$UNINSTALL" ] && uninstall_lightweight && echo -e "\nDONE" && exit 0
 [ -n "$INSTALL_ONLY" ] && [ -n "$INSTALL_ELK" ] && deploy_elk
 #[ -n "$INSTALL_ONLY" ] && [ -n "$INSTALL_PERFMON" ] && deploy_perfmon
