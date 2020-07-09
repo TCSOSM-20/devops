@@ -28,7 +28,7 @@ applications:
       zookeeper-units: 3
     annotations:
       gui-x: 0
-      gui-y: 1100
+      gui-y: 550
   mariadb-k8s:
     charm: "cs:~charmed-osm/mariadb-k8s"
     channel: "stable"
@@ -46,8 +46,8 @@ applications:
       query-cache-size: 0
       ha-mode: true
     annotations:
-      gui-x: -500
-      gui-y: -400
+      gui-x: -250
+      gui-y: -200
   kafka-k8s:
     charm: "cs:~charmed-osm/kafka-k8s"
     channel: "stable"
@@ -63,7 +63,7 @@ applications:
       zookeeper-service-name: zookeeper-k8s-endpoints
     annotations:
       gui-x: 0
-      gui-y: 600
+      gui-y: 300
   mongodb-k8s:
     charm: "cs:~charmed-osm/mongodb-k8s"
     channel: "stable"
@@ -80,7 +80,7 @@ applications:
       enable-sidecar: true
     annotations:
       gui-x: 0
-      gui-y: 100
+      gui-y: 50
   nbi-k8s:
     charm: "cs:~charmed-osm/nbi-k8s"
     channel: "%(channel)s"
@@ -93,7 +93,7 @@ applications:
       DATABASE_COMMONKEY: osm
     annotations:
       gui-x: 0
-      gui-y: -400
+      gui-y: -200
   ro-k8s:
     charm: "cs:~charmed-osm/ro-k8s"
     channel: "%(channel)s"
@@ -106,8 +106,8 @@ applications:
       ro_database: "mano_db"
       OPENMANO_TENANT: "osm"
     annotations:
-      gui-x: -500
-      gui-y: 600
+      gui-x: -250
+      gui-y: 300
   ui-k8s:
     charm: "cs:~charmed-osm/ui-k8s"
     channel: "%(channel)s"
@@ -116,8 +116,8 @@ applications:
     options:
       mysql_database: lwui
     annotations:
-      gui-x: 500
-      gui-y: -400
+      gui-x: 250
+      gui-y: -200
   lcm-k8s:
     charm: "cs:~charmed-osm/lcm-k8s"
     channel: "%(channel)s"
@@ -136,8 +136,8 @@ applications:
       use_external_vca: true
       DATABASE_COMMONKEY: osm
     annotations:
-      gui-x: -500
-      gui-y: 100
+      gui-x: -250
+      gui-y: 50
   mon-k8s:
     charm: "cs:~charmed-osm/mon-k8s"
     channel: "%(channel)s"
@@ -158,8 +158,8 @@ applications:
       vca_cacert: cacert
       use_external_vca: true
     annotations:
-      gui-x: 500
-      gui-y: 100
+      gui-x: 250
+      gui-y: 50
   pol-k8s:
     charm: "cs:~charmed-osm/pol-k8s"
     channel: "%(channel)s"
@@ -170,8 +170,16 @@ applications:
     options:
       log_level: INFO
     annotations:
-      gui-x: -500
-      gui-y: 1100
+      gui-x: -250
+      gui-y: 550
+  pla-k8s:
+    charm: "%(prefix)s/pla%(suffix)s"
+    channel: "%(channel)s"
+    scale: 3
+    series: kubernetes
+    annotations:
+      gui-x: 500
+      gui-y: -200
   prometheus-k8s:
     charm: "cs:~charmed-osm/prometheus-k8s"
     channel: "stable"
@@ -184,16 +192,16 @@ applications:
       web-subpath: /
       default-target: "mon-k8s:8000"
     annotations:
-      gui-x: 500
-      gui-y: 600
+      gui-x: 250
+      gui-y: 300
   grafana-k8s:
     charm: "cs:~charmed-osm/grafana-k8s"
     channel: "stable"
     scale: 3
     series: kubernetes
     annotations:
-      gui-x: 500
-      gui-y: 1100
+      gui-x: 250
+      gui-y: 550
 
 relations:
   - - "kafka-k8s:zookeeper"
@@ -228,3 +236,9 @@ relations:
     - "nbi-k8s:nbi"
   - - "prometheus-k8s:prometheus"
     - "nbi-k8s:prometheus"
+  - - "pla:kafka"
+    - "kafka-k8s:kafka"
+  - - "pla:mongo"
+    - "mongodb-k8s:mongo"
+  - - "pla:mysql"
+    - "mariadb-k8s:mysql"

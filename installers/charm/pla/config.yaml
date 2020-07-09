@@ -24,19 +24,15 @@ options:
     description: Port number
     type: int
     default: 8080 # Fake port
-  kafka_host:
-    description: Kafka Hostname
-    type: string
-    default: kafka-k8s
-  kafka_port:
-    description: Kafka Port
-    type: int
-    default: 9092
-  mongo_uri:
-    description: Mongo URI
-    type: string
-    default: mongodb://mongodb-k8s:27017
   log_level:
     description: Log level
     type: string
     default: INFO
+  database:
+    description: Database name
+    type: string
+    default: pla
+  database_common_key:
+    description: Common Key for Mongo database
+    type: string
+    default: osm

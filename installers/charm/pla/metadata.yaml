@@ -26,6 +26,6 @@ requires:
   kafka:
     interface: kafka
   mongo:
-    interface: mongo
+    interface: mongodb
   mysql:
     interface: mysql

@@ -132,7 +132,6 @@ function deploy_charmed_osm(){
         sg microk8s -c "juju add-model osm $K8S_CLOUD_NAME"
     fi
     echo "Deploying OSM with charms"
-    # echo $BUNDLE
     images_overlay=""
     [ -v TAG ] && generate_images_overlay && images_overlay="--overlay $IMAGES_OVERLAY_FILE"
     if [ -v BUNDLE ]; then
@@ -201,6 +200,11 @@ applications:
       vca_password: $vca_password
       vca_host: $vca_host
       vca_cacert: $vca_cacert
+  pla:
+    options:
+      vca_user: $vca_user
+      vca_password: $vca_password
+      vca_host: $vca_host
 EOF
     mv /tmp/vca-overlay.yaml ~/.osm/
     OSM_VCA_HOST=$vca_host
@@ -227,6 +231,9 @@ applications:
   ui-k8s:
     options:
       image: opensourcemano/light-ui:$TAG
+  pla:
+    options:
+      image: opensourcemano/pla:$TAG
 
 EOF
     mv /tmp/images-overlay.yaml $IMAGES_OVERLAY_FILE
