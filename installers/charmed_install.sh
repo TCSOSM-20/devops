@@ -200,11 +200,6 @@ applications:
       vca_password: $vca_password
       vca_host: $vca_host
       vca_cacert: $vca_cacert
-  pla:
-    options:
-      vca_user: $vca_user
-      vca_password: $vca_password
-      vca_host: $vca_host
 EOF
     mv /tmp/vca-overlay.yaml ~/.osm/
     OSM_VCA_HOST=$vca_host
