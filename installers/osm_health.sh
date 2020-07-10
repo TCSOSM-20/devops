@@ -16,7 +16,7 @@
 # limitations under the License.
 
 WAIT_TIME=340  # LCM healthcheck needs 2x(30+140) senconds
-SERVICES_WITH_HEALTH="nbi ro zookeeper lcm mon light-ui pol"
+SERVICES_WITH_HEALTH="nbi ro zookeeper lcm mon light-ui pol kafka"
 NUM_SERVICES_WITH_HEALTH=$(echo $SERVICES_WITH_HEALTH | wc -w)
 WAIT_FINAL=30
 OSM_DEPLOYMENT="light-ui nbi lcm ro mon pol keystone"
