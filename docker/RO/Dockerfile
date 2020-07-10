@@ -47,6 +47,8 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y python3-
     python3-osm-rovim-openstack${RO_VERSION} python3-osm-rovim-openvim${RO_VERSION} \
     python3-osm-rovim-vmware${RO_VERSION}
 
+# ensure right version is installed as pyhton3-ccryptography install an old version
+RUN python3 -m pip install --upgrade "cryptography>=2.5"
 
 VOLUME /var/log/osm
 
