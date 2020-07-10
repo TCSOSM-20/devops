@@ -45,6 +45,8 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y python3-
     python3-osm-rovim-aws${RO_VERSION} python3-osm-rovim-fos${RO_VERSION} python3-osm-rovim-opennebula${RO_VERSION}
     # python3-osm-rosdn-floodlightof python3-osm-rosdn-odlof 
 
+# ensure right version is installed as pyhton3-ccryptography install an old version
+RUN python3 -m pip install --upgrade "cryptography>=2.5"
 
 VOLUME /var/log/osm
 
