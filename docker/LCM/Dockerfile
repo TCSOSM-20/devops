@@ -83,10 +83,11 @@ ARG LCM_VERSION
 ARG COMMON_VERSION
 ARG N2VC_VERSION
 
-RUN apt-get update && apt-get install -y python3-osm-lcm${LCM_VERSION} \
-                                         python3-osm-common${COMMON_VERSION} \
-                                         python3-n2vc${N2VC_VERSION} \
-                                         && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+     python3-osm-lcm${LCM_VERSION} \
+     python3-osm-common${COMMON_VERSION} \
+     python3-n2vc${N2VC_VERSION} \
+     && rm -rf /var/lib/apt/lists/*
 
 EXPOSE 9999
 
