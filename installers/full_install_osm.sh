@@ -846,7 +846,7 @@ function parse_yaml() {
 }
 
 function namespace_vol() {
-    osm_services="nbi lcm ro pol mon kafka mongo mysql"
+    osm_services="nbi lcm ro pol mon kafka mongo mysql prometheus"
     for osm in $osm_services; do
         $WORKDIR_SUDO  sed -i "s#path: /var/lib/osm#path: $OSM_NAMESPACE_VOL#g" $OSM_K8S_WORK_DIR/$osm.yaml
     done
