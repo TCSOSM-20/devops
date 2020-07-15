@@ -61,7 +61,7 @@ RUN curl ${REPOSITORY_BASE}/${RELEASE}/${REPOSITORY_KEY} | apt-key add - \
                           python3-n2vc${N2VC_VERSION}
 
 
-RUN python3 -m pip install -U "juju==2.8.1"
+RUN python3 -m pip install -U "juju==2.8.2"
 
 COPY scripts/ scripts/
 
