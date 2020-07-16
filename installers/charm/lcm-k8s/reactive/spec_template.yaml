@@ -45,6 +45,5 @@ containers:
       OSMLCM_VCA_PUBKEY: %(vca_pubkey)s
       OSMLCM_VCA_SECRET: %(vca_password)s
       OSMLCM_VCA_CACERT: %(vca_cacert)s
-      OSMLCM_VCA_APIPROXY: %(vca_apiproxy)s
       OSMLCM_VCA_CLOUD: %(vca_cloud)s
       OSMLCM_VCA_K8S_CLOUD: %(vca_k8s_cloud)s

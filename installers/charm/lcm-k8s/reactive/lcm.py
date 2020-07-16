@@ -21,7 +21,7 @@ from charmhelpers.core.hookenv import (
     config,
 )
 from charms import layer
-
+import yaml
 
 @hook("upgrade-charm")
 @when("leadership.is_leader")
@@ -131,4 +131,7 @@ def make_pod_spec(ro_host, ro_port, kafka_host, kafka_port, mongo_uri):
     }
     data.update(cfg)
 
-    return pod_spec_template % data
+    spec = yaml.safe_dump(pod_spec_template % data)
+    if "vca_apiproxy" in cfg and cfg["vca_apiproxy"] != "":
+        spec["containers"][0]["config"]["OSMLCM_VCA_APIPROXY"] = cfg["vca_apiproxy"]
+    return spec

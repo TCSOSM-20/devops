@@ -145,7 +145,6 @@ applications:
       vca_password: secret
       vca_pubkey: pubkey
       vca_cacert: cacert
-      vca_apiproxy: apiproxy
       use_external_vca: false
       DATABASE_COMMONKEY: osm
     annotations:
