@@ -42,7 +42,23 @@ function install_snaps(){
 
 function bootstrap_k8s_lxd(){
     [ -v CONTROLLER ] && ADD_K8S_OPTS="--controller ${CONTROLLER}" && CONTROLLER_NAME=$CONTROLLER
-    [ ! -v CONTROLLER ] && ADD_K8S_OPTS="--client" && BOOTSTRAP_NEEDED="yes" && CONTROLLER_NAME="controller"
+    [ ! -v CONTROLLER ] && ADD_K8S_OPTS="--client" && BOOTSTRAP_NEEDED="yes" && CONTROLLER_NAME="osm-vca"
+
+    if [ -v BOOTSTRAP_NEEDED ]; then
+        CONTROLLER_PRESENT=$(juju controllers 2>/dev/null| grep ${CONTROLLER_NAME} | wc -l)
+        if [ $CONTROLLER_PRESENT -ge 1 ]; then
+            cat << EOF
+Threre is already a VCA present with the installer reserved name of "${CONTROLLER_NAME}".
+You may either explicitly use this VCA with the "--vca ${CONTROLLER_NAME}" option, or remove it
+using this command:
+
+   juju destroy-controller --release-storage --destroy-all-models -y ${CONTROLLER_NAME}
+
+Please retry the installation once this conflict has been resolved.
+EOF
+            exit 1
+        fi
+    fi
 
     if [ -v KUBECFG ]; then
         cat $KUBECFG | juju add-k8s $K8S_CLOUD_NAME $ADD_K8S_OPTS
@@ -50,8 +66,16 @@ function bootstrap_k8s_lxd(){
     else
         sg microk8s -c "echo ${DEFAULT_IP}-${DEFAULT_IP} | microk8s.enable metallb"
         sg microk8s -c "microk8s.enable storage dns"
+        TIME_TO_WAIT=30
+        start_time="$(date -u +%s)"
         while true
         do
+            now="$(date -u +%s)"
+            if [[ $(( now - start_time )) -gt $TIME_TO_WAIT ]];then
+                echo "Microk8s storage failed to enable"
+                sg microk8s -c "microk8s.status"
+                exit 1
+            fi
             sg microk8s -c "microk8s.status" | grep 'storage: enabled'
             if [ $? -eq 0 ]; then
                 break
@@ -119,7 +143,7 @@ EOF
     juju add-cloud -c $CONTROLLER_NAME lxd-cloud $LXD_CLOUD --force
     juju add-credential -c $CONTROLLER_NAME lxd-cloud -f $LXD_CREDENTIALS
     sg lxd -c "lxd waitready"
-    juju add-model test lxd-cloud || true
+    #juju add-model test lxd-cloud || true
     juju controller-config features=[k8s-operators]
 }
 
@@ -283,3 +307,19 @@ install_osmclient
 if [ -v MICROSTACK ]; then
     install_microstack
 fi
+
+echo "Your installation is now complete, follow these steps for configuring the osmclient:"
+echo
+echo "1. Get the NBI IP with the following command:"
+echo
+echo NBI_IP='`juju status --format json | jq -rc '"'"'.applications."nbi-k8s".address'"'"'`'
+echo
+echo "2. Create the OSM_HOSTNAME environment variable with the NBI IP"
+echo
+echo "export OSM_HOSTNAME=\$NBI_IP"
+echo
+echo "3. Add the previous command to your .bashrc for other Shell sessions"
+echo
+echo "echo \"export OSM_HOSTNAME=\$NBI_IP\" >> ~/.bashrc"
+echo
+echo "DONE"

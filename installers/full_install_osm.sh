@@ -1246,7 +1246,7 @@ EOF
 
     [ -z "$INSTALL_NOHOSTCLIENT" ] && install_osmclient
     track osmclient
-    
+
     echo -e "Checking OSM health state..."
     if [ -n "$KUBERNETES" ]; then
         $OSM_DEVOPS/installers/osm_health.sh -s ${OSM_STACK_NAME} -k || \
@@ -1641,22 +1641,6 @@ if [ -n "$CHARMED" ]; then
         ${OSM_DEVOPS}/installers/charmed_uninstall.sh -R $RELEASE -r $REPOSITORY -u $REPOSITORY_BASE -D /usr/share/osm-devops -t $DOCKER_TAG "$@"
      else
         ${OSM_DEVOPS}/installers/charmed_install.sh -R $RELEASE -r $REPOSITORY -u $REPOSITORY_BASE -D /usr/share/osm-devops -t $DOCKER_TAG "$@"
-
-        echo "Your installation is now complete, follow these steps for configuring the osmclient:"
-        echo
-        echo "1. Get the NBI IP with the following command:"
-        echo
-        echo NBI_IP='`juju status --format json | jq -rc '"'"'.applications."nbi-k8s".address'"'"'`'
-        echo
-        echo "2. Create the OSM_HOSTNAME environment variable with the NBI IP"
-        echo
-        echo "export OSM_HOSTNAME=\$NBI_IP"
-        echo
-        echo "3. Add the previous command to your .bashrc for other Shell sessions"
-        echo
-        echo "echo \"export OSM_HOSTNAME=\$NBI_IP\" >> ~/.bashrc"
-        echo
-        echo "DONE"
      fi
 
      exit 0

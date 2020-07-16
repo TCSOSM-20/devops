@@ -14,7 +14,18 @@
 #
 
 
-juju destroy-model osm --destroy-storage -y
-juju destroy-model test --destroy-storage -y
+juju destroy-model osm --destroy-storage -y --force --no-wait
 sudo snap unalias osm
 sudo snap remove osmclient
+CONTROLLER_NAME="osm-vca"
+CONTROLLER_PRESENT=$(juju controllers 2>/dev/null| grep ${CONTROLLER_NAME} | wc -l)
+if [[ $CONTROLLER_PRESENT -ge 1 ]]; then
+    cat << EOF
+The VCA with the name "${CONTROLLER_NAME}" has been left in place to ensure that no other
+applications are using it.  If you are sure you wish to remove this controller,
+please execute the following command:
+
+   juju destroy-controller --release-storage --destroy-all-models -y ${CONTROLLER_NAME}
+
+EOF
+fi
