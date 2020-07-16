@@ -178,7 +178,6 @@ function create_overlay() {
 
     # Calculate the default route of this machine
     local DEFAULT_IF=`ip route list match 0.0.0.0 | awk '{print $5}'`
-    local vca_apiproxy=`ip -o -4 a |grep ${DEFAULT_IF}|awk '{split($4,a,"/"); print a[1]}'`
 
     # Generate a new overlay.yaml, overriding any existing one
     cat << EOF > /tmp/vca-overlay.yaml
@@ -191,7 +190,6 @@ applications:
       vca_port: $vca_port
       vca_pubkey: $vca_pubkey
       vca_cacert: $vca_cacert
-      vca_apiproxy: $vca_apiproxy
       vca_cloud: $vca_cloud
       vca_k8s_cloud: $K8S_CLOUD_NAME
   mon-k8s:
