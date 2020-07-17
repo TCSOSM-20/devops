@@ -423,7 +423,7 @@ function juju_createcontroller() {
 }
 
 function juju_addk8s() {
-    cat .kube/config | juju add-k8s $OSM_VCA_K8S_CLOUDNAME --controller $OSM_STACK_NAME --storage openebs-hostpath
+    cat $HOME/.kube/config | juju add-k8s $OSM_VCA_K8S_CLOUDNAME --controller $OSM_STACK_NAME --storage openebs-hostpath
 }
 
 function juju_createproxy() {
@@ -782,6 +782,21 @@ function kube_config_dir() {
 
 function install_k8s_storageclass() {
     kubectl apply -f https://openebs.github.io/charts/openebs-operator-1.6.0.yaml
+    local storageclass_timeout=300
+    local counter=0
+    echo "Waiting for storageclass"
+    while (( counter < storageclass_timeout ))
+    do
+        kubectl get storageclass openebs-hostpath &> /dev/null
+
+        if [ $? -eq 0 ] ; then
+            echo "Storageclass available"
+            break
+        else
+            counter=$((counter + 15))
+            sleep 15
+        fi
+    done
     kubectl patch storageclass openebs-hostpath -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
 }
 
