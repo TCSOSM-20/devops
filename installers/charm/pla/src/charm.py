@@ -43,8 +43,6 @@ class PLACharm(CharmBase):
         self.state.set_default(kafka_host=None)
         self.state.set_default(kafka_port=None)
         self.state.set_default(mongodb_uri=None)
-        self.state.set_default(mysql_host=None)
-        self.state.set_default(mysql_port=None)
 
         # Observe Charm related events
         self.framework.observe(self.on.config_changed, self.on_config_changed)
@@ -58,9 +56,6 @@ class PLACharm(CharmBase):
         self.framework.observe(
             self.on.mongo_relation_changed, self.on_mongo_relation_changed
         )
-        self.framework.observe(
-            self.on.mysql_relation_changed, self.on_mysql_relation_changed
-        )
 
     def _apply_spec(self):
         # Only apply the spec if this unit is a leader.
@@ -73,9 +68,6 @@ class PLACharm(CharmBase):
             return
         if not self.state.mongodb_uri:
             unit.status = WaitingStatus("Waiting for MongoDB")
-            return
-        if not self.state.mysql_host or not self.state.mysql_port:
-            unit.status = WaitingStatus("Waiting for MySQL")
             return
 
         unit.status = MaintenanceStatus("Applying new pod spec")
@@ -91,12 +83,6 @@ class PLACharm(CharmBase):
     def make_pod_spec(self):
         config = self.framework.model.config
 
-        mysql_uri = "mysql://root:{}@{}:{}/{}".format(
-            self.state.mysql_root_password,
-            self.state.mysql_host,
-            self.state.mysql_port,
-            self.state.mysql_database,
-        )
         ports = [
             {"name": "port", "containerPort": config["port"], "protocol": "TCP",},
         ]
@@ -108,7 +94,6 @@ class PLACharm(CharmBase):
             "OSMPLA_DATABASE_DRIVER": "mongo",
             "OSMPLA_DATABASE_URI": self.state.mongodb_uri,
             "OSMPLA_GLOBAL_LOG_LEVEL": config["log_level"],
-            "OSMPLA_SQL_DATABASE_URI": mysql_uri,
             "OSMPLA_DATABASE_COMMONKEY": config["database_common_key"],
         }
 
@@ -155,17 +140,6 @@ class PLACharm(CharmBase):
         self.state.mongodb_uri = event.relation.data[event.unit].get(
             "connection_string"
         )
-        self._apply_spec()
-
-    def on_mysql_relation_changed(self, event):
-        unit = self.model.unit
-        if not unit.is_leader():
-            return
-        unit_data = event.relation.data[event.unit]
-        self.state.mysql_host = unit_data.get("host")
-        self.state.mysql_port = unit_data.get("port")
-        self.state.mysql_root_password = unit_data.get("root_password")
-        self.state.mysql_database = self.model.config["database"]
         self._apply_spec()
 
 

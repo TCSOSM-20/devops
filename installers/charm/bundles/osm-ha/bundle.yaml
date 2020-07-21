@@ -121,7 +121,7 @@ applications:
   ng-ui:
     charm: "%(prefix)s/ng-ui%(suffix)s"
     channel: "%(channel)s"
-    scale: 1
+    scale: 3
     series: kubernetes
     options:
       port: 80
@@ -184,7 +184,7 @@ applications:
     annotations:
       gui-x: -250
       gui-y: 550
-  pla-k8s:
+  pla:
     charm: "%(prefix)s/pla%(suffix)s"
     channel: "%(channel)s"
     scale: 3
@@ -252,7 +252,5 @@ relations:
     - "kafka-k8s:kafka"
   - - "pla:mongo"
     - "mongodb-k8s:mongo"
-  - - "pla:mysql"
-    - "mariadb-k8s:mysql"
   - - 'ng-ui:nbi'
     - 'nbi-k8s:nbi'

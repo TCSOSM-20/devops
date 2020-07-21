@@ -252,7 +252,5 @@ relations:
     - "kafka-k8s:kafka"
   - - "pla:mongo"
     - "mongodb-k8s:mongo"
-  - - "pla:mysql"
-    - "mariadb-k8s:mysql"
   - - 'ng-ui:nbi'
     - 'nbi-k8s:nbi'
