@@ -28,14 +28,14 @@ containers:
       OSMNBI_DATABASE_DRIVER: mongo
       OSMNBI_DATABASE_URI: %(mongo_uri)s
       OSMNBI_DATABASE_COMMONKEY: %(DATABASE_COMMONKEY)s
-      
+
       OSMNBI_STORAGE_DRIVER: mongo
       OSMNBI_STORAGE_PATH: /app/storage
       OSMNBI_STORAGE_COLLECTION: files
       OSMNBI_STORAGE_URI: %(mongo_uri)s
 
       OSMNBI_STATIC_DIR: /app/osm_nbi/html_public
-      
+
       OSMNBI_PROMETHEUS_HOST: %(prometheus_host)s
       OSMNBI_PROMETHEUS_PORT: %(prometheus_port)s
       OSMNBI_LOG_LEVEL: %(log_level)s

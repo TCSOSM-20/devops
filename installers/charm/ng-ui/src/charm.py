@@ -63,7 +63,7 @@ class NGUICharm(CharmBase):
         # Only apply the spec if this unit is a leader.
         unit = self.model.unit
         if not unit.is_leader():
-            unit.status = ActiveStatus("Ready")
+            unit.status = ActiveStatus("ready")
             return
         if not self.state.nbi_host or not self.state.nbi_port:
             unit.status = WaitingStatus("Waiting for NBI")
@@ -72,11 +72,11 @@ class NGUICharm(CharmBase):
 
         new_spec = self.make_pod_spec()
         if new_spec == self.state.spec:
-            unit.status = ActiveStatus("Ready")
+            unit.status = ActiveStatus("ready")
             return
         self.framework.model.pod.set_spec(new_spec)
         self.state.spec = new_spec
-        unit.status = ActiveStatus("Ready")
+        unit.status = ActiveStatus("ready")
 
     def make_pod_spec(self):
         config = self.framework.model.config
@@ -129,7 +129,7 @@ class NGUICharm(CharmBase):
         ]
         port = config["https_port"] if ssl_enabled else config["port"]
         ports = [
-            {"name": "port", "containerPort": port, "protocol": "TCP",},
+            {"name": "port", "containerPort": port, "protocol": "TCP", },
         ]
 
         kubernetes = {

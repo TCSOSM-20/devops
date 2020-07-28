@@ -61,7 +61,7 @@ class PLACharm(CharmBase):
         # Only apply the spec if this unit is a leader.
         unit = self.model.unit
         if not unit.is_leader():
-            unit.status = ActiveStatus("Ready")
+            unit.status = ActiveStatus("ready")
             return
         if not self.state.kafka_host or not self.state.kafka_port:
             unit.status = WaitingStatus("Waiting for Kafka")
@@ -74,17 +74,17 @@ class PLACharm(CharmBase):
 
         new_spec = self.make_pod_spec()
         if new_spec == self.state.spec:
-            unit.status = ActiveStatus("Ready")
+            unit.status = ActiveStatus("ready")
             return
         self.framework.model.pod.set_spec(new_spec)
         self.state.spec = new_spec
-        unit.status = ActiveStatus("Ready")
+        unit.status = ActiveStatus("ready")
 
     def make_pod_spec(self):
         config = self.framework.model.config
 
         ports = [
-            {"name": "port", "containerPort": config["port"], "protocol": "TCP",},
+            {"name": "port", "containerPort": config["port"], "protocol": "TCP", },
         ]
 
         config_spec = {

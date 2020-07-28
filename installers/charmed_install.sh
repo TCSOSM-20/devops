@@ -35,8 +35,20 @@ function check_arguments(){
 
     # echo $BUNDLE $KUBECONFIG $LXDENDPOINT
 }
+
 function install_snaps(){
-    [ ! -v KUBECFG ] && sudo snap install microk8s --classic && sudo usermod -a -G microk8s `whoami` && mkdir -p ~/.kube && sudo chown -f -R `whoami` ~/.kube
+    if [ ! -v KUBECFG ]; then
+        sudo snap install microk8s --classic
+        sudo usermod -a -G microk8s `whoami`
+        mkdir -p ~/.kube
+        sudo chown -f -R `whoami` ~/.kube
+        KUBEGRP="microk8s"
+    else
+        KUBECTL="kubectl"
+        sudo snap install kubectl --classic
+        export KUBECONFIG=${KUBECFG}
+        KUBEGRP=$(id -g -n)
+    fi
     sudo snap install juju --classic --channel=2.8/stable
 }
 
@@ -64,8 +76,8 @@ EOF
         cat $KUBECFG | juju add-k8s $K8S_CLOUD_NAME $ADD_K8S_OPTS
         [ -v BOOTSTRAP_NEEDED ] && juju bootstrap $K8S_CLOUD_NAME $CONTROLLER_NAME --config controller-service-type=loadbalancer
     else
-        sg microk8s -c "echo ${DEFAULT_IP}-${DEFAULT_IP} | microk8s.enable metallb"
-        sg microk8s -c "microk8s.enable storage dns"
+        sg ${KUBEGRP} -c "echo ${DEFAULT_IP}-${DEFAULT_IP} | microk8s.enable metallb"
+        sg ${KUBEGRP} -c "microk8s.enable storage dns"
         TIME_TO_WAIT=30
         start_time="$(date -u +%s)"
         while true
@@ -73,18 +85,18 @@ EOF
             now="$(date -u +%s)"
             if [[ $(( now - start_time )) -gt $TIME_TO_WAIT ]];then
                 echo "Microk8s storage failed to enable"
-                sg microk8s -c "microk8s.status"
+                sg ${KUBEGRP} -c "microk8s.status"
                 exit 1
             fi
-            sg microk8s -c "microk8s.status" | grep 'storage: enabled'
+            sg ${KUBEGRP} -c "microk8s.status" | grep 'storage: enabled'
             if [ $? -eq 0 ]; then
                 break
             fi
             sleep 1
         done
 
-        [ ! -v BOOTSTRAP_NEEDED ] && sg microk8s -c "microk8s.config" | juju add-k8s $K8S_CLOUD_NAME $ADD_K8S_OPTS
-        [ -v BOOTSTRAP_NEEDED ] && sg microk8s -c "juju bootstrap microk8s $CONTROLLER_NAME --config controller-service-type=loadbalancer" && K8S_CLOUD_NAME=microk8s
+        [ ! -v BOOTSTRAP_NEEDED ] && sg ${KUBEGRP} -c "microk8s.config" | juju add-k8s $K8S_CLOUD_NAME $ADD_K8S_OPTS
+        [ -v BOOTSTRAP_NEEDED ] && sg ${KUBEGRP} -c "juju bootstrap microk8s $CONTROLLER_NAME --config controller-service-type=loadbalancer" && K8S_CLOUD_NAME=microk8s
     fi
 
     if [ -v LXD_CLOUD ]; then
@@ -147,13 +159,33 @@ EOF
     juju controller-config features=[k8s-operators]
 }
 
+function wait_for_port(){
+    SERVICE=$1
+    INDEX=$2
+    TIME_TO_WAIT=30
+    start_time="$(date -u +%s)"
+    while true
+    do
+        now="$(date -u +%s)"
+        if [[ $(( now - start_time )) -gt $TIME_TO_WAIT ]];then
+            echo "Failed to expose external ${SERVICE} interface port"
+            exit 1
+        fi
+
+        if [ $(sg ${KUBEGRP} -c "${KUBECTL} get ingress -n osm -o json | jq -r '.items[$INDEX].metadata.name'") == ${SERVICE} ] ; then
+            break
+        fi
+        sleep 1
+    done
+}
+
 function deploy_charmed_osm(){
     create_overlay
     echo "Creating OSM model"
     if [ -v KUBECFG ]; then
         juju add-model osm $K8S_CLOUD_NAME
     else
-        sg microk8s -c "juju add-model osm $K8S_CLOUD_NAME"
+        sg ${KUBEGRP} -c "juju add-model osm $K8S_CLOUD_NAME"
     fi
     echo "Deploying OSM with charms"
     images_overlay=""
@@ -166,20 +198,54 @@ function deploy_charmed_osm(){
     echo "Waiting for deployment to finish..."
     check_osm_deployed &> /dev/null
     echo "OSM with charms deployed"
-    sg microk8s -c "microk8s.enable ingress"
-    juju config ui-k8s juju-external-hostname=osm.$DEFAULT_IP.xip.io
+    if [ ! -v KUBECFG ]; then
+        sg ${KUBEGRP} -c "microk8s.enable ingress"
+        API_SERVER=${DEFAULT_IP}
+    else
+        API_SERVER=$(kubectl config view --minify | grep server | cut -f 2- -d ":" | tr -d " ")
+        proto="$(echo $API_SERVER | grep :// | sed -e's,^\(.*://\).*,\1,g')"
+        url="$(echo ${API_SERVER/$proto/})"
+        user="$(echo $url | grep @ | cut -d@ -f1)"
+        hostport="$(echo ${url/$user@/} | cut -d/ -f1)"
+        API_SERVER="$(echo $hostport | sed -e 's,:.*,,g')"
+    fi
+
+    juju config nbi-k8s juju-external-hostname=nbi.${API_SERVER}.xip.io
+    juju expose nbi-k8s
+
+    wait_for_port nbi-k8s 0
+    sg ${KUBEGRP} -c "${KUBECTL} get ingress -n osm -o json | jq '.items[0].metadata.annotations += {\"nginx.ingress.kubernetes.io/backend-protocol\": \"HTTPS\"}' | ${KUBECTL} --validate=false replace -f -"
+    sg ${KUBEGRP} -c "${KUBECTL} get ingress -n osm -o json | jq '.items[0].metadata.annotations += {\"nginx.ingress.kubernetes.io/proxy-body-size\": \"0\"}' | ${KUBECTL} replace -f -"
+
+    juju config ng-ui juju-external-hostname=ngui.${API_SERVER}.xip.io
+    juju expose ng-ui
+
+    wait_for_port ng-ui 1
+    sg ${KUBEGRP} -c "${KUBECTL} get ingress -n osm -o json | jq '.items[2].metadata.annotations += {\"nginx.ingress.kubernetes.io/proxy-body-size\": \"0\"}' | ${KUBECTL} replace -f -"
+
+    juju config ui-k8s juju-external-hostname=osm.${API_SERVER}.xip.io
     juju expose ui-k8s
+
+    wait_for_port ui-k8s 2
+    sg ${KUBEGRP} -c "${KUBECTL} get ingress -n osm -o json | jq '.items[1].metadata.annotations += {\"nginx.ingress.kubernetes.io/proxy-body-size\": \"0\"}' | ${KUBECTL} replace -f -"
 }
 
 function check_osm_deployed() {
+    TIME_TO_WAIT=300
+    start_time="$(date -u +%s)"
     while true
     do
-        pod_name=`sg microk8s -c "microk8s.kubectl -n osm get pods | grep ui-k8s | grep -v operator" | awk '{print $1; exit}'`
+        pod_name=`sg ${KUBEGRP} -c "${KUBECTL} -n osm get pods | grep ui-k8s | grep -v operator" | awk '{print $1; exit}'`
 
-        if [[ `sg microk8s -c "microk8s.kubectl -n osm wait pod $pod_name --for condition=Ready"` ]]; then
-            if [[ `sg microk8s -c "microk8s.kubectl -n osm wait pod lcm-k8s-0 --for condition=Ready"` ]]; then
+        if [[ `sg ${KUBEGRP} -c "${KUBECTL} -n osm wait pod $pod_name --for condition=Ready"` ]]; then
+            if [[ `sg ${KUBEGRP} -c "${KUBECTL} -n osm wait pod lcm-k8s-0 --for condition=Ready"` ]]; then
                 break
             fi
+        fi
+        now="$(date -u +%s)"
+        if [[ $(( now - start_time )) -gt $TIME_TO_WAIT ]];then
+            echo "Timeout waiting for services to enter ready state"
+            exit 1
         fi
         sleep 10
     done
@@ -300,7 +366,6 @@ DEFAULT_IP=`ip -o -4 a |grep ${DEFAULT_IF}|awk '{split($4,a,"/"); print a[1]}'`
 check_arguments $@
 mkdir -p ~/.osm
 install_snaps
-sleep 5
 bootstrap_k8s_lxd
 deploy_charmed_osm
 install_osmclient
@@ -310,16 +375,12 @@ fi
 
 echo "Your installation is now complete, follow these steps for configuring the osmclient:"
 echo
-echo "1. Get the NBI IP with the following command:"
+echo "1. Create the OSM_HOSTNAME environment variable with the NBI IP"
 echo
-echo NBI_IP='`juju status --format json | jq -rc '"'"'.applications."nbi-k8s".address'"'"'`'
+echo "export OSM_HOSTNAME=nbi.$API_SERVER.xip.io:443"
 echo
-echo "2. Create the OSM_HOSTNAME environment variable with the NBI IP"
+echo "2. Add the previous command to your .bashrc for other Shell sessions"
 echo
-echo "export OSM_HOSTNAME=\$NBI_IP"
-echo
-echo "3. Add the previous command to your .bashrc for other Shell sessions"
-echo
-echo "echo \"export OSM_HOSTNAME=\$NBI_IP\" >> ~/.bashrc"
+echo "echo \"export OSM_HOSTNAME=nbi.$API_SERVER.xip.io:443\" >> ~/.bashrc"
 echo
 echo "DONE"
