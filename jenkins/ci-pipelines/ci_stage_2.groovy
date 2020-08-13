@@ -19,7 +19,7 @@ def project_checkout(url_prefix,project,refspec,revision) {
     // checkout the project
     // this is done automaticaly by the multibranch pipeline plugin
     // git url: "${url_prefix}/${project}"
-    
+
     sh "git fetch --tags"
     sh "git fetch origin ${refspec}"
     if (GERRIT_PATCHSET_REVISION.size() > 0 ) {
@@ -42,7 +42,7 @@ def ci_pipeline(mdg,url_prefix,project,branch,refspec,revision,do_stage_3,artifa
     stage('License Scan') {
       if (!JOB_NAME.contains('merge')) {
         sh "devops/tools/license_scan.sh"
-      } 
+      }
       else {
         println("skip the scan for merge")
       }
@@ -76,6 +76,30 @@ def ci_pipeline(mdg,url_prefix,project,branch,refspec,revision,do_stage_3,artifa
             sh "devops/tools/generatechangelog-pipeline.sh > changelog/changelog-${mdg}.html"
             sh(returnStdout:true,  script: 'devops-stages/stage-archive.sh').trim()
             ci_helper.archive(artifactory_server,mdg,branch,'untested')
+        }
+    }
+
+    if (fileExists('snap/snapcraft.yaml')) {
+        stage('Snap build') {
+            sh "sudo rm -rf ${WORKSPACE}/stage/ ${WORKSPACE}/parts/ ${WORKSPACE}/prime/ ${WORKSPACE}/*.snap"
+            sh "docker run -v ${WORKSPACE}:/build --env BRANCH=${BRANCH_NAME} -w /build snapcore/snapcraft:stable /bin/bash -c 'apt update && snapcraft'"
+            sh "sudo mv ${WORKSPACE}/${mdg}_*.snap ${WORKSPACE}/${mdg}.snap"
+            sh "sudo rm -rf ${WORKSPACE}/stage/ ${WORKSPACE}/parts/ ${WORKSPACE}/prime/"
+
+            REV=""
+            if ( !JOB_NAME.contains('merge') ) {
+                REV="/"+"${GERRIT_REFSPEC}".replaceAll('/','-')
+            }
+            channel="latest"
+            if (BRANCH_NAME.startsWith("v")) {
+                channel=BRANCH_NAME.substring(1)
+            } else if (BRANCH_NAME!="master") {
+                REV="/"+BRANCH_NAME+REV.replaceAll('/','-')
+            }
+
+            sh "sudo docker run -v ~/.snapcraft:/snapcraft -v ${WORKSPACE}:/build " +
+                "-w /build snapcore/snapcraft:stable /bin/bash -c " +
+                "\"snapcraft login --with /snapcraft/config ; snapcraft push --release=${channel}/edge${REV} ${mdg}.snap\""
         }
     }
 
