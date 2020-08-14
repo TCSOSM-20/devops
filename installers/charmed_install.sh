@@ -195,8 +195,9 @@ function deploy_charmed_osm(){
     else
         juju deploy osm --overlay ~/.osm/vca-overlay.yaml $images_overlay
     fi
+
     echo "Waiting for deployment to finish..."
-    check_osm_deployed &> /dev/null
+    check_osm_deployed
     echo "OSM with charms deployed"
     if [ ! -v KUBECFG ]; then
         sg ${KUBEGRP} -c "microk8s.enable ingress"
@@ -217,34 +218,33 @@ function deploy_charmed_osm(){
     sg ${KUBEGRP} -c "${KUBECTL} get ingress -n osm -o json | jq '.items[0].metadata.annotations += {\"nginx.ingress.kubernetes.io/backend-protocol\": \"HTTPS\"}' | ${KUBECTL} --validate=false replace -f -"
     sg ${KUBEGRP} -c "${KUBECTL} get ingress -n osm -o json | jq '.items[0].metadata.annotations += {\"nginx.ingress.kubernetes.io/proxy-body-size\": \"0\"}' | ${KUBECTL} replace -f -"
 
-    juju config ng-ui juju-external-hostname=ngui.${API_SERVER}.xip.io
+    juju config ng-ui juju-external-hostname=ui.${API_SERVER}.xip.io
     juju expose ng-ui
 
     wait_for_port ng-ui 1
-    sg ${KUBEGRP} -c "${KUBECTL} get ingress -n osm -o json | jq '.items[2].metadata.annotations += {\"nginx.ingress.kubernetes.io/proxy-body-size\": \"0\"}' | ${KUBECTL} replace -f -"
+    sg ${KUBEGRP} -c "${KUBECTL} get ingress -n osm -o json | jq '.items[2].metadata.annotations += {\"nginx.ingress.kubernetes.io/proxy-body-size\": \"0\"}' | ${KUBECTL} --validate=false replace -f -"
 
     juju config ui-k8s juju-external-hostname=osm.${API_SERVER}.xip.io
     juju expose ui-k8s
 
     wait_for_port ui-k8s 2
-    sg ${KUBEGRP} -c "${KUBECTL} get ingress -n osm -o json | jq '.items[1].metadata.annotations += {\"nginx.ingress.kubernetes.io/proxy-body-size\": \"0\"}' | ${KUBECTL} replace -f -"
+    sg ${KUBEGRP} -c "${KUBECTL} get ingress -n osm -o json | jq '.items[1].metadata.annotations += {\"nginx.ingress.kubernetes.io/proxy-body-size\": \"0\"}' | ${KUBECTL} --validate=false replace -f -"
 }
 
 function check_osm_deployed() {
-    TIME_TO_WAIT=300
+    TIME_TO_WAIT=600
     start_time="$(date -u +%s)"
+    total_service_count=14
     while true
     do
-        pod_name=`sg ${KUBEGRP} -c "${KUBECTL} -n osm get pods | grep ui-k8s | grep -v operator" | awk '{print $1; exit}'`
-
-        if [[ `sg ${KUBEGRP} -c "${KUBECTL} -n osm wait pod $pod_name --for condition=Ready"` ]]; then
-            if [[ `sg ${KUBEGRP} -c "${KUBECTL} -n osm wait pod lcm-k8s-0 --for condition=Ready"` ]]; then
-                break
-            fi
+        service_count=$(juju status | grep kubernetes | grep active | wc -l)
+        echo "$service_count / $total_service_count services active"
+        if [ $service_count -eq $total_service_count ]; then
+            break
         fi
         now="$(date -u +%s)"
         if [[ $(( now - start_time )) -gt $TIME_TO_WAIT ]];then
-            echo "Timeout waiting for services to enter ready state"
+            echo "Timed out waiting for OSM services to become ready"
             exit 1
         fi
         sleep 10
