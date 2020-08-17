@@ -183,6 +183,10 @@ function remove_helm() {
     fi
 }
 
+function remove_crontab_job() {
+    crontab -l | grep -v '${OSM_DEVOPS}/installers/update-juju-lxc-images'  | crontab -
+}
+
 #Uninstall osmclient
 function uninstall_osmclient() {
     sudo apt-get remove --purge -y python-osmclient
@@ -245,6 +249,7 @@ EONG
         $WORKDIR_SUDO rm -rf $OSM_DOCKER_WORK_DIR
         [ -z "$CONTROLLER_NAME" ] && sg lxd -c "juju destroy-controller --destroy-all-models --yes $OSM_STACK_NAME"
     fi
+    remove_crontab_job
     uninstall_osmclient
     echo "Some docker images will be kept in case they are used by other docker stacks"
     echo "To remove them, just run 'docker image prune' in a terminal"
@@ -274,6 +279,11 @@ function nat(){
 function FATAL(){
     echo "FATAL error: Cannot install OSM due to \"$1\""
     exit 1
+}
+
+function update_juju_images(){
+    crontab -l | grep update-juju-lxc-images || (crontab -l 2>/dev/null; echo "0 4 * * 6 $USER ${OSM_DEVOPS}/installers/update-juju-lxc-images --xenial --bionic") | crontab -
+    ${OSM_DEVOPS}/installers/update-juju-lxc-images --xenial --bionic
 }
 
 function install_lxd() {
@@ -414,6 +424,7 @@ function install_juju() {
     echo "Installing juju"
     sudo snap install juju --classic --channel=2.7/stable
     [[ ":$PATH": != *":/snap/bin:"* ]] && PATH="/snap/bin:${PATH}"
+    update_juju_images
     echo "Finished installation of juju"
     return 0
 }

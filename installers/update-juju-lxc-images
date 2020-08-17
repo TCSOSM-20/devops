@@ -98,6 +98,7 @@ function cache() {
     alias=juju/$series/amd64
 
     lxc delete $container -f || true
+    lxc image copy ubuntu:$series local: --alias clean-$series
     lxc launch ubuntu:$series $container
     sleep 15  # wait for network
 
@@ -121,6 +122,7 @@ function cache() {
     lxc stop $container
 
     lxc image delete $alias || true
+    lxc image delete clean-$series || true
     lxc publish $container --alias $alias description="$series juju dev image ($(date +%Y%m%d))"
 
     lxc delete $container -f || true
