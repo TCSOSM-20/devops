@@ -27,7 +27,7 @@ function check_arguments(){
             --lxd) LXD_CLOUD="$2" ;;
             --lxd-cred) LXD_CREDENTIALS="$2" ;;
             --microstack) MICROSTACK=y ;;
-            --ha) BUNDLE="osm-ha" ;;
+            --ha) BUNDLE="cs:osm-ha" ;;
             --tag) TAG="$2" ;;
         esac
         shift
@@ -136,7 +136,7 @@ function deploy_charmed_osm(){
     else
         images_overlay=""
         [ -v TAG ] && generate_images_overlay && images_overlay="--overlay $IMAGES_OVERLAY_FILE"
-        juju deploy osm --overlay ~/.osm/vca-overlay.yaml $images_overlay
+        juju deploy cs:osm --overlay ~/.osm/vca-overlay.yaml $images_overlay
     fi
     echo "Waiting for deployment to finish..."
     check_osm_deployed &> /dev/null
