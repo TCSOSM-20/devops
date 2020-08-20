@@ -78,7 +78,6 @@ function bootstrap_k8s_lxd(){
         # Install LXD snap
         sudo apt-get remove --purge -y liblxc1 lxc-common lxcfs lxd lxd-client
         sudo snap install lxd
-        sudo apt-get install zfsutils-linux -y
         # Configure LXD
         sudo usermod -a -G lxd `whoami`
         cat /usr/share/osm-devops/installers/lxd-preseed.conf | sed 's/^config: {}/config:\n  core.https_address: '$LXDENDPOINT':8443/' | sg lxd -c "lxd init --preseed"
